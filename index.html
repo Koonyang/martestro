@@ -418,6 +418,8 @@ button.tipb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .src-item .t{font-weight:700;font-size:14.5px;margin:6px 0 2px;letter-spacing:-.02em}
 .src-item .credits{margin:8px 0 0;padding-left:16px;color:var(--m);overflow-wrap:break-word}
 .src-item .credits li{margin:3px 0}
+.src-item .credits a{word-break:normal}
+.src-item .credits .lic{white-space:nowrap}
 .src-item .muted{font-size:12.5px;line-height:1.76}
 .src-item a{font-size:12.5px;font-weight:600;word-break:break-all}
 /* empty & skeleton */
@@ -3231,7 +3233,7 @@ function photoCredits(){
   var real = RECIPES.filter(function(r){ return r.imgCredit; }), ai = RECIPES.filter(function(r){ return r.img && r.imgAi; });
   if (!real.length && !ai.length) return '';
   return '<div class="src-item"><span class="tag real">레시피 사진</span><div class="t">직접 쓴 레시피 사진 '+(real.length+ai.length)+'장</div><span class="muted small">실제 사진 '+real.length+'장은 위키미디어 공용의 자유 이용 사진이에요(640×480으로 잘라 줄임). AI 생성 이미지 '+ai.length+'장은 사진 아래에 「AI 생성 이미지」라고 표시했어요.</span>' +
-    '<ul class="credits small">' + real.map(function(r){ var c = r.imgCredit; return '<li>'+esc(r.name)+' — <a href="'+esc(c.u)+'" target="_blank" rel="noopener">'+esc(c.t)+'</a> · '+esc(c.a)+' · '+(c.lu ? '<a href="'+esc(c.lu)+'" target="_blank" rel="noopener">'+esc(c.l)+'</a>' : esc(c.l))+'</li>'; }).join('') + '</ul></div>';
+    '<ul class="credits small">' + real.map(function(r){ var c = r.imgCredit; return '<li>'+esc(r.name)+' — <a href="'+esc(c.u)+'" target="_blank" rel="noopener">'+esc(c.t)+'</a> · '+esc(c.a)+' · '+(c.lu ? '<a class="lic" href="'+esc(c.lu)+'" target="_blank" rel="noopener">'+esc(c.l)+'</a>' : '<span class="lic">'+esc(c.l)+'</span>')+'</li>'; }).join('') + '</ul></div>';
 }
 function renderSources(){
 var st = (DEALS_META && DEALS_META.status) || {};
