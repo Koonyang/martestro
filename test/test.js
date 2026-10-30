@@ -193,4 +193,44 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert(!L.dealMatchesKw(d, ['이마트']), '다른 마트');
   console.log('할인 재료 키워드 검색 OK');
 }
+// 정렬: 방향 토글, 값 없는 항목은 어느 방향이든 맨 뒤
+{
+  const D = L.DEAL_SORTS, R = L.RECIPE_SORTS;
+  let c = L.normSort(D, null); assert.deepEqual(c, {k:'rec', rev:false});
+  assert.deepEqual(L.normSort(D, {k:'zzz', rev:true}), {k:'rec', rev:false});
+  assert.deepEqual(L.normSort(D, {k:'rec', rev:true}), {k:'rec', rev:false});
+  c = L.nextSort(D, c, 'off'); assert.deepEqual(c, {k:'off', rev:false}); assert.equal(L.sortLabel(D, c), '할인율 높은순'); assert.equal(L.sortArrow(D, c), '↓');
+  c = L.nextSort(D, c, 'off'); assert.deepEqual(c, {k:'off', rev:true}); assert.equal(L.sortLabel(D, c), '할인율 낮은순'); assert.equal(L.sortArrow(D, c), '↑');
+  c = L.nextSort(D, c, 'price'); assert.deepEqual(c, {k:'price', rev:false}); assert.equal(L.sortLabel(D, c), '가격 낮은순'); assert.equal(L.sortArrow(D, c), '↑');
+  assert.equal(L.sortLabel(D, {k:'price', rev:true}), '가격 높은순');
+  assert.equal(L.sortLabel(D, {k:'end', rev:false}), '마감 임박순'); assert.equal(L.sortLabel(D, {k:'end', rev:true}), '마감 여유순');
+  assert.deepEqual(L.nextSort(D, {k:'rec', rev:false}, 'rec'), {k:'rec', rev:false}); assert.equal(L.sortArrow(D, {k:'rec'}), '');
+  ['절약률 높은순','절약률 낮은순','비용 낮은순','비용 높은순','조리시간 짧은순','조리시간 긴순'].forEach((l, i) => assert.equal(L.sortLabel(R, {k:['save','cost','time'][i>>1], rev:!!(i&1)}), l));
+  const ds = [{name:'a', price:1000, orig:2000, end:'2026-11-03'}, {name:'b', price:500, end:'2026-10-31'}, {name:'c', cond:'1+1'}, {name:'d', price:3000, orig:3300, end:'2026-11-01'}, {name:'e', price:800, orig:1000}];
+  const nm = l => l.map(x => x.name).join('');
+  assert.equal(nm(L.sortDeals(ds, {k:'rec'})), 'abcde');
+  assert.equal(nm(L.sortDeals(ds, {k:'off', rev:false})), 'aedbc'); // 50,20,9 % / 할인율 없음은 뒤 (원래 순서)
+  assert.equal(nm(L.sortDeals(ds, {k:'off', rev:true})), 'deabc');
+  assert.equal(nm(L.sortDeals(ds, {k:'price', rev:false})), 'beadc');
+  assert.equal(nm(L.sortDeals(ds, {k:'price', rev:true})), 'daebc');
+  assert.equal(nm(L.sortDeals(ds, {k:'end', rev:false})), 'bdace');
+  assert.equal(nm(L.sortDeals(ds, {k:'end', rev:true})), 'adbce');
+  assert.equal(nm(ds), 'abcde'); // 원본은 그대로
+  // 실제 데이터: 할인율 순서 + 빈 값 맨 뒤
+  const act = deals.filter(d => L.isActive(d, '2026-10-30'));
+  [false, true].forEach(rev => { const o = L.sortDeals(act, {k:'off', rev}).map(L.dealOffPct); const f = o.findIndex(v => v == null);
+    if (f >= 0) assert(o.slice(f).every(v => v == null)); const v = o.slice(0, f < 0 ? o.length : f); for (let i = 1; i < v.length; i++) assert(rev ? v[i] >= v[i-1] : v[i] <= v[i-1]); });
+  // 레시피
+  const rk = L.rankRecipes(L.RECIPES, deals, '2026-10-30');
+  assert(rk.some(s => s.mainCost > 0));
+  rk.forEach(s => { const p = s.matched.filter(x => x.ing.main && x.deal.price != null).reduce((a, x) => a + x.deal.price, 0); assert.equal(s.mainCost, s.matched.some(x => x.ing.main && x.deal.price != null) ? p : null); });
+  const chk = (k, rev, desc) => { const o = L.sortRecipes(rk, {k, rev}).map(s => L.recipeSortVal(k, s)); const f = o.indexOf(null);
+    if (f >= 0) assert(o.slice(f).every(v => v == null), k); const v = o.slice(0, f < 0 ? o.length : f); assert(v.length > 1, k);
+    for (let i = 1; i < v.length; i++) assert(desc ? v[i] <= v[i-1] : v[i] >= v[i-1], k+rev); };
+  chk('save', false, true); chk('save', true, false); chk('cost', false, false); chk('cost', true, true); chk('time', false, false); chk('time', true, true);
+  assert.deepEqual(L.sortRecipes(rk, {k:'rec'}).map(s => s.recipe.name), rk.map(s => s.recipe.name));
+  // {s}/{r} 섞인 목록 + get, 원 레시피는 절약률 값이 없어 뒤로
+  const mix = [{r:L.RECIPES[0]}, {s:rk[0]}]; assert.equal(L.sortRecipes(mix, {k:'save'}, it => it.s || it.r)[0], rk[0].savePct ? mix[1] : mix[0]);
+  console.log('정렬 OK');
+}
 console.log('ALL TESTS PASSED');

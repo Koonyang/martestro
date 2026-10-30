@@ -165,10 +165,10 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 button.stat{display:block;text-align:left;min-height:0;font:inherit;color:inherit;cursor:pointer;box-shadow:inset 0 0 0 1px transparent;transition:background .15s,box-shadow .15s}
 button.stat:hover{filter:none}
 button.stat:focus-visible{outline:2px solid var(--g);outline-offset:2px}
-button.stat[aria-pressed=true]{background:var(--a);box-shadow:inset 0 0 0 1.5px var(--g)}
-button.stat[aria-pressed=true] b{color:var(--a-on)}
-button.stat[aria-pressed=true] span{color:var(--g)}
-@media (prefers-color-scheme:dark){button.stat[aria-pressed=true] span{color:var(--a-on);opacity:.8}}
+button.stat[aria-checked=true]{background:var(--a);box-shadow:inset 0 0 0 1.5px var(--g)}
+button.stat[aria-checked=true] b{color:var(--a-on)}
+button.stat[aria-checked=true] span{color:var(--g)}
+@media (prefers-color-scheme:dark){button.stat[aria-checked=true] span{color:var(--a-on);opacity:.8}}
 .stat b{display:block;white-space:nowrap;font-size:19px;font-weight:800;letter-spacing:-.03em;color:var(--t)}
 .stat span{font-size:12px;color:var(--m);font-weight:600}
 .stat.hl{background:var(--a2)}.stat.hl b{color:var(--a-ink)}
@@ -195,7 +195,7 @@ button.stat[aria-pressed=true] span{color:var(--g)}
 .form-grid{display:grid;gap:10px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* recipes */
-.tools{display:flex;gap:8px;margin-top:14px;margin-bottom:18px}
+.tools{display:flex;gap:8px;margin-top:14px}
 /* 할인 품목 고르기 (체크 동그라미 + 고른 줄 강조) */
 .deal.pickable{cursor:pointer;-webkit-tap-highlight-color:transparent;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px;transition:background .15s}
 .deal.pickable .pick{position:relative;flex:0 0 48px;width:48px;height:48px;min-height:0;padding:0;border-radius:12px;background:transparent;box-shadow:none;color:inherit;display:block;align-self:flex-start;margin-top:2px;overflow:visible}
@@ -248,6 +248,20 @@ button.kchip small{font-size:11.5px;font-weight:650;color:var(--m);font-variant-
 button.kchip small:empty{display:none}
 button.kchip[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g)}
 button.kchip[aria-pressed=true] small{color:var(--g)}
+/* 정렬 알약: 다시 누르면 방향이 바뀌어요 (추천순 제외) */
+.sortbar{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;margin:12px -4px 0;padding:3px 4px}
+.sortbar::-webkit-scrollbar{display:none}
+.sortbar[hidden]{display:none}
+#rSortBar{margin-top:14px;margin-bottom:6px}
+.sb-k{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:var(--m);margin-right:1px}
+.sb-k svg{width:14px;height:14px;fill:none;stroke:var(--g);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+button.sp{flex:0 0 auto;min-height:34px;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;gap:3px;white-space:nowrap;background:var(--card);color:var(--t2);box-shadow:inset 0 0 0 1px var(--line);letter-spacing:-.02em}
+#tab-recipes button.sp{box-shadow:inset 0 0 0 1px var(--line),var(--shadow)}
+button.sp:hover{filter:none;color:var(--t)}
+button.sp[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g)}
+button.sp i{font-style:normal;font-weight:800;color:var(--g);font-size:13px;line-height:1}
+button.sp:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+@media (prefers-color-scheme:dark){button.sp[aria-pressed=true]{box-shadow:none}button.sp[aria-pressed=true] i{color:var(--a-on)}}
 button.kchip:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 @media (prefers-color-scheme:dark){button.kchip[aria-pressed=true]{box-shadow:none}button.kchip[aria-pressed=true] small{color:color-mix(in srgb,var(--a-on) 70%,transparent)}}
 .tag.conv{background:color-mix(in srgb,var(--g) 16%,transparent);color:var(--g-ink)}
@@ -499,6 +513,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <div id="dealKws" class="kw-chips" role="group" aria-label="검색 키워드" hidden></div>
     <div id="dealKwStatus" class="vh" role="status" aria-live="polite"></div>
     <div id="dealSummary"></div>
+    <div id="dSortBar" class="sortbar" role="group" aria-label="할인 재료 정렬 (다시 누르면 방향이 바뀌어요)" hidden></div>
     <div id="dealList"></div>
   </div>
   <div class="card">
@@ -531,6 +546,8 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"></div>
     <select id="rCat" aria-label="분류"><option value="">전체</option></select>
   </div>
+  <div id="rSortBar" class="sortbar" role="group" aria-label="레시피 정렬 (다시 누르면 방향이 바뀌어요)"></div>
+  <div id="sortStatus" class="vh" role="status" aria-live="polite"></div>
   <div id="recipeList"></div>
   <button class="ghost block" id="btnMore" style="display:none">더 보기</button>
   <p class="foot" id="pantryNote"></p>
@@ -1986,7 +2003,7 @@ function buildDealIndex(deals, today){
 }
 
 function scoreRecipe(recipe, idx){
-  var mainTotal = 0, mainHit = 0, anyHit = 0, savings = 0, origSum = 0, saleSum = 0;
+  var mainTotal = 0, mainHit = 0, anyHit = 0, savings = 0, origSum = 0, saleSum = 0, mainCost = 0, nCost = 0;
   var matched = [], missing = [];
   recipe.ings.forEach(function(ing){
     if (ing.main) mainTotal++;
@@ -1996,6 +2013,7 @@ function scoreRecipe(recipe, idx){
       var best = list[0];
       if (ing.main) mainHit++;
       anyHit++;
+      if (ing.main && best.price!=null){ mainCost += best.price; nCost++; }
       if (ing.main && best.price!=null && best.orig!=null && best.orig > best.price) { savings += best.orig - best.price; origSum += best.orig; saleSum += best.price; }
       matched.push({ing:ing, deal:best, others:list.length-1});
     } else {
@@ -2005,7 +2023,7 @@ function scoreRecipe(recipe, idx){
   var ratio = mainTotal ? mainHit/mainTotal : 0;
   // 주재료 적중(최대 3개) + 비율 + 부재료 적중 + 절약액 + 직접 다듬은 기본 레시피 가산점
   var score = ratio*20 + Math.min(mainHit,3)*4 + Math.min(anyHit-mainHit,3)*1 + Math.min(savings/1000, 10)*0.4 + (recipe.src === 'pub' ? 0 : 6);
-  return {recipe:recipe, mainTotal:mainTotal, mainHit:mainHit, anyHit:anyHit, ratio:ratio, savings:savings, origSum:origSum, saleSum:saleSum, savePct:(origSum ? Math.round(savings/origSum*100) : 0), matched:matched, missing:missing, score:score};
+  return {recipe:recipe, mainTotal:mainTotal, mainHit:mainHit, anyHit:anyHit, ratio:ratio, savings:savings, origSum:origSum, saleSum:saleSum, savePct:(origSum ? Math.round(savings/origSum*100) : 0), mainCost:(nCost ? mainCost : null), matched:matched, missing:missing, score:score};
 }
 
 function rankRecipes(recipes, deals, today){
@@ -2013,6 +2031,58 @@ function rankRecipes(recipes, deals, today){
   return recipes.map(function(r){ return scoreRecipe(r, idx); })
     .filter(function(s){ return s.mainHit > 0; })
     .sort(function(a,b){ return b.score - a.score || b.savings - a.savings; });
+}
+
+// ---------- 정렬 ----------
+// 정렬 키마다 기본 방향(dir: -1 큰 값부터, 1 작은 값부터)과 [기본, 반대] 이름. 다시 누르면 rev 로 방향이 바뀌어요.
+// 값이 없는 항목(정가 없는 할인·기간 없는 품목·조리시간 없는 레시피…)은 어느 방향이든 맨 뒤.
+var DEAL_SORTS = [
+  {k:'rec', l:['추천순']},
+  {k:'off', dir:-1, l:['할인율 높은순','할인율 낮은순']},
+  {k:'price', dir:1, l:['가격 낮은순','가격 높은순']},
+  {k:'end', dir:1, l:['마감 임박순','마감 여유순']}
+];
+var RECIPE_SORTS = [
+  {k:'rec', l:['추천순']},
+  {k:'save', dir:-1, l:['절약률 높은순','절약률 낮은순']},
+  {k:'cost', dir:1, l:['비용 낮은순','비용 높은순']},
+  {k:'time', dir:1, l:['조리시간 짧은순','조리시간 긴순']}
+];
+function sortDef(defs, k){ for (var i = 0; i < defs.length; i++) if (defs[i].k === k) return defs[i]; return defs[0]; }
+// 저장된 값 검사 → {k, rev}
+function normSort(defs, v){ var d = sortDef(defs, v && v.k); return {k:d.k, rev: !!(d.dir && v && v.rev)}; }
+// 같은 키를 다시 누르면 방향만 바꾸고(추천순 제외), 다른 키는 기본 방향으로
+function nextSort(defs, cur, k){ var d = sortDef(defs, k); return {k:d.k, rev: d.dir && cur && cur.k === d.k ? !cur.rev : false}; }
+function sortLabel(defs, cur){ var d = sortDef(defs, cur && cur.k); return d.l[d.dir && cur.rev ? 1 : 0]; }
+// 화살표: ↓ 큰 값부터, ↑ 작은 값부터
+function sortArrow(defs, cur){ var d = sortDef(defs, cur && cur.k); if (!d.dir) return ''; return (d.dir * (cur.rev ? -1 : 1)) < 0 ? '↓' : '↑'; }
+function sortBy(list, val, dir){
+  return list.map(function(x, i){ var v = val(x); return {x:x, v:(v == null || v !== v) ? null : v, i:i}; }).sort(function(a, b){
+    var am = a.v === null, bm = b.v === null;
+    if (am || bm) return (am - bm) || (a.i - b.i);
+    return (a.v < b.v ? -1 : a.v > b.v ? 1 : 0) * dir || (a.i - b.i);
+  }).map(function(o){ return o.x; });
+}
+function dealOffPct(d){ return d.price != null && d.orig != null && d.orig > d.price ? (1 - d.price / d.orig) * 100 : null; }
+var DEAL_SORT_VAL = {off:dealOffPct, price:function(d){ return d.price != null ? +d.price : null; }, end:function(d){ return d.end || null; }};
+function sortDeals(deals, cur){
+  var d = sortDef(DEAL_SORTS, cur && cur.k);
+  if (!d.dir) return deals.slice();
+  return sortBy(deals, DEAL_SORT_VAL[d.k], d.dir * (cur.rev ? -1 : 1));
+}
+// items: 점수 매긴 레시피({recipe,…}) 또는 레시피 그 자체
+function recipeSortVal(k, x){
+  var r = x.recipe || x, s = x.recipe ? x : null;
+  if (k === 'save') return s && s.origSum > 0 && s.savings > 0 ? s.savePct : null;
+  if (k === 'cost') return s ? s.mainCost : null;
+  if (k === 'time') return r.mins > 0 ? r.mins : null;
+  return null;
+}
+function sortRecipes(list, cur, get){
+  var d = sortDef(RECIPE_SORTS, cur && cur.k);
+  if (!d.dir) return list.slice();
+  get = get || function(x){ return x; };
+  return sortBy(list, function(x){ return recipeSortVal(d.k, get(x)); }, d.dir * (cur.rev ? -1 : 1));
 }
 
 function formatWon(n){ return n==null ? '' : Number(n).toLocaleString('ko-KR') + '원'; }
@@ -2081,7 +2151,7 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
 
 </script>
 <script>
@@ -2460,33 +2530,69 @@ document.addEventListener('click', function(e){
 });
 
 // 요약 숫자 타일 = 필터 버튼: 「할인 재료」(전체, 기본) / 「오늘 적용」·「곧 시작」(따로 켜고 끄기, 합집합). 레시피 종류 칩과 같은 규칙
-var dFilt = [];
+// 요약 타일 = 하나만 고르는 라디오 (''=할인 재료 전체 / today / soon). 이미 켜진 걸 다시 누르면 그대로.
+var dFilt = '';
 function statBtn(k, n, label){
-  var on = k ? dFilt.indexOf(k) >= 0 : !dFilt.length;
-  return '<button type="button" class="stat" data-df="'+k+'" aria-pressed="'+on+'"><b>'+n+'</b><span>'+label+'</span></button>';
+  var on = dFilt === k;
+  return '<button type="button" class="stat" role="radio" data-df="'+k+'" aria-checked="'+on+'" tabindex="'+(on ? 0 : -1)+'"><b>'+n+'</b><span>'+label+'</span></button>';
+}
+function setDealFilt(k){
+  if (dFilt !== k){ dFilt = k; renderDeals(); }
+  var nb = document.querySelector('#dealSummary button.stat[data-df="'+k+'"]'); if (nb) nb.focus();
 }
 $('dealSummary').addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('button.stat'); if (!b) return;
-  var k = b.getAttribute('data-df');
-  if (!k) dFilt = []; else { var i = dFilt.indexOf(k); if (i >= 0) dFilt.splice(i, 1); else dFilt.push(k); }
-  renderDeals();
-  var nb = document.querySelector('#dealSummary button.stat[data-df="'+k+'"]'); if (nb) nb.focus();
+  setDealFilt(b.getAttribute('data-df'));
 });
+$('dealSummary').addEventListener('keydown', function(e){ // 라디오 그룹: 화살표로 이동하며 선택
+  var b = e.target.closest && e.target.closest('button.stat'); if (!b) return;
+  var all = [].slice.call(document.querySelectorAll('#dealSummary button.stat')), i = all.indexOf(b), j = -1;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % all.length;
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + all.length) % all.length;
+  else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = all.length - 1;
+  if (j < 0) return; e.preventDefault(); setDealFilt(all[j].getAttribute('data-df'));
+});
+// ---------- 정렬 (할인 재료·레시피) ----------
+var dSort = normSort(DEAL_SORTS, load('mr_dsort', null)), rSort = normSort(RECIPE_SORTS, load('mr_rsort', null));
+function renderSortBar(el, defs, cur){
+  var foc = document.activeElement && el.contains(document.activeElement) ? document.activeElement.getAttribute('data-sort') : null;
+  el.innerHTML = '<span class="sb-k" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4M13.5 7.5 17 4l3.5 3.5"/></svg>정렬</span>' + defs.map(function(d){
+    var on = cur.k === d.k, lab = on ? sortLabel(defs, cur) : d.l[0], ar = on ? sortArrow(defs, cur) : '';
+    var al = lab + (on && d.dir ? ', 다시 누르면 ' + d.l[cur.rev ? 0 : 1] : '');
+    return '<button type="button" class="sp" data-sort="'+d.k+'" aria-pressed="'+on+'" aria-label="'+esc(al)+'">'+esc(lab)+(ar ? '<i aria-hidden="true">'+ar+'</i>' : '')+'</button>';
+  }).join('');
+  if (foc){ var b = el.querySelector('[data-sort="'+foc+'"]'); if (b) b.focus(); }
+  var act = el.querySelector('[aria-pressed=true]');
+  if (act && el.scrollWidth > el.clientWidth){ var l = act.offsetLeft - el.offsetLeft, r = l + act.offsetWidth; if (l < el.scrollLeft || r > el.scrollLeft + el.clientWidth) el.scrollLeft = Math.max(0, l - 40); }
+}
+$('dSortBar').addEventListener('click', function(e){
+  var b = e.target.closest('[data-sort]'); if (!b) return;
+  dSort = nextSort(DEAL_SORTS, dSort, b.getAttribute('data-sort')); save('mr_dsort', dSort);
+  $('sortStatus').textContent = '할인 재료 정렬: ' + sortLabel(DEAL_SORTS, dSort);
+  renderDeals();
+});
+$('rSortBar').addEventListener('click', function(e){
+  var b = e.target.closest('[data-sort]'); if (!b) return;
+  rSort = nextSort(RECIPE_SORTS, rSort, b.getAttribute('data-sort')); save('mr_rsort', rSort);
+  $('sortStatus').textContent = '레시피 정렬: ' + sortLabel(RECIPE_SORTS, rSort);
+  rLimit = PAGE; renderRecipes();
+});
+
 function renderDeals(){
   var marts = selectedMarts(), shownN = 0;
   if (!marts.length){
-    $('dealSummary').innerHTML = '';
+    $('dealSummary').innerHTML = ''; $('dSortBar').hidden = true;
     $('dealList').innerHTML = emptyBox('basket', '선택한 마트가 없어요', '오른쪽 위 위치 버튼을 눌러 주변 마트를 체크하거나<br>「위치 설정 없이 대형마트 정보 확인」에서 마트를 골라 주세요.') + '<button class="sec block" data-go="tab-loc">마트 고르러 가기</button>';
   } else {
     var deals = collectDeals(), today = todayStr();
     var activeAll = deals.filter(function(d){ return isActive(d, today); });
     var hasUp = activeAll.some(function(d){ return isUpcoming(d, today); });
-    if (!hasUp) dFilt = [];
+    if (!hasUp) dFilt = '';
     var active = activeAll.filter(function(d){ return dealMatchesKw(d, dKws); }); // 키워드가 있으면 숫자도 키워드 기준
     var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length;
-    var shown = dFilt.length ? active.filter(function(d){ return dFilt.indexOf(isUpcoming(d, today) ? 'soon' : 'today') >= 0; }) : active;
+    var shown = dFilt ? active.filter(function(d){ return (isUpcoming(d, today) ? 'soon' : 'today') === dFilt; }) : active;
     $('dealSummary').innerHTML = '<div class="sel-marts">'+marts.map(function(m){ return '<b>'+esc(m.name)+'</b>'; }).join(' · ')+' <span class="muted small">· '+fmtMD(today)+' 기준</span></div>' +
-      '<div class="sum" role="group" aria-label="할인 재료 보기 필터">' + statBtn('', active.length, '할인 재료') + (hasUp ? statBtn('today', active.length-nUp, '오늘 적용') + statBtn('soon', nUp, '곧 시작') : '') + '</div>' +
+      '<div class="sum" role="radiogroup" aria-label="할인 재료 보기 필터">' + statBtn('', active.length, '할인 재료') + (hasUp ? statBtn('today', active.length-nUp, '오늘 적용') + statBtn('soon', nUp, '곧 시작') : '') + '</div>' +
       '';  // 가격확인 안내 상자는 없앴어요 — 「가격확인」 태그를 누르면 말풍선으로 설명해요
     shownN = shown.length;
     var groups = {};
@@ -2495,9 +2601,14 @@ function renderDeals(){
     var upc = function(d){ return isUpcoming(d, today) ? 1 : 0; };
     Object.keys(groups).forEach(function(k){ groups[k].sort(function(a,b){ return upc(a)-upc(b); }); });
     var keys = Object.keys(groups).sort(function(a,b){ return (a==='기타')-(b==='기타') || groups[b].length - groups[a].length; });
-    $('dealList').innerHTML = keys.length ? keys.map(function(k){
+    $('dSortBar').hidden = !active.length; if (active.length) renderSortBar($('dSortBar'), DEAL_SORTS, dSort);
+    // 추천순은 재료별 묶음, 다른 정렬은 한 줄로 펼쳐서 (값 없는 품목은 맨 뒤)
+    var flat = dSort.k !== 'rec';
+    $('dealList').innerHTML = keys.length ? (flat
+      ? '<div class="ing-h">'+esc(sortLabel(DEAL_SORTS, dSort))+' <span>'+shown.length+'</span></div>' + sortDeals(shown, dSort).map(dealRow).join('')
+      : keys.map(function(k){
       return '<div class="ing-h">'+esc(k)+' <span>'+groups[k].length+'</span></div>' + groups[k].map(dealRow).join('');
-    }).join('') : (dKws.length && activeAll.length ? emptyBox('search', '「'+esc(dKws.join('」, 「'))+'」'+(dKws.length > 1 ? ' 중 어느 것과도' : josaWa(dKws[0]))+' 맞는 할인 재료가 없어요', '<span class="kw-why">검색한 식품이 마트에 없거나, 할인 대상이 아니에요.</span>' + (active.length ? '<span class="kw-why">「할인 재료」를 눌러 전체 기간도 확인해 보세요.</span>' : '') + '<button type="button" class="kw-clear" data-kwclear="1">키워드 모두 지우기</button>') : active.length ? emptyBox('tag', '이 조건에 맞는 할인 재료가 없어요', '「할인 재료」를 눌러 전체를 보세요.') : emptyBox('tag', '등록된 할인 재료가 없어요', '선택한 마트에 전단 데이터가 없어요. 아래에서 직접 추가해 보세요.'));
+    }).join('')) : (dKws.length && activeAll.length ? emptyBox('search', '「'+esc(dKws.join('」, 「'))+'」'+(dKws.length > 1 ? ' 중 어느 것과도' : josaWa(dKws[0]))+' 맞는 할인 재료가 없어요', '<span class="kw-why">검색한 식품이 마트에 없거나, 할인 대상이 아니에요.</span>' + (active.length ? '<span class="kw-why">「할인 재료」를 눌러 전체 기간도 확인해 보세요.</span>' : '') + '<button type="button" class="kw-clear" data-kwclear="1">키워드 모두 지우기</button>') : active.length ? emptyBox('tag', '이 조건에 맞는 할인 재료가 없어요', '「할인 재료」를 눌러 전체를 보세요.') : emptyBox('tag', '등록된 할인 재료가 없어요', '선택한 마트에 전단 데이터가 없어요. 아래에서 직접 추가해 보세요.'));
   }
   renderKws();
   $('dealKwStatus').textContent = dKws.length && marts.length ? '키워드 '+dKws.length+'개 · 할인 재료 '+(shownN||0)+'개' : '';
@@ -2776,6 +2887,11 @@ function recipeItems(){
     var kl = RECIPE_KINDS.filter(function(k){ return rKinds.indexOf(k[0]) >= 0; }).map(function(k){ return k[1]; }).join('·');
     summary += ' <span class="muted small">· '+esc(kl)+' '+items.length.toLocaleString('ko-KR')+'개만 보는 중</span>';
   }
+  // 정렬: 할인 재료로 순위 매긴 레시피끼리, 검색으로만 나온 레시피는 그 뒤에 (조리시간 순이면 그쪽도 정렬)
+  if (rSort.k !== 'rec'){
+    var rs = items.filter(function(it){ return it.s; }), rr = items.filter(function(it){ return !it.s; });
+    items = sortRecipes(rs, rSort, function(it){ return it.s; }).concat(rSort.k === 'time' ? sortRecipes(rr, rSort, function(it){ return it.r; }) : rr);
+  }
   return {items:items, summary:summary, cnt:cnt, marts:marts, sel:sel};
 }
 function renderSelInd(sel){
@@ -2789,6 +2905,7 @@ function renderRecipes(append){
   var R = recipeItems(), items = R.items, summary = R.summary, cnt = R.cnt, marts = R.marts;
   document.querySelectorAll('.kchip').forEach(function(b){ var n = cnt[b.getAttribute('data-kind')]; b.querySelector('.kc').textContent = n != null ? n.toLocaleString('ko-KR') : ''; });
   renderSelInd(R.sel);
+  renderSortBar($('rSortBar'), RECIPE_SORTS, rSort);
   $('recipeSummary').innerHTML = summary;
   if (!items.length){
     $('recipeList').innerHTML = '<div class="card">'+(R.sel.length ? emptyBox('chef', '고른 재료가 들어간 레시피가 없어요', (rKinds.length || rQuery || rCat ? '종류·검색 조건을 풀거나 ' : '') + '할인 재료 탭에서 다른 재료를 골라 보세요.') + '<button class="sec block" id="selClear2">선택 재료 지우기</button>' : rKinds.length && !rQuery && !rCat ? emptyBox('chef', '이 종류에 맞는 레시피가 없어요', '「전체」를 눌러 다른 레시피도 보세요.') : rQuery||rCat ? emptyBox('search', '검색 결과가 없어요', '다른 이름이나 재료로 검색해 보세요.') : emptyBox('chef', '맞는 레시피가 없어요', '다른 마트를 추가하거나 할인 재료를 직접 입력해 보세요.'))+'</div>';
@@ -2797,7 +2914,7 @@ function renderRecipes(append){
   var from = append ? rLimit - PAGE : 0;
   var html = items.slice(from, rLimit).map(function(it, i){
     var n = from + i;
-    if (it.s) return rankedCard(it.s, rQuery || rCat || R.sel.length ? 99 : n);
+    if (it.s) return rankedCard(it.s, rQuery || rCat || R.sel.length || rSort.k !== 'rec' ? 99 : n);
     var head = (marts.length && n > 0 && items[n-1].s) ? '<div class="divider">할인 재료는 없지만 검색된 레시피</div>' : '';
     return head + plainCard(it.r);
   }).join('');

@@ -421,7 +421,7 @@ function buildDealIndex(deals, today){
 }
 
 function scoreRecipe(recipe, idx){
-  var mainTotal = 0, mainHit = 0, anyHit = 0, savings = 0, origSum = 0, saleSum = 0;
+  var mainTotal = 0, mainHit = 0, anyHit = 0, savings = 0, origSum = 0, saleSum = 0, mainCost = 0, nCost = 0;
   var matched = [], missing = [];
   recipe.ings.forEach(function(ing){
     if (ing.main) mainTotal++;
@@ -431,6 +431,7 @@ function scoreRecipe(recipe, idx){
       var best = list[0];
       if (ing.main) mainHit++;
       anyHit++;
+      if (ing.main && best.price!=null){ mainCost += best.price; nCost++; }
       if (ing.main && best.price!=null && best.orig!=null && best.orig > best.price) { savings += best.orig - best.price; origSum += best.orig; saleSum += best.price; }
       matched.push({ing:ing, deal:best, others:list.length-1});
     } else {
@@ -440,7 +441,7 @@ function scoreRecipe(recipe, idx){
   var ratio = mainTotal ? mainHit/mainTotal : 0;
   // 주재료 적중(최대 3개) + 비율 + 부재료 적중 + 절약액 + 직접 다듬은 기본 레시피 가산점
   var score = ratio*20 + Math.min(mainHit,3)*4 + Math.min(anyHit-mainHit,3)*1 + Math.min(savings/1000, 10)*0.4 + (recipe.src === 'pub' ? 0 : 6);
-  return {recipe:recipe, mainTotal:mainTotal, mainHit:mainHit, anyHit:anyHit, ratio:ratio, savings:savings, origSum:origSum, saleSum:saleSum, savePct:(origSum ? Math.round(savings/origSum*100) : 0), matched:matched, missing:missing, score:score};
+  return {recipe:recipe, mainTotal:mainTotal, mainHit:mainHit, anyHit:anyHit, ratio:ratio, savings:savings, origSum:origSum, saleSum:saleSum, savePct:(origSum ? Math.round(savings/origSum*100) : 0), mainCost:(nCost ? mainCost : null), matched:matched, missing:missing, score:score};
 }
 
 function rankRecipes(recipes, deals, today){
@@ -448,6 +449,58 @@ function rankRecipes(recipes, deals, today){
   return recipes.map(function(r){ return scoreRecipe(r, idx); })
     .filter(function(s){ return s.mainHit > 0; })
     .sort(function(a,b){ return b.score - a.score || b.savings - a.savings; });
+}
+
+// ---------- 정렬 ----------
+// 정렬 키마다 기본 방향(dir: -1 큰 값부터, 1 작은 값부터)과 [기본, 반대] 이름. 다시 누르면 rev 로 방향이 바뀌어요.
+// 값이 없는 항목(정가 없는 할인·기간 없는 품목·조리시간 없는 레시피…)은 어느 방향이든 맨 뒤.
+var DEAL_SORTS = [
+  {k:'rec', l:['추천순']},
+  {k:'off', dir:-1, l:['할인율 높은순','할인율 낮은순']},
+  {k:'price', dir:1, l:['가격 낮은순','가격 높은순']},
+  {k:'end', dir:1, l:['마감 임박순','마감 여유순']}
+];
+var RECIPE_SORTS = [
+  {k:'rec', l:['추천순']},
+  {k:'save', dir:-1, l:['절약률 높은순','절약률 낮은순']},
+  {k:'cost', dir:1, l:['비용 낮은순','비용 높은순']},
+  {k:'time', dir:1, l:['조리시간 짧은순','조리시간 긴순']}
+];
+function sortDef(defs, k){ for (var i = 0; i < defs.length; i++) if (defs[i].k === k) return defs[i]; return defs[0]; }
+// 저장된 값 검사 → {k, rev}
+function normSort(defs, v){ var d = sortDef(defs, v && v.k); return {k:d.k, rev: !!(d.dir && v && v.rev)}; }
+// 같은 키를 다시 누르면 방향만 바꾸고(추천순 제외), 다른 키는 기본 방향으로
+function nextSort(defs, cur, k){ var d = sortDef(defs, k); return {k:d.k, rev: d.dir && cur && cur.k === d.k ? !cur.rev : false}; }
+function sortLabel(defs, cur){ var d = sortDef(defs, cur && cur.k); return d.l[d.dir && cur.rev ? 1 : 0]; }
+// 화살표: ↓ 큰 값부터, ↑ 작은 값부터
+function sortArrow(defs, cur){ var d = sortDef(defs, cur && cur.k); if (!d.dir) return ''; return (d.dir * (cur.rev ? -1 : 1)) < 0 ? '↓' : '↑'; }
+function sortBy(list, val, dir){
+  return list.map(function(x, i){ var v = val(x); return {x:x, v:(v == null || v !== v) ? null : v, i:i}; }).sort(function(a, b){
+    var am = a.v === null, bm = b.v === null;
+    if (am || bm) return (am - bm) || (a.i - b.i);
+    return (a.v < b.v ? -1 : a.v > b.v ? 1 : 0) * dir || (a.i - b.i);
+  }).map(function(o){ return o.x; });
+}
+function dealOffPct(d){ return d.price != null && d.orig != null && d.orig > d.price ? (1 - d.price / d.orig) * 100 : null; }
+var DEAL_SORT_VAL = {off:dealOffPct, price:function(d){ return d.price != null ? +d.price : null; }, end:function(d){ return d.end || null; }};
+function sortDeals(deals, cur){
+  var d = sortDef(DEAL_SORTS, cur && cur.k);
+  if (!d.dir) return deals.slice();
+  return sortBy(deals, DEAL_SORT_VAL[d.k], d.dir * (cur.rev ? -1 : 1));
+}
+// items: 점수 매긴 레시피({recipe,…}) 또는 레시피 그 자체
+function recipeSortVal(k, x){
+  var r = x.recipe || x, s = x.recipe ? x : null;
+  if (k === 'save') return s && s.origSum > 0 && s.savings > 0 ? s.savePct : null;
+  if (k === 'cost') return s ? s.mainCost : null;
+  if (k === 'time') return r.mins > 0 ? r.mins : null;
+  return null;
+}
+function sortRecipes(list, cur, get){
+  var d = sortDef(RECIPE_SORTS, cur && cur.k);
+  if (!d.dir) return list.slice();
+  get = get || function(x){ return x; };
+  return sortBy(list, function(x){ return recipeSortVal(d.k, get(x)); }, d.dir * (cur.rev ? -1 : 1));
 }
 
 function formatWon(n){ return n==null ? '' : Number(n).toLocaleString('ko-KR') + '원'; }
@@ -516,4 +569,4 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

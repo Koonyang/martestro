@@ -127,19 +127,21 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if (await p.$$eval('#dealList .deal.picked', x => x.length) !== before) throw new Error('말풍선 태그가 줄 선택을 바꿈');
     await p.keyboard.press('Escape');
   }
-  // 요약 타일 = 필터 버튼 (할인 재료=전체 / 오늘 적용·곧 시작 합집합)
-  const dfState = () => p.evaluate(() => ({ pr: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', b.getAttribute('aria-pressed')])), n: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', +b.querySelector('b').textContent])), rows: document.querySelectorAll('#dealList .deal').length, up: document.querySelectorAll('#dealList .deal .tag.soon').length }));
+  // 요약 타일 = 하나만 고르는 라디오 (할인 재료=전체 / 오늘 적용 / 곧 시작)
+  const dfState = () => p.evaluate(() => ({ role: document.querySelector('#dealSummary .sum').getAttribute('role'), pr: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', b.getAttribute('aria-checked')])), tab: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', b.tabIndex])), roles: [...document.querySelectorAll('#dealSummary button.stat')].every(b => b.getAttribute('role') === 'radio' && !b.hasAttribute('aria-pressed')), n: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', +b.querySelector('b').textContent])), rows: document.querySelectorAll('#dealList .deal').length, up: document.querySelectorAll('#dealList .deal .tag.soon').length, foc: document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.df : null }));
   const dfClick = async k => { await p.click(`#dealSummary button.stat[data-df="${k}"]`); await new Promise(r => setTimeout(r, 150)); return dfState(); };
+  const one = (d, k) => Object.entries(d.pr).every(([kk, v]) => v === (kk === k ? 'true' : 'false'));
   let df = await dfState(); console.log('deal filter default:', df);
-  if (df.pr.all !== 'true' || df.rows !== df.n.all) throw new Error('할인 재료 타일 기본 상태 이상');
+  if (df.role !== 'radiogroup' || !df.roles || df.pr.all !== 'true' || !one(df, 'all') || df.rows !== df.n.all) throw new Error('할인 재료 타일 기본 상태 이상');
   if (df.n.soon) {
-    let d1 = await dfClick('today'); if (d1.pr.all !== 'false' || d1.pr.today !== 'true' || d1.rows !== df.n.today || d1.up !== 0) throw new Error('오늘 적용 필터 이상 ' + JSON.stringify(d1));
-    d1 = await dfClick('soon'); if (d1.pr.today !== 'true' || d1.pr.soon !== 'true' || d1.rows !== df.n.all) throw new Error('오늘+곧 합집합 이상');
-    d1 = await dfClick('today'); if (d1.pr.soon !== 'true' || d1.rows !== df.n.soon || d1.up !== df.n.soon) throw new Error('곧 시작 필터 이상');
-    d1 = await dfClick('soon'); if (d1.pr.all !== 'true' || d1.rows !== df.n.all) throw new Error('마지막 필터 끄면 전체로 안 돌아감');
-    await dfClick('soon'); d1 = await dfClick(''); if (d1.pr.all !== 'true' || d1.pr.soon !== 'false' || d1.rows !== df.n.all) throw new Error('전체 누르면 초기화 안 됨');
-    await p.focus('#dealSummary button.stat[data-df="today"]'); await p.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 150));
-    d1 = await dfState(); if (d1.pr.today !== 'true') throw new Error('키보드로 필터 켜기 이상'); await dfClick('');
+    let d1 = await dfClick('today'); if (!one(d1, 'today') || d1.rows !== df.n.today || d1.up !== 0 || d1.tab.today !== 0 || d1.tab.all !== -1) throw new Error('오늘 적용 필터 이상 ' + JSON.stringify(d1));
+    d1 = await dfClick('soon'); if (!one(d1, 'soon') || d1.rows !== df.n.soon || d1.up !== df.n.soon) throw new Error('곧 시작으로 바꾸면 오늘 적용이 꺼져야 함 ' + JSON.stringify(d1));
+    d1 = await dfClick('soon'); if (!one(d1, 'soon') || d1.rows !== df.n.soon) throw new Error('켜진 타일을 다시 눌러도 그대로여야 함');
+    d1 = await dfClick(''); if (!one(d1, 'all') || d1.rows !== df.n.all) throw new Error('할인 재료 누르면 전체로');
+    d1 = await dfClick(''); if (!one(d1, 'all')) throw new Error('할인 재료 다시 눌러도 그대로');
+    await p.focus('#dealSummary button.stat[data-df=""]'); await p.keyboard.press('ArrowRight'); await new Promise(r => setTimeout(r, 150));
+    d1 = await dfState(); if (!one(d1, 'today') || d1.foc !== 'today') throw new Error('화살표 키로 라디오 이동 이상 ' + JSON.stringify(d1));
+    await p.keyboard.press('ArrowLeft'); await new Promise(r => setTimeout(r, 150)); d1 = await dfState(); if (!one(d1, 'all')) throw new Error('화살표 왼쪽 이상');
   }
   // 키워드 검색: 확인/Enter로 칩 추가(OR), ✕로 지우기, 숫자 타일과 AND, 빈 결과 안내, 고른 재료는 숨겨져도 유지
   {
@@ -319,10 +321,61 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if ((await navState()).on !== 'tab-recipes') throw new Error('✕ 닫으면 직전 탭으로 안 돌아감');
     await p.click('nav button[data-tab="tab-deals"]');
   }
+  // 정렬 알약: 추천순(묶음) / 그 밖은 한 줄로, 다시 누르면 방향 반대, 값 없는 항목은 맨 뒤, localStorage 기억
+  {
+    const W = ms => new Promise(r => setTimeout(r, ms));
+    await p.click('nav button[data-tab="tab-deals"]'); await W(250);
+    const sb = sel => p.evaluate(sel => { const el = document.querySelector(sel); return { hidden: el.hidden, role: el.getAttribute('role'), pills: [...el.querySelectorAll('button.sp')].map(b => ({k: b.dataset.sort, on: b.getAttribute('aria-pressed'), t: b.textContent, al: b.getAttribute('aria-label')})) }; }, sel);
+    const on = b => b.pills.filter(x => x.on === 'true').map(x => x.t).join();
+    const dRows = () => p.evaluate(() => ({ heads: [...document.querySelectorAll('#dealList .ing-h')].map(e => e.firstChild.textContent.trim()), off: [...document.querySelectorAll('#dealList .deal')].map(r => { const o = r.querySelector('.price .off'); return o ? +o.textContent.replace(/[^\d]/g, '') : null; }), price: [...document.querySelectorAll('#dealList .deal')].map(r => { const o = r.querySelector('.price .now'); return o ? +o.textContent.replace(/[^\d]/g, '') : null; }) }));
+    const ordered = (v, desc) => { const f = v.indexOf(null), a = v.slice(0, f < 0 ? v.length : f); return (f < 0 || v.slice(f).every(x => x == null)) && a.every((x, i) => !i || (desc ? x <= a[i-1] : x >= a[i-1])); };
+    let b = await sb('#dSortBar'); const r0 = await dRows();
+    if (b.hidden || b.role !== 'group' || b.pills.map(x => x.k).join() !== 'rec,off,price,end' || on(b) !== '추천순' || r0.heads.length < 2) throw new Error('할인 정렬 기본 상태 이상 ' + JSON.stringify(b));
+    await p.click('#dSortBar [data-sort="off"]'); await W(200); b = await sb('#dSortBar'); let r = await dRows();
+    console.log('deal sort off:', on(b), r.heads, r.off.slice(0, 6), r.off.filter(x => x == null).length);
+    if (on(b) !== '할인율 높은순↓' || r.heads.length !== 1 || r.heads[0] !== '할인율 높은순' || !ordered(r.off, true) || r.off.length !== r0.off.length) throw new Error('할인율 높은순 이상');
+    await p.click('#dSortBar [data-sort="off"]'); await W(200); b = await sb('#dSortBar'); r = await dRows();
+    if (on(b) !== '할인율 낮은순↑' || !ordered(r.off, false) || !/다시 누르면 할인율 높은순/.test(b.pills[1].al)) throw new Error('할인율 낮은순 이상 ' + JSON.stringify(b.pills[1]));
+    if (await p.evaluate(() => localStorage.getItem('mr_dsort')) !== '{"k":"off","rev":true}') throw new Error('할인 정렬 저장 이상');
+    if (await p.evaluate(() => document.activeElement && document.activeElement.dataset.sort) !== 'off') throw new Error('정렬 누른 뒤 포커스 유지 안 됨');
+    await p.click('#dSortBar [data-sort="price"]'); await W(200); b = await sb('#dSortBar'); r = await dRows();
+    if (on(b) !== '가격 낮은순↑' || !ordered(r.price, false)) throw new Error('가격 낮은순 이상');
+    await p.click('#dSortBar [data-sort="price"]'); await W(200); b = await sb('#dSortBar'); r = await dRows();
+    if (on(b) !== '가격 높은순↓' || !ordered(r.price, true)) throw new Error('가격 높은순 이상');
+    await p.click('#dSortBar [data-sort="end"]'); await W(200); b = await sb('#dSortBar'); if (on(b) !== '마감 임박순↑') throw new Error('마감 임박순 이상');
+    await p.click('#dSortBar [data-sort="end"]'); await W(200); b = await sb('#dSortBar'); if (on(b) !== '마감 여유순↓') throw new Error('마감 여유순 이상');
+    // 정렬 + 타일 필터 + 키워드 함께
+    if (df.n.soon) { await dfClick('today'); r = await dRows(); const n = await p.evaluate(() => +document.querySelector('#dealSummary button.stat[data-df="today"] b').textContent); if (r.off.length !== n) throw new Error('정렬+필터 개수 이상'); await dfClick(''); }
+    // 새로고침해도 기억
+    await p.reload({waitUntil: 'networkidle2'}); await W(800);
+    b = await sb('#dSortBar'); if (on(b) !== '마감 여유순↓') throw new Error('새로고침 뒤 할인 정렬 기억 안 됨 ' + on(b));
+    await p.click('#dSortBar [data-sort="rec"]'); await W(200); await p.click('#dSortBar [data-sort="rec"]'); await W(200); b = await sb('#dSortBar'); r = await dRows();
+    if (on(b) !== '추천순' || r.heads.join() !== r0.heads.join()) throw new Error('추천순(재료 묶음) 복귀 이상');
+    // 레시피
+    await p.click('nav button[data-tab="tab-recipes"]'); await W(400);
+    const rRows = () => p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe')].map(c => { const g = c.querySelector('.g-p'), m = [...c.querySelectorAll('.rmeta span')].map(e => e.textContent).find(t => /분$/.test(t)); return { save: g ? +g.textContent.replace(/[^\d]/g, '') : null, mins: m ? +m.replace(/[^\d]/g, '') : null, rank: !!c.querySelector('.rank, .rk, .num') }; }));
+    b = await sb('#rSortBar'); if (b.pills.map(x => x.k).join() !== 'rec,save,cost,time' || on(b) !== '추천순') throw new Error('레시피 정렬 기본 이상');
+    await p.click('#rSortBar [data-sort="save"]'); await W(300); b = await sb('#rSortBar'); let rr = await rRows();
+    if (on(b) !== '절약률 높은순↓' || !ordered(rr.map(x => x.save), true)) throw new Error('절약률 높은순 이상');
+    if (await p.$('#btnMore') && await p.evaluate(() => getComputedStyle(document.getElementById('btnMore')).display !== 'none')) { await p.click('#btnMore'); await W(400); const r2 = await rRows(); if (r2.length <= rr.length || !ordered(r2.map(x => x.save), true)) throw new Error('더 보기 뒤 정렬 이상'); }
+    await p.click('#rSortBar [data-sort="save"]'); await W(300); b = await sb('#rSortBar'); rr = await rRows();
+    if (on(b) !== '절약률 낮은순↑' || !ordered(rr.map(x => x.save), false)) throw new Error('절약률 낮은순 이상');
+    await p.click('#rSortBar [data-sort="cost"]'); await W(300); b = await sb('#rSortBar'); if (on(b) !== '비용 낮은순↑') throw new Error('비용 낮은순 이상');
+    await p.click('#rSortBar [data-sort="cost"]'); await W(300); b = await sb('#rSortBar'); if (on(b) !== '비용 높은순↓') throw new Error('비용 높은순 이상');
+    await p.click('#rSortBar [data-sort="time"]'); await W(300); b = await sb('#rSortBar'); rr = await rRows();
+    if (on(b) !== '조리시간 짧은순↑' || !ordered(rr.map(x => x.mins), false)) throw new Error('조리시간 짧은순 이상');
+    await p.click('#rSortBar [data-sort="time"]'); await W(300); b = await sb('#rSortBar'); rr = await rRows();
+    if (on(b) !== '조리시간 긴순↓' || !ordered(rr.map(x => x.mins), true)) throw new Error('조리시간 긴순 이상');
+    if (await p.evaluate(() => localStorage.getItem('mr_rsort')) !== '{"k":"time","rev":true}') throw new Error('레시피 정렬 저장 이상');
+    console.log('recipe sort time desc:', rr.slice(0, 5).map(x => x.mins));
+    await p.click('#rSortBar [data-sort="rec"]'); await W(300);
+    await p.click('nav button[data-tab="tab-deals"]'); await W(250);
+    console.log('sort pills OK');
+  }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
-    const gap = await p.evaluate(() => { const t = document.querySelector('#tab-recipes .tools').getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
-    console.log('recipes tools gap:', gap); if (gap.sw || gap.gap < 12 || gap.gap > 32) throw new Error('레시피 탭 스위치/간격 이상 ' + JSON.stringify(gap));
+    const gap = await p.evaluate(() => { const t = document.getElementById('rSortBar').getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
+    console.log('recipes tools gap:', gap); if (gap.sw || gap.gap < 10 || gap.gap > 32) throw new Error('레시피 탭 스위치/간격 이상 ' + JSON.stringify(gap));
     await p.click('nav button[data-tab="tab-deals"]'); }
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
   console.log('nav:', await p.$$eval('nav button', bs => bs.map(b => b.innerText.trim()).join(' | ')));
