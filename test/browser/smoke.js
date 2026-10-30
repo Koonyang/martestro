@@ -161,6 +161,8 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.type('#dSearch', 'zzqq없는말'); await p.click('#dSearchGo'); await W(100); await p.click('#dealKws button.kw-x[data-kw="0"]'); await W(150);
     const ke = await kwState(); if (ke.rows || !ke.empty) throw new Error('빈 결과 안내 이상 ' + JSON.stringify(ke));
     const emptyTxt = await p.$eval('#dealList .empty', e => e.innerText); if (!/zzqq없는말/.test(emptyTxt)) throw new Error('빈 결과 문구 ' + emptyTxt);
+    const why = await p.$eval('#dealList .empty .kw-why', e => ({ t: e.textContent, fs: parseFloat(getComputedStyle(e).fontSize), hfs: parseFloat(getComputedStyle(e.closest('.empty').querySelector('b')).fontSize) }));
+    if (why.t !== '검색한 식품이 마트에 없거나, 할인 대상이 아니에요.' || !(why.fs < why.hfs)) throw new Error('빈 결과 이유 문구 이상 ' + JSON.stringify(why));
     await p.click('#dealList .empty button[data-kwclear]'); await W(150);
     const k0 = await kwState(); if (k0.kws.length || k0.rows !== base.rows || (await p.evaluate(() => document.activeElement.id)) !== 'dSearch') throw new Error('키워드 모두 지우기 이상');
     if (!(await p.$eval(`#dealList .deal[data-sel="${pkName}"]`, e => e.classList.contains('picked')))) throw new Error('검색으로 숨겨졌던 고른 재료가 풀림');

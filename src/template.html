@@ -211,7 +211,8 @@ button.stat[aria-pressed=true] span{color:var(--g)}
 .kw .kw-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
 .kw .kw-x:focus-visible,button.kw-clear:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 button.kw-clear{background:none;box-shadow:none;min-height:32px;padding:4px 6px;font-size:13px;font-weight:650;color:var(--t2);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--g) 70%,transparent);text-underline-offset:3px}
-.empty button.kw-clear{margin-top:8px;font-size:14px}
+.empty .kw-why{display:block;font-size:13px;color:var(--m);line-height:1.55}
+.empty button.kw-clear{margin-top:10px;font-size:14px}
 @media (prefers-color-scheme:dark){.kw{background:#26324F;color:#EEF1F8}}
 .sel-ind .si-k{color:var(--g);font-weight:800;flex:0 0 auto;font-size:12.5px}
 .sel-ind .si-v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -954,7 +955,7 @@ function renderDeals(){
     var keys = Object.keys(groups).sort(function(a,b){ return (a==='기타')-(b==='기타') || groups[b].length - groups[a].length; });
     $('dealList').innerHTML = keys.length ? keys.map(function(k){
       return '<div class="ing-h">'+esc(k)+' <span>'+groups[k].length+'</span></div>' + groups[k].map(dealRow).join('');
-    }).join('') : (dKws.length && activeAll.length ? emptyBox('search', '「'+esc(dKws.join('」, 「'))+'」'+(dKws.length > 1 ? ' 중 어느 것과도' : josaWa(dKws[0]))+' 맞는 할인 재료가 없어요', (active.length ? '「할인 재료」를 눌러 전체 기간을 보거나 ' : '') + '다른 키워드로 찾아 보세요.<br><button type="button" class="kw-clear" data-kwclear="1">키워드 모두 지우기</button>') : active.length ? emptyBox('tag', '이 조건에 맞는 할인 재료가 없어요', '「할인 재료」를 눌러 전체를 보세요.') : emptyBox('tag', '등록된 할인 재료가 없어요', '선택한 마트에 전단 데이터가 없어요. 아래에서 직접 추가해 보세요.'));
+    }).join('') : (dKws.length && activeAll.length ? emptyBox('search', '「'+esc(dKws.join('」, 「'))+'」'+(dKws.length > 1 ? ' 중 어느 것과도' : josaWa(dKws[0]))+' 맞는 할인 재료가 없어요', '<span class="kw-why">검색한 식품이 마트에 없거나, 할인 대상이 아니에요.</span>' + (active.length ? '<span class="kw-why">「할인 재료」를 눌러 전체 기간도 확인해 보세요.</span>' : '') + '<button type="button" class="kw-clear" data-kwclear="1">키워드 모두 지우기</button>') : active.length ? emptyBox('tag', '이 조건에 맞는 할인 재료가 없어요', '「할인 재료」를 눌러 전체를 보세요.') : emptyBox('tag', '등록된 할인 재료가 없어요', '선택한 마트에 전단 데이터가 없어요. 아래에서 직접 추가해 보세요.'));
   }
   renderKws();
   $('dealKwStatus').textContent = dKws.length && marts.length ? '키워드 '+dKws.length+'개 · 할인 재료 '+(shownN||0)+'개' : '';
