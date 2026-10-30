@@ -168,19 +168,22 @@ body.deals-on .top.scrolled{border-bottom-color:transparent}
 .dhead .page-h p{font-size:13px;line-height:1.35}
 .dhead .page-h p span{white-space:nowrap}
 #dealSummary:empty{display:none}
-.dfsw{display:flex;align-items:center;flex:none;margin-right:-8px}
-.dfa{display:flex;align-items:center;justify-content:center;width:40px;height:44px;min-height:0;padding:0;border:0;background:none;box-shadow:none;color:var(--g);cursor:pointer;border-radius:12px}
+.dfsw{display:flex;align-items:center;flex:none;margin-right:-10px}
+.dfa{display:flex;align-items:center;justify-content:center;width:44px;height:60px;min-height:0;padding:0;border:0;background:none;box-shadow:none;color:var(--g);cursor:pointer;border-radius:14px;-webkit-tap-highlight-color:transparent}
 .dfa:hover{filter:none;background:none}
-.dfa:focus-visible{outline:2px solid var(--g);outline-offset:-4px}
-.dfa svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.dfa[hidden]{display:none}
-.dfv{width:74px;text-align:center;overflow:hidden}
+.dfa:focus-visible{outline:2px solid var(--g);outline-offset:-6px}
+.dfa svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.dfa[hidden]{visibility:hidden;display:flex}
+.dfv{width:70px;text-align:center;overflow:hidden}
 .dfv>span{display:block;white-space:nowrap}
-.dfn{font-size:15px;font-weight:800;letter-spacing:-.03em;color:var(--t)}
-.dfc{font-size:11.5px;font-weight:600;color:var(--m)}
+.dfn{font-size:12.5px;font-weight:700;color:var(--t2);letter-spacing:-.02em}
+.dfc{font-size:21px;font-weight:800;letter-spacing:-.03em;color:var(--t)}
 .dfv.in-r>span{animation:dfR .2s var(--ease) both}.dfv.in-l>span{animation:dfL .2s var(--ease) both}
 @keyframes dfR{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
 @keyframes dfL{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.dfdots{display:flex;justify-content:center;align-items:center;gap:4px;height:10px;margin-top:2px}
+.dfdots i{display:block;width:5px;height:5px;border-radius:3px;background:var(--m);opacity:.45;transition:width .25s var(--ease),opacity .25s,background .25s}
+.dfdots i.on{width:16px;opacity:1;background:var(--g)}
 .dlist-card .sortbar{margin:11px -4px 0}
 .dlist-card{margin-top:16px;padding-top:6px}
 #tab-deals .ing-h{top:calc(var(--hdrH,56px) + var(--dsH,60px))}
@@ -1044,20 +1047,23 @@ document.addEventListener('click', function(e){
 });
 
 // 보기 필터 = 「‹ 전체 ›」 화살표로 넘기는 하나만 고르기 (''=전체 / today=오늘 적용 / soon=곧 시작, 끝에서 처음으로 돌아가요)
-var dFilt = '', dfOpts = [], dfDir = 0;
+var dFilt = '', dfOpts = [], dfDir = 0, dfPrev = -1;
 var CHEV = function(d){ return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+(d<0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7')+'"/></svg>'; };
 function dfSwitch(){
   var i = Math.max(0, dfOpts.map(function(o){ return o.k; }).indexOf(dFilt)), o = dfOpts[i], n = dfOpts.length, many = n > 1;
   var nb = function(d){ return dfOpts[(i + d + n) % n].l; };
   return '<div class="dfsw" role="group" aria-label="할인 재료 보기 (화살표로 넘겨요)" data-cur="'+o.k+'" data-n="'+dfOpts.map(function(x){ return x.n; }).join(',')+'">' +
     '<button type="button" class="dfa" data-step="-1" aria-label="이전 보기: '+nb(-1)+'"'+(many?'':' hidden')+'>'+CHEV(-1)+'</button>' +
-    '<div class="dfv'+(dfDir>0?' in-r':dfDir<0?' in-l':'')+'" aria-live="polite"><span class="dfn">'+o.l+'</span><span class="dfc">'+o.n+'개</span></div>' +
+    '<div class="dfv'+(dfDir>0?' in-r':dfDir<0?' in-l':'')+'" aria-live="polite"><span class="dfn">'+o.l+'</span><span class="dfc" aria-label="'+o.n+'개">'+o.n+'</span>' +
+    (many ? '<div class="dfdots" aria-hidden="true">'+dfOpts.map(function(x, j){ return '<i'+(j === (dfPrev < 0 ? i : dfPrev) ? ' class="on"' : '')+'></i>'; }).join('')+'</div>' : '') + '</div>' +
     '<button type="button" class="dfa" data-step="1" aria-label="다음 보기: '+nb(1)+'"'+(many?'':' hidden')+'>'+CHEV(1)+'</button></div>';
 }
 function stepDealFilt(d){
   var n = dfOpts.length; if (n < 2) return;
   var i = Math.max(0, dfOpts.map(function(o){ return o.k; }).indexOf(dFilt));
-  dFilt = dfOpts[(i + d + n) % n].k; dfDir = d; renderDeals(); dfDir = 0;
+  var j = (i + d + n) % n; dFilt = dfOpts[j].k; dfDir = d; dfPrev = i; renderDeals(); dfDir = 0; dfPrev = -1;
+  var dots = document.querySelectorAll('#dealSummary .dfdots i'); // 점은 예전 자리에서 그려 두고 다음 프레임에 옮겨 길쭉한 막대가 늘고 줄게
+  if (dots.length) requestAnimationFrame(function(){ requestAnimationFrame(function(){ [].forEach.call(dots, function(e, k){ e.classList.toggle('on', k === j); }); }); });
   var b = document.querySelector('#dealSummary .dfa[data-step="'+d+'"]'); if (b) b.focus();
 }
 $('dealSummary').addEventListener('click', function(e){

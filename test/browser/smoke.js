@@ -142,17 +142,17 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   }
   const dfState = () => p.evaluate(() => { const sw = document.querySelector('#dealSummary .dfsw'), ks = ['all', 'today', 'soon'], ns = sw.dataset.n.split(',').map(Number);
     return { cur: sw.dataset.cur || 'all', name: sw.querySelector('.dfn').textContent, cnt: parseInt(sw.querySelector('.dfc').textContent), boxes: document.querySelectorAll('#dealSummary .stat, #dealSummary .sum').length,
-      arrows: [...sw.querySelectorAll('.dfa')].filter(b => !b.hidden).map(b => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }),
+      arrows: [...sw.querySelectorAll('.dfa')].filter(b => !b.hidden).map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }), dots: [...sw.querySelectorAll('.dfdots i')].map(e => e.classList.contains('on') ? Math.round(e.getBoundingClientRect().width) : -Math.round(e.getBoundingClientRect().width)),
       n: Object.fromEntries(ns.map((v, i) => [ks[i], v])), rows: document.querySelectorAll('#dealList .deal').length, up: document.querySelectorAll('#dealList .deal .tag.soon').length,
       foc: document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.step : null }; });
-  const dfStep = async d => { await p.click(`#dealSummary .dfa[data-step="${d}"]`); await new Promise(r => setTimeout(r, 150)); return dfState(); };
+  const dfStep = async d => { await p.click(`#dealSummary .dfa[data-step="${d}"]`); await new Promise(r => setTimeout(r, 400)); return dfState(); };
   const dfClick = async k => { for (let t = 0; t < 3; t++) { const s = await dfState(); if (s.cur === (k || 'all')) return s; await dfStep(1); } return dfState(); };
   const NAME = { all: '전체', today: '오늘 적용', soon: '곧 시작' };
-  const one = (d, k) => d.cur === k && d.name === NAME[k] && d.cnt === d.n[k] && d.rows === d.n[k];
+  const one = (d, k) => d.cur === k && d.name === NAME[k] && d.cnt === d.n[k] && d.rows === d.n[k] && (!d.dots.length || (d.dots.filter(x => x > 0).length === 1 && d.dots[Object.keys(NAME).indexOf(k)] > 8));
   let df = await dfState(); console.log('deal filter default:', df);
   if (df.boxes || !one(df, 'all')) throw new Error('할인 재료 보기 기본 상태 이상 ' + JSON.stringify(df));
   if (df.n.soon) {
-    if (df.arrows.length !== 2 || df.arrows.some(x => x < 40)) throw new Error('화살표 터치 영역 이상 ' + JSON.stringify(df.arrows));
+    if (df.arrows.length !== 2 || df.arrows.some(([w, h]) => w < 44 || h < 56) || df.dots.length !== 3) throw new Error('화살표 터치 영역 이상 ' + JSON.stringify(df.arrows));
     let d1 = await dfStep(1); if (!one(d1, 'today') || d1.up !== 0 || d1.foc !== '1') throw new Error('› 누르면 오늘 적용 ' + JSON.stringify(d1));
     d1 = await dfStep(1); if (!one(d1, 'soon') || d1.up !== df.n.soon) throw new Error('› 한 번 더 누르면 곧 시작 ' + JSON.stringify(d1));
     d1 = await dfStep(1); if (!one(d1, 'all')) throw new Error('끝에서 › 누르면 전체로 돌아와야 함 ' + JSON.stringify(d1));
