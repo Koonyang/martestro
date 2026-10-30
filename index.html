@@ -46,6 +46,18 @@ svg.i{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-
 .brand{display:flex;align-items:center;gap:9px;color:var(--t);text-decoration:none!important}
 .brand svg{width:30px;height:30px;border-radius:9px;flex:0 0 auto}
 .brand .wm{font-family:"Great Vibes","Snell Roundhand","Apple Chancery","Brush Script MT",cursive;font-weight:400;font-size:31px;line-height:1;letter-spacing:0;padding-top:4px;color:var(--a-ink)}
+/* 헤더 오른쪽 위: 위치·마트 설정 버튼 (지금 위치 이름을 작게) — 설정 화면에선 ✕ 닫기 */
+button.hdr-btn{min-height:40px;padding:4px 4px 4px 10px;gap:7px;border-radius:999px;background:transparent;color:var(--t2);font-size:12.5px;font-weight:600;max-width:58%}
+button.hdr-btn:hover{filter:none;background:color-mix(in srgb,var(--a2) 70%,transparent)}
+button.hdr-btn:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+.hdr-btn .hb-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--m)}
+.hdr-btn .hb-l:empty{display:none}
+.hdr-btn .hb-ic{width:36px;height:36px;border-radius:12px;background:var(--a);color:var(--a-on);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;box-shadow:inset 0 0 0 1.5px var(--g)}
+.hdr-btn .hb-ic svg.i{width:19px;height:19px;--ff:color-mix(in srgb,var(--g) 55%,transparent)}
+.hdr-btn .ic-x{display:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+body.setup .hdr-btn .ic-pin{display:none}
+body.setup .hdr-btn .ic-x{display:block}
+body.setup .hdr-btn .hb-ic{background:var(--a2);color:var(--a-ink);box-shadow:none}
 .stamp{font-size:12px;color:var(--m);font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
 .stamp:empty{display:none}
 .stamp::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--g)}
@@ -431,11 +443,12 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="url(#lgM)"/><path d="M9 23 21.5 10.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="9.6" cy="22.4" r="3.1" fill="#C9A227"/><path d="M20.2 11.8c-.6-3.4 1.6-5.6 5.6-5.6 0 4-2.2 6.2-5.6 5.6z" fill="#E2C55A"/></svg>
       <span class="wm">Martestro</span>
     </a>
+    <button type="button" id="btnSetup" class="hdr-btn" aria-label="위치·마트 설정" aria-controls="tab-loc" aria-expanded="false"><span class="hb-l" id="locName"></span><span class="hb-ic" aria-hidden="true"><svg class="i ic-pin"><use href="#i-pin"/></svg><svg class="i ic-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span></button>
   </div>
 </header>
 
 <main>
-<!-- ① 위치·마트 -->
+<!-- ① 위치·마트 설정 화면 (헤더 오른쪽 위 버튼으로 열고 닫아요. 하단 탭에는 없어요) -->
 <section class="tab on" id="tab-loc">
   <div class="hero">
     <h1>오늘의 <em>요리 지휘자</em></h1>
@@ -557,7 +570,6 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 <button id="fabR" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-pot"/></svg><span>해당 재료로 레시피 추천 <i class="sep">·</i></span><b id="fabRN">0개</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인 <i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <nav aria-label="메뉴"><div class="nav-in">
-  <button data-tab="tab-loc" class="on"><svg class="i"><use href="#i-pin"/></svg>위치·마트</button>
   <button data-tab="tab-deals"><svg class="i"><use href="#i-tag"/></svg>할인 재료</button>
   <button data-tab="tab-recipes"><svg class="i"><use href="#i-pot"/></svg>레시피 추천</button>
 </div></nav>
@@ -2096,13 +2108,19 @@ var state = {
   onlyFull: false
 };
 
-function persist(){ save('mr_loc', state.loc); save('mr_marts', state.marts); save('mr_sel', state.selected); save('mr_custom', state.custom); }
+function persist(){ save('mr_opt', {r: $('radius').value, conv: $('incConv').checked}); save('mr_loc', state.loc); save('mr_marts', state.marts); save('mr_sel', state.selected); save('mr_custom', state.custom); }
 
 // ---------- 탭 ----------
 document.querySelectorAll('nav button').forEach(function(b){
   b.addEventListener('click', function(){ showTab(b.getAttribute('data-tab')); });
 });
+var lastTab = 'tab-deals';
 function showTab(id){
+  var setup = id === 'tab-loc';
+  if (!setup) lastTab = id;
+  document.body.classList.toggle('setup', setup);
+  $('btnSetup').setAttribute('aria-expanded', setup ? 'true' : 'false');
+  $('btnSetup').setAttribute('aria-label', setup ? '위치·마트 설정 닫기' : '위치·마트 설정' + (state.loc ? ' (지금: ' + state.loc.label + ')' : ''));
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on', t.id===id); });
   document.querySelectorAll('nav button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-tab')===id); });
   if (id==='tab-deals') renderDeals();
@@ -2110,6 +2128,11 @@ function showTab(id){
   window.scrollTo(0,0);
   if (typeof updateFab === 'function') updateFab();
 }
+// 헤더 오른쪽 위 버튼: 설정 화면 열기 ↔ 닫기(직전 탭으로)
+$('btnSetup').addEventListener('click', function(){ showTab(document.body.classList.contains('setup') ? lastTab : 'tab-loc'); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && document.body.classList.contains('setup') && !document.querySelector('.tip-pop:not([hidden])')) showTab(lastTab); });
+function shortLoc(l){ if (!l) return ''; var t = String(l.label || ''); if (t === '현재 위치') return t; return t.split(',')[0].trim(); }
+function renderLocName(){ $('locName').textContent = shortLoc(state.loc); if (!document.body.classList.contains('setup')) $('btnSetup').setAttribute('aria-label', '위치·마트 설정' + (state.loc ? ' (지금: ' + state.loc.label + ')' : '')); }
 window.addEventListener('scroll', function(){ $('top').classList.toggle('scrolled', window.scrollY > 4); }, {passive:true});
 
 // ---------- 위치 ----------
@@ -2127,6 +2150,7 @@ $('btnGeo').addEventListener('click', function(){
   navigator.geolocation.getCurrentPosition(function(pos){
     btn.disabled = false; btn.innerHTML = GEO_LABEL;
     setLocation(pos.coords.latitude, pos.coords.longitude, '현재 위치');
+    nameHere(state.loc);
   }, function(err){
     btn.disabled = false; btn.innerHTML = GEO_LABEL;
     var msg = err.code===1 ? '위치 권한이 거부됐어요.' : '위치를 가져오지 못했어요.';
@@ -2135,6 +2159,17 @@ $('btnGeo').addEventListener('click', function(){
   }, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
 });
 
+// GPS로 정한 위치의 동네 이름 (헤더에 작게 보여 줘요) — 실패하면 「현재 위치」 그대로
+function nameHere(L0){
+  if (!window.fetch || !L0) return;
+  fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=16&accept-language=ko&lat=' + L0.lat + '&lon=' + L0.lon).then(function(r){ return r.ok ? r.json() : null; }).then(function(js){
+    var a = js && js.address; if (!a || state.loc !== L0) return;
+    var n = a.quarter || a.suburb || a.neighbourhood || a.village || a.city_district || a.town || a.borough || a.city;
+    if (!n) return;
+    L0.label = n; persist(); renderLocName();
+    var st = $('locStatus').querySelector('b'); if (st && st.textContent === '현재 위치') st.textContent = n;
+  }).catch(function(){});
+}
 function geocode(){
   var q = $('addr').value.trim(); if (!q) return;
   var btn = $('btnAddr'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
@@ -2155,7 +2190,7 @@ $('radius').addEventListener('change', function(){ syncSeg(); if (state.loc) fin
 $('incConv').addEventListener('change', function(){ if (state.loc) findMarts(); });
 
 function setLocation(lat, lon, label){
-  state.loc = {lat:lat, lon:lon, label:label}; persist();
+  state.loc = {lat:lat, lon:lon, label:label}; persist(); renderLocName();
   scrollPending = state.loc;   // 새 위치일 때만 목록으로 자동 스크롤 (반경·편의점 토글은 제외)
   findMarts();
 }
@@ -2207,6 +2242,7 @@ function applyMarts(list, how){
   setStatus('<b>'+esc(L0.label)+'</b> 기준 · 마트 '+state.marts.length+'곳을 찾았어요.' + (how ? ' <span class="muted small">'+how+'</span>' : ''));
   renderMarts();
   scrollToMarts();
+  if (!document.body.classList.contains('setup')){ if (!selectedMarts().length) showTab('tab-loc'); else { var on = document.querySelector('section.tab.on'); if (on && on.id === 'tab-deals') renderDeals(); } }
 }
 var skTimer = null;
 function findMarts(){
@@ -2372,7 +2408,7 @@ $('brandChips').addEventListener('click', function(e){
 
 // ---------- 선택된 마트 → 할인 목록 ----------
 function martById(id){
-  if (id.indexOf('brand:') === 0){ var b = id.slice(6); return {id:id, name:BRANDS[b].label, brand:b, virtual:true}; }
+  if (id.indexOf('brand:') === 0){ var b = id.slice(6); if (!BRANDS[b]) return null; return {id:id, name:BRANDS[b].label, brand:b, virtual:true}; }
   for (var i=0;i<state.marts.length;i++) if (state.marts[i].id===id) return state.marts[i];
   if (state.custom[id]) return {id:id, name:state.custom[id].name, brand:state.custom[id].brand||'local'};
   return null;
@@ -2442,7 +2478,7 @@ function renderDeals(){
   var marts = selectedMarts(), shownN = 0;
   if (!marts.length){
     $('dealSummary').innerHTML = '';
-    $('dealList').innerHTML = emptyBox('basket', '선택한 마트가 없어요', '「위치·마트」 탭에서 마트를 체크하거나<br>「위치 설정 없이 대형마트 정보 확인」에서 마트를 골라 주세요.') + '<button class="sec block" data-go="tab-loc">마트 고르러 가기</button>';
+    $('dealList').innerHTML = emptyBox('basket', '선택한 마트가 없어요', '오른쪽 위 위치 버튼을 눌러 주변 마트를 체크하거나<br>「위치 설정 없이 대형마트 정보 확인」에서 마트를 골라 주세요.') + '<button class="sec block" data-go="tab-loc">마트 고르러 가기</button>';
   } else {
     var deals = collectDeals(), today = todayStr();
     var activeAll = deals.filter(function(d){ return isActive(d, today); });
@@ -2804,7 +2840,23 @@ $('btnReset').addEventListener('click', function(){
 // 빈 화면의 바로가기 버튼
 document.addEventListener('click', function(e){ var g = e.target.closest && e.target.closest('[data-go]'); if (g) showTab(g.getAttribute('data-go')); });
 // ---------- 시작 ----------
+// 저장된 위치·마트 복원: 쓸 수 있는 마트가 남아 있으면 바로 「할인 재료」, 없으면 설정 화면
+(function restore(){
+  var opt = load('mr_opt', null);
+  if (opt){ if ([].some.call($('radius').options, function(o){ return o.value === String(opt.r); })) $('radius').value = String(opt.r); $('incConv').checked = !!opt.conv; syncSeg(); }
+  if (state.loc && !(isFinite(state.loc.lat) && isFinite(state.loc.lon))) state.loc = null;
+  if (!Array.isArray(state.marts)) state.marts = [];
+  state.marts = state.marts.filter(function(m){ return m && m.id && m.brand; });
+  if (!Array.isArray(state.selected)) state.selected = [];
+  state.selected = state.selected.filter(function(id, i, a){ return typeof id === 'string' && a.indexOf(id) === i && (id.indexOf('brand:') === 0 ? !!BRANDS[id.slice(6)] : !!martById(id)); });
+  persist();
+})();
+renderLocName();
 renderMarts();
+if (state.loc) setStatus('<b>'+esc(state.loc.label)+'</b> 기준 · 마트 '+state.marts.length+'곳 (저장된 목록)');
+showTab(selectedMarts().length ? 'tab-deals' : 'tab-loc');
+// 저장된 위치가 있으면 마트 목록을 조용히 새로 받아요 (없어진 마트는 선택에서 빠져요)
+if (state.loc && selectedMarts().length) findMarts();
 if (window.fetch && location.protocol !== 'file:') loadMartIndex().then(function(ix){ $('martDataDate').textContent = ' (기준일 '+ix.date+' · 마트 '+(ix.count.big+ix.count.s).toLocaleString('ko-KR')+'곳, 편의점 '+ix.count.c.toLocaleString('ko-KR')+'곳)'; }).catch(function(){});
 // 최신 전단 데이터(data/deals.json)를 받아 와서 바꿔 끼우기 — 실패하면 앱에 들어 있는 데이터 그대로 사용
 if (window.fetch && location.protocol !== 'file:') {

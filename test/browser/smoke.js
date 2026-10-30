@@ -44,6 +44,11 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   async function useAddr(place) { await p.$eval('#addr', e => { e.value = ''; }); await p.type('#addr', place); await p.click('#btnAddr'); }
   async function useGeo(place) { const [latitude, longitude] = PLACES[place]; await p.setGeolocation({ latitude, longitude }); await p.click('#btnGeo'); }
   if (await p.$('#presets')) throw new Error('빠른 위치 설정 줄이 아직 있어요');
+  // 첫 방문: 저장된 게 없으면 위치·마트 설정 화면이 바로 열려요. 하단 탭은 「할인 재료 | 레시피 추천」 두 개
+  const openSetup = async () => { if (!(await p.evaluate(() => document.body.classList.contains('setup')))) { await p.click('#btnSetup'); await new Promise(r => setTimeout(r, 200)); } };
+  const navState = () => p.evaluate(() => ({ setup: document.body.classList.contains('setup'), on: (document.querySelector('section.tab.on') || {}).id, nav: [...document.querySelectorAll('nav button')].map(b => b.innerText.trim()).join(' | '), exp: document.getElementById('btnSetup').getAttribute('aria-expanded'), label: document.getElementById('btnSetup').getAttribute('aria-label'), loc: document.getElementById('locName').textContent }));
+  { const n0 = await navState(); console.log('first visit:', n0);
+    if (!n0.setup || n0.on !== 'tab-loc' || n0.nav !== '할인 재료 | 레시피 추천' || n0.exp !== 'true' || n0.label !== '위치·마트 설정 닫기') throw new Error('첫 방문 설정 화면 이상 ' + JSON.stringify(n0)); }
   // 첫 화면 문구
   { const hero = await p.evaluate(() => { const h = document.querySelector('.hero'); return { h1: h.querySelector('h1').textContent, em: (h.querySelector('h1 em') || {}).textContent, sub: h.querySelector('.sub').textContent, eyebrow: !!h.querySelector('.eyebrow') || /MAESTRO/.test(h.textContent), title: document.title }; });
     if (hero.h1 !== '오늘의 요리 지휘자' || hero.em !== '요리 지휘자' || hero.sub !== '동네 마트 재료로 찬거리를 골라드려요.' || hero.eyebrow || /할인 재료를 지휘하는/.test(hero.title)) throw new Error('첫 화면 문구 이상 ' + JSON.stringify(hero)); }
@@ -59,7 +64,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   console.log('no-location deals:', noLocDeals.slice(0, 60)); if (!/이마트/.test(noLocDeals)) throw new Error('위치 없이 이마트 전단 안 보임');
   if (/전국 전단|공통 전단/.test(noLocDeals)) throw new Error('요약에 (전국 전단) 남음: ' + noLocDeals.slice(0, 80));
   await p.$$eval('#brandChips button', bs => bs.find(x => x.innerText.includes('이마트')).click());
-  await p.click('nav button[data-tab="tab-loc"]');
+  await openSetup();
   // 새 위치가 정해지면 마트 목록으로 자동 스크롤되는지 (반경 변경 때는 안 움직임)
   const listTop = () => p.evaluate(() => { const c = document.getElementById('martList').closest('.card'); return { y: scrollY, top: Math.round(c.getBoundingClientRect().top), hdr: Math.round(document.getElementById('top').getBoundingClientRect().height) }; });
   const settle = () => p.waitForFunction(() => { const y = scrollY; return new Promise(r => setTimeout(() => r(scrollY === y), 250)); }, { timeout: 5000 }).catch(() => {});
@@ -101,9 +106,9 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   const cover = await p.evaluate(() => { const cs = document.querySelectorAll('#tab-loc .card'), last = cs[cs.length - 1].getBoundingClientRect(), f = document.getElementById('fab').getBoundingClientRect(); return { lastBottom: Math.round(last.bottom), fabTop: Math.round(f.top) }; });
   console.log('fab vs last row:', cover); if (cover.lastBottom > cover.fabTop) throw new Error('버튼이 마지막 마트를 가려요');
   await p.click('#fab'); await new Promise(r => setTimeout(r, 400));
-  const after = await p.evaluate(() => ({ tab: document.querySelector('section.tab.on').id, y: scrollY, fab: document.getElementById('fab').classList.contains('show') }));
-  console.log('fab click:', after); if (after.tab !== 'tab-deals' || after.y !== 0 || after.fab) throw new Error('버튼 눌러도 할인 재료 탭으로 안 감');
-  await p.click('nav button[data-tab="tab-loc"]'); await new Promise(r => setTimeout(r, 300));
+  const after = await p.evaluate(() => ({ tab: document.querySelector('section.tab.on').id, y: scrollY, fab: document.getElementById('fab').classList.contains('show'), setup: document.body.classList.contains('setup') }));
+  console.log('fab click:', after); if (after.tab !== 'tab-deals' || after.y !== 0 || after.fab || after.setup) throw new Error('버튼 눌러도 할인 재료 탭으로 안 감');
+  await openSetup(); await new Promise(r => setTimeout(r, 300));
   await p.$$eval('#martList input:checked', els => els.forEach(e => e.click())); await new Promise(r => setTimeout(r, 500));
   if (await p.$eval('#fab', e => e.classList.contains('show'))) throw new Error('0곳인데 버튼이 보여요');
   await p.$eval('input[data-id="node/4655465094"]', e => e.click()); await new Promise(r => setTimeout(r, 300));
@@ -203,7 +208,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.mouse.click(195, 120); if (await tipState()) throw new Error('바깥 눌러도 안 닫힘');
   await p.click(chkSel); await p.evaluate(() => scrollBy(0, 60)); await new Promise(r => setTimeout(r, 150)); if (await tipState()) throw new Error('스크롤해도 안 닫힘');
   // 마트 목록의 「전단 판독 · 가격확인」 태그는 눌러도 마트 체크가 안 바뀌어야 해요
-  await p.click('nav button[data-tab="tab-loc"]');
+  await openSetup();
   const mt = await p.$('#martList button.tipb'); if (mt) { await mt.evaluate(e => e.scrollIntoView({ block: 'center' })); const id = await mt.evaluate(e => e.closest('.mart').querySelector('input').dataset.id); const c0 = await p.$eval(`input[data-id="${id}"]`, e => e.checked);
     await mt.click(); const tm = await tipState(); const c1 = await p.$eval(`input[data-id="${id}"]`, e => e.checked); console.log('tip(mart):', tm && tm.text, 'checked same:', c0 === c1);
     if (!tm || c0 !== c1) throw new Error('마트 줄 가격확인 태그가 체크를 바꿈'); await p.keyboard.press('Escape'); }
@@ -230,7 +235,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   if (ov2.pressed !== 'true' || ov2.op !== '0' || ov2.open !== ov.open) throw new Error('사진 누르기 → 사진만 보기 이상(또는 카드가 펼쳐짐)');
   await p.focus('#recipeList .recipe button.thumb'); await p.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 400));
   ov2 = await ovState(); if (ov2.pressed !== 'false' || ov2.op !== '1') throw new Error('키보드로 막 다시 켜기 이상');
-  await p.click('nav button[data-tab="tab-loc"]');
+  await openSetup();
   await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   await p.click('nav button[data-tab="tab-deals"]');
   if (fake) console.log('fake update shown:', await p.evaluate(() => document.body.innerText.includes('테스트용 국산 애호박')));
@@ -290,14 +295,30 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   const ek = await p.$eval('.deal.pickable', e => e.getAttribute('data-sel')); await p.click(`.deal[data-sel="${ek}"] .dn`);
   if (!(await fabR()).show) throw new Error('선택 후 플로팅 안 보임');
   const brandOf = ek.split('|')[0];
-  await p.click('nav button[data-tab="tab-loc"]'); await new Promise(r => setTimeout(r, 300));
+  await openSetup(); await new Promise(r => setTimeout(r, 300));
   if (brandOf === 'emart') await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   else await p.$$eval('#martList input:checked', els => els.forEach(e => e.click()));
   await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
   console.log('after mart removed:', brandOf, 'ind hidden:', await p.$eval('#selInd', e => e.hidden)); if (!(await p.$eval('#selInd', e => e.hidden))) throw new Error('사라진 품목 선택이 남아 있어요');
-  await p.click('nav button[data-tab="tab-loc"]'); await new Promise(r => setTimeout(r, 300));
+  await openSetup(); await new Promise(r => setTimeout(r, 300));
   if (brandOf === 'emart') await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   else await p.$eval('input[data-id="node/4655465094"]', e => e.click());
+  // 다시 방문: 저장된 위치·마트로 바로 「할인 재료」 탭, 헤더 버튼으로 설정 다시 열기·닫기
+  { await new Promise(r => setTimeout(r, 300));
+    await p.reload({ waitUntil: 'networkidle0' }); await new Promise(r => setTimeout(r, 800));
+    const n1 = await navState(); const rows = await p.$$eval('#dealList .deal', x => x.length); const sm = await p.$eval('#dealSummary .sel-marts', e => e.innerText).catch(() => '');
+    console.log('return visit:', n1, 'rows', rows, sm);
+    if (n1.setup || n1.on !== 'tab-deals' || !rows || !sm || n1.exp !== 'false' || !/^위치·마트 설정/.test(n1.label)) throw new Error('다시 방문 시 할인 재료 탭 이상 ' + JSON.stringify(n1));
+    if (!(await p.$eval('nav button[data-tab="tab-deals"]', b => b.classList.contains('on')))) throw new Error('하단 탭 표시 이상');
+    await p.click('#btnSetup'); await new Promise(r => setTimeout(r, 250));
+    const n2 = await navState(); const chk = await p.$$eval('#martList input:checked, #brandChips button[aria-pressed="true"]', x => x.length);
+    if (!n2.setup || n2.on !== 'tab-loc' || n2.exp !== 'true' || !chk) throw new Error('헤더 버튼으로 설정 열기 이상 ' + JSON.stringify(n2) + ' chk ' + chk);
+    await p.keyboard.press('Escape'); await new Promise(r => setTimeout(r, 200));
+    if ((await navState()).on !== 'tab-deals') throw new Error('Esc로 설정 닫기 이상');
+    await p.click('nav button[data-tab="tab-recipes"]'); await p.click('#btnSetup'); await new Promise(r => setTimeout(r, 200)); await p.click('#btnSetup'); await new Promise(r => setTimeout(r, 200));
+    if ((await navState()).on !== 'tab-recipes') throw new Error('✕ 닫으면 직전 탭으로 안 돌아감');
+    await p.click('nav button[data-tab="tab-deals"]');
+  }
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
   console.log('nav:', await p.$$eval('nav button', bs => bs.map(b => b.innerText.trim()).join(' | ')));
   await p.click('#btnSrc'); await p.waitForFunction(() => document.getElementById('srcSheet').open, { timeout: 5000 });
@@ -305,6 +326,11 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.screenshot({ path: '/tmp/martestro_info.png' });
   await p.click('#srcClose'); await new Promise(r => setTimeout(r, 200));
   if (await p.$eval('#srcSheet', d => d.open)) throw new Error('출처 시트가 안 닫혀요');
+  // 저장된 마트가 더는 없으면(오래된 저장값) 버리고 설정 화면
+  { await p.evaluate(() => { localStorage.setItem('mr_sel', JSON.stringify(['node/0000000', 'brand:nope'])); localStorage.setItem('mr_loc', JSON.stringify({ lat: 'x' })); });
+    await p.reload({ waitUntil: 'networkidle0' }); await new Promise(r => setTimeout(r, 500));
+    const n3 = await navState(); const sel = await p.evaluate(() => localStorage.getItem('mr_sel'));
+    console.log('stale saved:', n3, sel); if (!n3.setup || n3.on !== 'tab-loc' || sel !== '[]' || n3.loc) throw new Error('오래된 저장값 처리 이상'); }
   console.log('errors:', errs);
   await b.close(); if (srv) srv.close();
   if (errs.filter(e => !/404|Failed to load resource/.test(e)).length) process.exit(1);
