@@ -133,6 +133,36 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.focus('#dealSummary button.stat[data-df="today"]'); await p.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 150));
     d1 = await dfState(); if (d1.pr.today !== 'true') throw new Error('키보드로 필터 켜기 이상'); await dfClick('');
   }
+  // 키워드 검색: 확인/Enter로 칩 추가(OR), ✕로 지우기, 숫자 타일과 AND, 빈 결과 안내, 고른 재료는 숨겨져도 유지
+  {
+    const W = ms => new Promise(r => setTimeout(r, ms));
+    const kwState = () => p.evaluate(() => ({ kws: [...document.querySelectorAll('#dealKws .kw .kw-v')].map(e => e.textContent), rows: document.querySelectorAll('#dealList .deal').length, all: +(document.querySelector('#dealSummary button.stat[data-df=""] b') || {}).textContent, groups: [...document.querySelectorAll('#dealList .ing-h span')].reduce((a, e) => a + +e.textContent, 0), input: document.getElementById('dSearch').value, empty: !!document.querySelector('#dealList .empty button[data-kwclear]'), status: document.getElementById('dealKwStatus').textContent, top: document.getElementById('dealSearch').getBoundingClientRect().top < document.getElementById('dealSummary').getBoundingClientRect().top }));
+    const base = await kwState(); if (!base.top || base.kws.length) throw new Error('검색창 위치/초기 키워드 이상');
+    const pk = await p.$('#dealList .deal.pickable:not(.picked) .pick'); const pkName = await pk.evaluate(b => b.closest('.deal').dataset.sel); await pk.click(); await W(150);
+    const otherGroup = await p.$$eval('#dealList .ing-h', hs => (hs.map(h => h.firstChild.textContent.trim()).find(t => !/돼지/.test(t)) || ''));
+    await p.type('#dSearch', '돼지'); await p.click('#dSearchGo'); await W(150);
+    let k1 = await kwState(); console.log('kw 돼지:', k1);
+    if (k1.kws.join() !== '돼지' || k1.input !== '' || !k1.rows || k1.rows >= base.rows || k1.rows !== k1.all || k1.groups !== k1.rows) throw new Error('키워드 1개 필터 이상 ' + JSON.stringify(k1));
+    const kw2 = otherGroup || '두부';
+    await p.type('#dSearch', kw2); await p.keyboard.press('Enter'); await W(150);
+    let k2 = await kwState(); console.log('kw 돼지+' + kw2 + ':', k2.rows, k2.status);
+    if (k2.kws.join() !== '돼지,' + kw2 || k2.rows <= k1.rows || k2.groups !== k2.rows || !/키워드 2개/.test(k2.status)) throw new Error('키워드 OR 이상');
+    await p.type('#dSearch', ' 돼 지 '); await p.keyboard.press('Enter'); await p.keyboard.press('Enter'); await W(150);
+    if ((await kwState()).kws.length !== 2) throw new Error('중복/빈 키워드가 추가됨');
+    if (df.n.soon) { const t = await dfClick('today'); const k3 = await kwState(); if (t.pr.today !== 'true' || k3.rows > k2.rows) throw new Error('키워드+타일 AND 이상'); await dfClick(''); }
+    // ✕로 하나 지우기 (키보드)
+    await p.focus('#dealKws button.kw-x[data-kw="1"]'); await p.keyboard.press('Enter'); await W(150);
+    k1 = await kwState(); if (k1.kws.join() !== '돼지') throw new Error('✕ 지우기 이상 ' + k1.kws);
+    const lbl = await p.$eval('#dealKws button.kw-x', b => b.getAttribute('aria-label')); if (lbl !== '키워드 돼지 지우기') throw new Error('✕ 라벨 ' + lbl);
+    // 빈 결과
+    await p.type('#dSearch', 'zzqq없는말'); await p.click('#dSearchGo'); await W(100); await p.click('#dealKws button.kw-x[data-kw="0"]'); await W(150);
+    const ke = await kwState(); if (ke.rows || !ke.empty) throw new Error('빈 결과 안내 이상 ' + JSON.stringify(ke));
+    const emptyTxt = await p.$eval('#dealList .empty', e => e.innerText); if (!/zzqq없는말/.test(emptyTxt)) throw new Error('빈 결과 문구 ' + emptyTxt);
+    await p.click('#dealList .empty button[data-kwclear]'); await W(150);
+    const k0 = await kwState(); if (k0.kws.length || k0.rows !== base.rows || (await p.evaluate(() => document.activeElement.id)) !== 'dSearch') throw new Error('키워드 모두 지우기 이상');
+    if (!(await p.$eval(`#dealList .deal[data-sel="${pkName}"]`, e => e.classList.contains('picked')))) throw new Error('검색으로 숨겨졌던 고른 재료가 풀림');
+    await p.click(`#dealList .deal[data-sel="${pkName}"] .pick`); await W(150);
+  }
   // 품목 작은 사진: 모든 줄에 48px 자리(사진 또는 이모지)
   const th = await p.$$eval('#dealList .deal', ds => ({ rows: ds.length, thumbs: ds.filter(d => d.querySelector('.dthumb')).length, imgs: ds.filter(d => d.querySelector('.dthumb img')).length, w: ds[0] && ds[0].querySelector('.dthumb').getBoundingClientRect().width }));
   console.log('thumbs:', th); if (th.thumbs !== th.rows || Math.round(th.w) !== 48) throw new Error('품목 사진 자리 이상');

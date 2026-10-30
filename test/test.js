@@ -176,4 +176,21 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert.strictEqual(L.dealIng ? typeof L.dealIng : 'function', 'function');
   console.log('품목 이름 정리:', names.length, '개 OK, 예) ', S('수입)돼지냉동대패삼겹 1kg(스페인산·봉)').title);
 }
+{ // 할인 재료 키워드 검색
+  let k = L.addKw([], '  돼지  '); assert.deepStrictEqual(k, ['돼지']);
+  k = L.addKw(k, ''); k = L.addKw(k, '   '); k = L.addKw(k, '돼 지'); k = L.addKw(k, 'CJ'); k = L.addKw(k, 'cj');
+  assert.deepStrictEqual(k, ['돼지', 'CJ'], '빈 값·중복(띄어쓰기·대소문자 무시) 무시');
+  const d = {name:'수입)돼지냉동대패삼겹 1kg(스페인산·봉)', ing:'돼지고기', martName:'홈플러스'};
+  const conv = {name:'CJ)햇반 찰기가득쌀밥(210gx8입)', ing:'즉석밥', cat:'간편식품', kind:'즉석밥', martName:'이마트'};
+  assert(L.dealMatchesKw(d, []), '키워드 없으면 전부');
+  assert(L.dealMatchesKw(d, ['대패 삼겹']), '띄어쓰기 무시 + 원래 이름');
+  assert(L.dealMatchesKw(d, ['돼지고기']), '재료 키');
+  assert(L.dealMatchesKw(d, ['홈플']), '마트 이름');
+  assert(L.dealMatchesKw(d, ['스페인']), '원산지(원래 이름 안)');
+  assert(L.dealMatchesKw(conv, ['cj햇반']), '대소문자 무시');
+  assert(L.dealMatchesKw(conv, ['간편식품']) && L.dealMatchesKw(conv, ['즉석']), '분류·종류 태그');
+  assert(!L.dealMatchesKw(d, ['두부']) && L.dealMatchesKw(d, ['두부', '삼겹']), 'OR');
+  assert(!L.dealMatchesKw(d, ['이마트']), '다른 마트');
+  console.log('할인 재료 키워드 검색 OK');
+}
 console.log('ALL TESTS PASSED');

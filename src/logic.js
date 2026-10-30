@@ -500,4 +500,20 @@ function splitDealName(raw){
   return {title: title, meta: meta};
 }
 
-if (typeof module !== 'undefined') module.exports = {splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+// ---- 할인 재료 키워드 검색 (대소문자·띄어쓰기 무시, 키워드 중 하나라도 맞으면 OK) ----
+function normKw(s){ return String(s == null ? '' : s).toLowerCase().replace(/\s+/g, ''); }
+function addKw(list, raw){ // 빈 값·중복(정규화 기준)은 무시
+  var v = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim(), k = normKw(v);
+  if (!k || list.some(function(x){ return normKw(x) === k; })) return list;
+  return list.concat([v]);
+}
+function dealKwHay(d){
+  var sp = splitDealName(d.name);
+  return normKw([d.name, sp.title, d.ing, d.cat, d.kind, d.martName].filter(Boolean).join('|'));
+}
+function dealMatchesKw(d, kws){
+  if (!kws || !kws.length) return true;
+  var hay = dealKwHay(d);
+  return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
+}
+if (typeof module !== 'undefined') module.exports = {normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
