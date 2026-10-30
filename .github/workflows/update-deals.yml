@@ -74,7 +74,7 @@ jobs:
       - name: 배포할 파일만 모으기
         run: |
           mkdir -p _site
-          cp -r index.html data _site/ && touch _site/.nojekyll
+          cp -r index.html data assets _site/ && touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
