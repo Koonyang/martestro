@@ -187,7 +187,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   console.log('top5:', await p.$$eval('.recipe h3', els => els.slice(0, 5).map(e => e.innerText)));
   const gauges = await p.$$eval('.recipe .gauge', gs => gs.slice(0, 3).map(g => g.getAttribute('aria-label')));
   console.log('gauges:', gauges);
-  if (!gauges.length || !gauges.every(t => /^예상 절약률 \d+%: 원가 [\d,]+원 → [\d,]+원 · \d+% 절약$/.test(t))) throw new Error('절약률 게이지 없음/형식 오류');
+  if (!gauges.length || !gauges.every(t => /^예상 절약률 \d+%: 원가 [\d,]+원 → [\d,]+원 · \d+% 절약 \(한 끼 기준( · 일부 1팩)?\)$/.test(t))) throw new Error('절약률 게이지 없음/형식 오류');
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
   // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
   if (await p.$('.legend')) throw new Error('레시피 카드 범례가 아직 있어요');
@@ -224,6 +224,16 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   if (ms2.mnVis !== ms2.mn || ms2.pressed !== 'true' || !/마트/.test(ms2.chip) || ms2.open !== ms.open || ms2.other) throw new Error('표시 가격 기준 켜기 이상');
   await p.focus('#recipeList .recipe .mn-toggle'); await p.keyboard.press('Enter'); ms2 = await mnState();
   if (ms2.mnVis !== 0 || ms2.pressed !== 'false') throw new Error('키보드로 끄기 이상');
+  // 레시피 카드 재료 가격 = 한 끼(1인분) 가격 (팩 크기를 모르면 팩 가격 + 「1팩 기준」), 게이지는 「한 끼 기준」
+  {
+    const pm = await p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe .ing.hit')].map(e => { const sm = e.querySelector('small'); const t = sm ? sm.innerText : ''; const m = (e.getAttribute('title') || '').match(/팩 가격 ([\d,]+)원/);
+      return { meal: /한 끼 약/.test(t), pack1: !!e.querySelector('.pk'), v: +((t.match(/([\d,]+)원/) || [, '0'])[1].replace(/,/g, '')), pack: m ? +m[1].replace(/,/g, '') : null }; }));
+    const gk = await p.evaluate(() => [...document.querySelectorAll('#recipeList .gauge .g-k em')].map(e => e.textContent));
+    const priced = pm.filter(x => x.pack != null), meal = priced.filter(x => x.meal), bulk = meal.filter(x => x.pack >= 20000);
+    console.log('per-meal chips:', priced.length, 'meal', meal.length, '1팩', priced.filter(x => x.pack1).length, 'bulk→meal', bulk.slice(0, 3).map(x => x.pack + '→' + x.v), 'gauge', [...new Set(gk)]);
+    if (!meal.length || priced.some(x => !x.meal && !x.pack1) || meal.some(x => x.v % 10 || x.v > 20000) || !gk.length || gk.some(t => !/^한 끼 기준/.test(t))) throw new Error('한 끼 가격 표시 이상');
+    if (bulk.some(x => x.v >= x.pack)) throw new Error('대용량 팩이 한 끼 가격으로 안 바뀜');
+  }
   // 「할인 재료 비율」 막대 줄은 없고, 사진을 누르면 흰 막(65%) + 「주재료 n/m 할인 중」이 페이드 인/아웃
   if (await p.$('#recipeList .score, #recipeList .bar')) throw new Error('할인 재료 비율 막대가 남아 있어요');
   if (/할인 재료 비율/.test(await p.$eval('#recipeList', e => e.innerText))) throw new Error('할인 재료 비율 글자가 보여요');

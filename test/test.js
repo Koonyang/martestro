@@ -223,7 +223,7 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   // 레시피
   const rk = L.rankRecipes(L.RECIPES, deals, '2026-10-30');
   assert(rk.some(s => s.mainCost > 0));
-  rk.forEach(s => { const p = s.matched.filter(x => x.ing.main && x.deal.price != null).reduce((a, x) => a + x.deal.price, 0); assert.equal(s.mainCost, s.matched.some(x => x.ing.main && x.deal.price != null) ? p : null); });
+  rk.forEach(s => { const p = s.matched.filter(x => x.ing.main && x.meal).reduce((a, x) => a + x.meal.price, 0); assert.equal(s.mainCost, s.matched.some(x => x.ing.main && x.meal) ? p : null); }); // 한 끼 기준 비용
   const chk = (k, rev, desc) => { const o = L.sortRecipes(rk, {k, rev}).map(s => L.recipeSortVal(k, s)); const f = o.indexOf(null);
     if (f >= 0) assert(o.slice(f).every(v => v == null), k); const v = o.slice(0, f < 0 ? o.length : f); assert(v.length > 1, k);
     for (let i = 1; i < v.length; i++) assert(desc ? v[i] <= v[i-1] : v[i] >= v[i-1], k+rev); };
@@ -232,5 +232,58 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   // {s}/{r} 섞인 목록 + get, 원 레시피는 절약률 값이 없어 뒤로
   const mix = [{r:L.RECIPES[0]}, {s:rk[0]}]; assert.equal(L.sortRecipes(mix, {k:'save'}, it => it.s || it.r)[0], rk[0].savePct ? mix[1] : mix[0]);
   console.log('정렬 OK');
+}
+// 한 끼(1인분) 가격: 실제 전단 상품명으로 팩 무게 읽기 + 레시피 분량 → 한 끼 가격
+{
+  const pg = (n, k) => L.packGrams(n, k);
+  const cases = [
+    ['돼지냉동대패삼겹 1kg(국산·봉)', '돼지고기', 1000], ['수입)돼지냉동대패삼겹 1kg(스페인산·봉)', '돼지고기', 1000],
+    ['돼지냉장삼겹살(국산·구이/수육용·100g)', '돼지고기', 100], ['보리먹고 자란 돼지 삼겹살 100G/돼지고기', '돼지고기', 100],
+    ['지평선메뚜기쌀 등 쌀 6종(국산·20kg)', '쌀', 20000], ['종가 김장김치 (5kg)', '김치', 5000], ['한우냉동모듬곰거리 3kg(국산·팩)', '소고기', 3000],
+    ['농심 감바스 짜파게티 (137g×4입)', '라면', 548], ['CJ)햇반 찰기가득쌀밥(210gx8입)', '즉석밥', 1680], ['CJ 비비고 왕교자 (350g×3)', '만두', 1050],
+    ['동원)딤섬새우하가우/부추창펀(300gx2입/390gx2입)', '만두', 600], ['동원 통그릴 비엔나 180G*2', '소시지', 360], ['오리주물럭 500g+500g(원산지별도표기·1묶음)', '오리고기', 1000],
+    ['동물복지란 30구 (대/특)', '계란', 30*55], ['행복대란 30개입', '계란', 30*55], ['양파(국산·6~8입·망)', '양파', 7*200], ['파프리카 (개)', '파프리카', 150],
+    ['대파 (단)', '대파', 800], ['제주 은갈치 (대/마리, 해동)', '갈치', 500], ['오징어(국산·5마리)', '오징어', 1250], ['오뚜기 컵라면6입(육개장/진라면 3종 등 4종)', '라면', 720],
+    ['파스퇴르 후레쉬우유 (900ml)', '우유', 900], ['활전복 (중/20~25미기획, 100g)', '전복', 100], ['토종닭백숙(국산·1마리)', '닭고기', 1000],
+    ['본고장 포차 즉석우동/김치우동 (상품별 규격 상이)', '우동면', null], ['인기버섯 5종 (각)', '버섯', null], ['국산 시금치', '시금치', null], ['갱엿 꾸덕 닭강정 (팩)', '닭고기', null]
+  ];
+  cases.forEach(([n, k, g]) => assert.equal(pg(n, k), g, n));
+  // 분량 문자열
+  assert.equal(L.amtGrams('200g', '돼지고기'), 200); assert.equal(L.amtGrams('1/2모', '두부'), 150); assert.equal(L.amtGrams('1마리(1kg)', '닭고기'), 1000);
+  assert.equal(L.amtGrams('4개', '계란'), 220); assert.equal(L.amtGrams('2큰술', '고추장'), 30); assert.equal(L.amtGrams('약간', '당근'), 5); assert.equal(L.amtGrams('한 줌', '버섯'), 50);
+  assert.equal(L.amtGrams('1/4포기', '김치'), 625); assert.equal(L.amtGrams('', '김치'), null);
+  // 인분: 공공 레시피 1인분, 기본 레시피 2인분(밥 1공기 요리는 1인분)
+  const R = n => L.ALL_RECIPES.find(r => r.name === n);
+  assert.equal(L.recipeServ(R('김치찌개')), 2); assert.equal(L.recipeServ(R('김치볶음밥')), 1);
+  const kj = R('김치찌개'), pork = kj.ings.find(i => i.k === '돼지고기');
+  assert.equal(L.mealGrams(kj, pork), 100); // 200g ÷ 2인분
+  // 대패삼겹 1kg 11,060원 → 한 끼 100g = 1,106원 → 1,110원 (팩 가격 아님)
+  const big = {name:'수입)돼지냉동대패삼겹 1kg(스페인산·봉)', ing:'돼지고기', price:11060, orig:15800};
+  assert.equal(L.round10(big.price * L.mealFrac(kj, pork, big)), 1110);
+  // 100g당 가격은 그대로 곱하기: 100g 1,984원 × 1 = 1,980원, 150g이면 2,980원
+  const per100 = {name:'돼지냉장삼겹살(국산·구이/수육용·100g)', ing:'돼지고기', price:1984};
+  assert.equal(L.round10(per100.price * L.mealFrac(kj, pork, per100)), 1980);
+  const jy = R('제육볶음'); assert.equal(L.round10(per100.price * L.mealFrac(jy, jy.ings.find(i => i.k === '돼지고기'), per100)), 2980);
+  // 20kg 쌀 56,905원 → 밥 1공기(생쌀 90g) ≈ 260원
+  const kb = R('김치볶음밥'), rice = kb.ings.find(i => i.k === '쌀');
+  assert.equal(L.round10(56905 * L.mealFrac(kb, rice, {name:'지평선메뚜기쌀 등 쌀 6종(국산·20kg)', ing:'쌀'})), 260);
+  // 지은 밥 상품(200g×4입)은 1공기 210g 기준
+  assert.equal(L.round10(7980 * L.mealFrac(kb, rice, {name:'CJ 구수한 쌀밥 (200g×4입)', ing:'쌀'})), 2090);
+  // 공공 레시피: 재료 줄 g 그대로 (1인분)
+  const pub = L.ALL_RECIPES.find(r => r.src === 'pub' && /새송이버섯 100g/.test(r.parts || ''));
+  assert.equal(L.mealGrams(pub, pub.ings.find(i => i.k === '버섯')), 100);
+  // 공공 레시피의 '밥 210g'(지은 밥)은 생쌀 90g으로
+  const bb = L.ALL_RECIPES.find(r => r.src === 'pub' && r.ings.some(i => i.k === '쌀') && /(^|, )(쌀)?밥 210g/.test(r.parts || ''));
+  if (bb) assert(L.mealGrams(bb, bb.ings.find(i => i.k === '쌀')) <= 100, bb.name);
+  // 팩 크기 모름 → null (화면은 「1팩 기준」)
+  assert.equal(L.mealFrac(kj, pork, {name:'갱엿 꾸덕 닭강정 (팩)', ing:'닭고기', price:9990}), null);
+  // 추천 결과: 재료마다 meal, 절약률 게이지는 한 끼 기준 합계
+  const rk2 = L.rankRecipes(L.ALL_RECIPES, deals, '2026-10-30');
+  rk2.forEach(s => { s.matched.forEach(x => { if (x.deal.price == null) return assert.equal(x.meal, null);
+      if (x.meal.f == null) assert.equal(x.meal.price, x.deal.price); else { assert(x.meal.price % 10 === 0 && x.meal.price >= 10); } });
+    const o = s.matched.filter(x => x.ing.main && x.meal && x.meal.orig).reduce((a, x) => a + x.meal.orig, 0); assert.equal(s.mealOrig, o); assert(s.mealSale <= s.mealOrig); });
+  const maxPack = Math.max(...rk2.flatMap(s => s.matched.filter(x => x.meal && x.meal.f != null).map(x => x.meal.price)));
+  console.log('한 끼 가격 최댓값:', maxPack, '원'); assert(maxPack < 15000);
+  console.log('한 끼 가격 OK');
 }
 console.log('ALL TESTS PASSED');
