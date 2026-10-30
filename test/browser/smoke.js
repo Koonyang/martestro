@@ -319,6 +319,11 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if ((await navState()).on !== 'tab-recipes') throw new Error('✕ 닫으면 직전 탭으로 안 돌아감');
     await p.click('nav button[data-tab="tab-deals"]');
   }
+  // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
+  { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
+    const gap = await p.evaluate(() => { const t = document.querySelector('#tab-recipes .tools').getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
+    console.log('recipes tools gap:', gap); if (gap.sw || gap.gap < 12 || gap.gap > 32) throw new Error('레시피 탭 스위치/간격 이상 ' + JSON.stringify(gap));
+    await p.click('nav button[data-tab="tab-deals"]'); }
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
   console.log('nav:', await p.$$eval('nav button', bs => bs.map(b => b.innerText.trim()).join(' | ')));
   await p.click('#btnSrc'); await p.waitForFunction(() => document.getElementById('srcSheet').open, { timeout: 5000 });

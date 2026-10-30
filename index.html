@@ -195,7 +195,7 @@ button.stat[aria-pressed=true] span{color:var(--g)}
 .form-grid{display:grid;gap:10px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* recipes */
-.tools{display:flex;gap:8px;margin-top:14px}
+.tools{display:flex;gap:8px;margin-top:14px;margin-bottom:18px}
 /* 할인 품목 고르기 (체크 동그라미 + 고른 줄 강조) */
 .deal.pickable{cursor:pointer;-webkit-tap-highlight-color:transparent;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px;transition:background .15s}
 .deal.pickable .pick{position:relative;flex:0 0 48px;width:48px;height:48px;min-height:0;padding:0;border-radius:12px;background:transparent;box-shadow:none;color:inherit;display:block;align-self:flex-start;margin-top:2px;overflow:visible}
@@ -531,7 +531,6 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"></div>
     <select id="rCat" aria-label="분류"><option value="">전체</option></select>
   </div>
-  <label class="switch" style="margin:6px 2px 0"><input type="checkbox" id="onlyFull" role="switch"> 주재료가 모두 할인 중인 것만</label>
   <div id="recipeList"></div>
   <button class="ghost block" id="btnMore" style="display:none">더 보기</button>
   <p class="foot" id="pantryNote"></p>
@@ -2104,8 +2103,7 @@ var state = {
   loc: load('mr_loc', null),            // {lat, lon, label}
   marts: load('mr_marts', []),          // 마지막 검색 결과
   selected: load('mr_sel', []),         // 선택한 마트 id 목록 (가상 'brand:emart' 포함)
-  custom: load('mr_custom', {}),        // {martId: {name, items:[...]}}
-  onlyFull: false
+  custom: load('mr_custom', {})        // {martId: {name, items:[...]}}
 };
 
 function persist(){ save('mr_opt', {r: $('radius').value, conv: $('incConv').checked}); save('mr_loc', state.loc); save('mr_marts', state.marts); save('mr_sel', state.selected); save('mr_custom', state.custom); }
@@ -2612,7 +2610,6 @@ document.querySelector('.kind-row').addEventListener('click', function(e){
   syncKindChips(); rLimit = PAGE; renderRecipes();
 });
 RECIPE_CATS.forEach(function(c){ var o = document.createElement('option'); o.value = c; o.textContent = c; $('rCat').appendChild(o); });
-$('onlyFull').addEventListener('change', function(){ state.onlyFull = this.checked; rLimit = PAGE; renderRecipes(); });
 $('rSearch').addEventListener('input', function(){ var v = this.value; clearTimeout(rTimer); rTimer = setTimeout(function(){ rQuery = v.trim(); rLimit = PAGE; renderRecipes(); }, 200); });
 $('rCat').addEventListener('change', function(){ rCat = this.value; rLimit = PAGE; renderRecipes(); });
 $('btnMore').addEventListener('click', function(){ rLimit += PAGE; renderRecipes(true); });
@@ -2750,7 +2747,6 @@ function recipeItems(){
   var summary;
   if (marts.length){
     var ranked = rankRecipes(ALL_RECIPES, collectDeals(), todayStr());
-    if (state.onlyFull) ranked = ranked.filter(function(s){ return s.mainHit === s.mainTotal; });
     ranked = filterRecipes(ranked, rQuery, rCat, function(s){ return s.recipe; });
     items = ranked.map(function(s){ return {s:s}; });
     var nRanked = items.length;
