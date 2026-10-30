@@ -108,6 +108,32 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   console.log('gauges:', gauges);
   if (!gauges.length || !gauges.every(t => /^예상 절약률 \d+%: 원가 [\d,]+원 → [\d,]+원 · \d+% 절약$/.test(t))) throw new Error('절약률 게이지 없음/형식 오류');
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
+  // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
+  if (await p.$('.legend')) throw new Error('레시피 카드 범례가 아직 있어요');
+  const tipState = () => p.evaluate(() => { const t = document.getElementById('tipPop'); if (!t || t.hidden) return null; const r = t.getBoundingClientRect(); return { text: t.innerText, left: Math.round(r.left), right: Math.round(r.right), vw: document.documentElement.clientWidth, open: document.querySelectorAll('button.tipb[aria-expanded=true]').length }; });
+  const chkSel = '.recipe button.tipb[data-tip="chk"]', mainSel = '.recipe button.tipb[data-tip="main"]';
+  await p.$eval(chkSel, e => e.scrollIntoView({ block: 'center' })); await new Promise(r => setTimeout(r, 200));
+  const before = await p.$eval(chkSel, e => e.closest('.recipe').querySelector('details') ? e.closest('.recipe').querySelector('details').open : null);
+  await p.click(chkSel); let tp = await tipState(); console.log('tip(chk):', tp);
+  if (!tp || !/매장에서 한 번 확인/.test(tp.text) || tp.left < 0 || tp.right > tp.vw || tp.open !== 1) throw new Error('가격확인 말풍선 이상');
+  if (await p.$eval(chkSel, e => e.getAttribute('aria-describedby')) !== 'tipPop' || await p.$eval('#tipPop', e => e.getAttribute('role')) !== 'tooltip') throw new Error('말풍선 접근성 속성 이상');
+  const afterD = await p.$eval(chkSel, e => e.closest('.recipe').querySelector('details') ? e.closest('.recipe').querySelector('details').open : null);
+  if (before !== afterD) throw new Error('태그 눌렀는데 카드가 펼쳐짐');
+  await p.click(chkSel); if (await tipState()) throw new Error('다시 눌러도 안 닫힘');
+  await p.click(mainSel); tp = await tipState(); console.log('tip(main):', tp && tp.text);
+  if (!tp || !/핵심 재료/.test(tp.text)) throw new Error('주재료 말풍선 이상');
+  await p.click(chkSel); tp = await tipState(); if (!tp || tp.open !== 1 || !/가격/.test(tp.text)) throw new Error('말풍선이 하나만 떠야 해요');
+  await p.keyboard.press('Escape'); if (await tipState()) throw new Error('ESC로 안 닫힘');
+  if (await p.evaluate(() => document.activeElement && document.activeElement.matches('button.tipb'))) {} else throw new Error('ESC 후 포커스가 태그로 안 돌아옴');
+  await p.keyboard.press('Enter'); if (!(await tipState())) throw new Error('키보드(Enter)로 안 열림');
+  await p.mouse.click(195, 120); if (await tipState()) throw new Error('바깥 눌러도 안 닫힘');
+  await p.click(chkSel); await p.evaluate(() => scrollBy(0, 60)); await new Promise(r => setTimeout(r, 150)); if (await tipState()) throw new Error('스크롤해도 안 닫힘');
+  // 마트 목록의 「전단 판독 · 가격확인」 태그는 눌러도 마트 체크가 안 바뀌어야 해요
+  await p.click('nav button[data-tab="tab-loc"]');
+  const mt = await p.$('#martList button.tipb'); if (mt) { await mt.evaluate(e => e.scrollIntoView({ block: 'center' })); const id = await mt.evaluate(e => e.closest('.mart').querySelector('input').dataset.id); const c0 = await p.$eval(`input[data-id="${id}"]`, e => e.checked);
+    await mt.click(); const tm = await tipState(); const c1 = await p.$eval(`input[data-id="${id}"]`, e => e.checked); console.log('tip(mart):', tm && tm.text, 'checked same:', c0 === c1);
+    if (!tm || c0 !== c1) throw new Error('마트 줄 가격확인 태그가 체크를 바꿈'); await p.keyboard.press('Escape'); }
+  await p.click('nav button[data-tab="tab-recipes"]');
   await p.click('nav button[data-tab="tab-loc"]');
   await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   await p.click('nav button[data-tab="tab-deals"]');
