@@ -128,7 +128,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.keyboard.press('Escape');
   }
   // 요약 타일 = 하나만 고르는 라디오 (할인 재료=전체 / 오늘 적용 / 곧 시작)
-  // 할인 재료 탭 위쪽: 검색줄은 카드 밖·헤더 밑 sticky, 「마트 · 날짜 기준」 줄 없음, 통계 타일·정렬은 카드 없이 바탕에
+  // 할인 재료 탭 위쪽: 검색줄은 카드 밖·헤더 밑 sticky, 「마트 · 날짜 기준」 줄 없음, 통계 타일은 카드 없이 바탕에, 정렬 줄은 목록 카드 맨 위
   {
     const lay = () => p.evaluate(() => { const ds = document.getElementById('dSticky'), hd = document.getElementById('top'), sum = document.querySelector('#dealSummary .sum');
       return { inCard: !!ds.closest('.card'), sumInCard: !!sum.closest('.card'), sortInCard: !!document.getElementById('dSortBar').closest('.card'), pos: getComputedStyle(ds).position,
@@ -137,7 +137,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.evaluate(() => scrollTo(0, 0)); await new Promise(r => setTimeout(r, 200));
     const l0 = await lay(); await p.evaluate(() => { scrollTo(0, 900); }); await new Promise(r => setTimeout(r, 300)); const l1 = await lay(); await p.evaluate(() => scrollTo(0, 0)); await new Promise(r => setTimeout(r, 150));
     console.log('deals top layout:', JSON.stringify(l0), 'scrolled', JSON.stringify(l1));
-    if (l0.inCard || l0.sumInCard || l0.sortInCard || l0.pos !== 'sticky' || l0.dateLine || !l0.firstChild || l0.stuck) throw new Error('할인 재료 위쪽 배치 이상');
+    if (l0.inCard || l0.sumInCard || !l0.sortInCard || l0.pos !== 'sticky' || l0.dateLine || !l0.firstChild || l0.stuck) throw new Error('할인 재료 위쪽 배치 이상');
     if (Math.abs(l1.dsTop - l1.hdB) > 1 || !l1.stuck) throw new Error('스크롤해도 검색줄이 헤더 밑에 붙어 있어야 해요');
   }
   const dfState = () => p.evaluate(() => ({ role: document.querySelector('#dealSummary .sum').getAttribute('role'), pr: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', b.getAttribute('aria-checked')])), tab: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', b.tabIndex])), roles: [...document.querySelectorAll('#dealSummary button.stat')].every(b => b.getAttribute('role') === 'radio' && !b.hasAttribute('aria-pressed')), n: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', +b.querySelector('b').textContent])), rows: document.querySelectorAll('#dealList .deal').length, up: document.querySelectorAll('#dealList .deal .tag.soon').length, foc: document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.df : null }));

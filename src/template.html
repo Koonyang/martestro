@@ -178,18 +178,21 @@ button.stat[aria-checked=true] span{color:var(--g)}
 .dsticky .search-row{margin-top:0}
 .dsticky .kw-chips{margin:8px 0 0}
 body.deals-on .top.scrolled{border-bottom-color:transparent}
-.dtop{padding:0 4px}
 .dhead{display:flex;align-items:center;gap:10px;padding:7px 4px 0}
 .dhead .page-h{flex:1;min-width:0;padding:0}
-.dhead .page-h p{font-size:13px}
+.dhead .page-h h1{line-height:1.2}
+.dhead .page-h p{font-size:13px;line-height:1.35}
 .dhead .page-h p span{white-space:nowrap}
 #dealSummary:empty{display:none}
-.dhead .sum{display:flex;gap:5px;margin:0;flex:none}
-.dhead button.stat{padding:5px 8px;border-radius:10px;min-width:40px;text-align:center}
+.dhead .sum{display:grid;grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:60px;gap:4px;margin:0;flex:none}
+.dhead button.stat{padding:5px 3px;border-radius:10px;min-width:0;text-align:center}
+.dhead button.stat[aria-checked=true]{background:var(--g2);box-shadow:inset 0 0 0 1px var(--g)}
+.dhead button.stat[aria-checked=true] b{color:var(--t)}
+.dhead button.stat[aria-checked=true] span{color:var(--g-ink);opacity:1}
 .dhead .stat b{font-size:15px}
-.dhead .stat span{display:block;font-size:10.5px;white-space:nowrap}
-.dtop .sortbar{margin:16px -4px 0;padding-left:4px;padding-right:4px}
-.dlist-card{margin-top:12px;padding-top:6px}
+.dhead .stat span{display:block;font-size:10px;white-space:nowrap}
+.dlist-card .sortbar{margin:11px -4px 0}
+.dlist-card{margin-top:16px;padding-top:6px}
 #tab-deals .ing-h{top:calc(var(--hdrH,56px) + var(--dsH,60px))}
 .ing-h{position:sticky;top:56px;z-index:2;display:flex;align-items:center;gap:8px;background:var(--card);padding:16px 0 6px;font-weight:800;font-size:15.5px;letter-spacing:-.03em}
 .ing-h span{font-size:12px;font-weight:700;color:var(--m);background:var(--card2);border-radius:999px;padding:1px 8px}
@@ -567,10 +570,10 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <div class="page-h"><h1>할인 재료</h1><p><span>선택한 마트에서 지금</span> <span>싸게 파는 재료예요.</span></p></div>
     <div id="dealSummary"></div>
   </div>
-  <div class="dtop">
+  <div class="card dlist-card">
     <div id="dSortBar" class="sortbar" role="group" aria-label="할인 재료 정렬 (다시 누르면 방향이 바뀌어요)" hidden></div>
+    <div id="dealList"></div>
   </div>
-  <div class="card dlist-card"><div id="dealList"></div></div>
   <div class="card">
     <div class="card-h"><h2><span class="ic-box"><svg class="i"><use href="#i-pen"/></svg></span>할인 재료 직접 추가</h2></div>
     <p class="desc">동네 마트처럼 전단 정보가 없는 곳은 매장에서 본 할인 상품을 적어 두세요. 이 기기(브라우저)에만 저장돼요.</p>
@@ -1055,7 +1058,7 @@ document.addEventListener('click', function(e){
 var dFilt = '';
 function statBtn(k, n, label){
   var on = dFilt === k;
-  return '<button type="button" class="stat" role="radio" data-df="'+k+'" aria-checked="'+on+'" tabindex="'+(on ? 0 : -1)+'"><b>'+n+'</b><span>'+label+'</span></button>';
+  return '<button type="button" class="stat" role="radio" data-df="'+k+'" aria-checked="'+on+'" tabindex="'+(on ? 0 : -1)+'"><span>'+label+'</span><b>'+n+'</b></button>';
 }
 function setDealFilt(k){
   if (dFilt !== k){ dFilt = k; renderDeals(); }
