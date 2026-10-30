@@ -173,6 +173,17 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* recipes */
 .tools{display:flex;gap:8px;margin-top:14px}
+/* 레시피 종류 필터 칩 (전체 / 자취생 / 간편식품 — 자취생·간편식품은 함께 고를 수 있음) */
+.kind-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+button.kchip{min-height:36px;padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:700;gap:5px;background:var(--card);color:var(--t2);box-shadow:inset 0 0 0 1px var(--line);letter-spacing:-.02em}
+button.kchip small{font-size:11.5px;font-weight:650;color:var(--m);font-variant-numeric:tabular-nums}
+button.kchip small:empty{display:none}
+button.kchip[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g)}
+button.kchip[aria-pressed=true] small{color:var(--g)}
+button.kchip:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+@media (prefers-color-scheme:dark){button.kchip[aria-pressed=true]{box-shadow:none}button.kchip[aria-pressed=true] small{color:color-mix(in srgb,var(--a-on) 70%,transparent)}}
+.tag.conv{background:color-mix(in srgb,var(--g) 16%,transparent);color:var(--g-ink)}
+@media (prefers-color-scheme:dark){.tag.conv{color:var(--g)}}
 .tools .field{flex:1;min-width:0}
 .tools select{width:auto;flex:0 0 auto;font-size:15px;font-weight:600}
 .tools input,.tools select{background-color:var(--card);box-shadow:var(--shadow)}
@@ -427,6 +438,11 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 <!-- ③ 레시피 -->
 <section class="tab" id="tab-recipes">
   <div class="page-h"><h1>추천 레시피</h1><p id="recipeSummary"></p></div>
+  <div class="kind-row" role="group" aria-label="레시피 종류 (여러 개 고를 수 있어요)">
+    <button type="button" class="kchip" data-kind="" aria-pressed="true">전체 <small class="kc"></small></button>
+    <button type="button" class="kchip" data-kind="jachi" aria-pressed="false" title="재료 적고 저렴한 한 끼">자취생 <small class="kc"></small></button>
+    <button type="button" class="kchip" data-kind="quick" aria-pressed="false" title="라면·만두·햄·참치·즉석밥 같은 간편식품으로">간편식품 <small class="kc"></small></button>
+  </div>
   <div class="tools">
     <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"></div>
     <select id="rCat" aria-label="분류"><option value="">전체</option></select>
@@ -796,7 +812,8 @@ function renderDeals(){
       '<div class="sum"><div class="stat hl"><b>'+active.length+'</b><span>할인 재료</span></div>' + (nUp ? '<div class="stat"><b>'+(active.length-nUp)+'</b><span>오늘 적용</span></div><div class="stat"><b>'+nUp+'</b><span>곧 시작</span></div>' : '') + '</div>' +
       (nChk ? '<div class="notice" style="margin-top:12px"><b>가격확인</b> 표시: 탑마트 전단은 이미지라 '+(SOURCES.topmart && SOURCES.topmart.origLabel ? '가격을 눈으로 읽어 옮겼어요(취소선 가격 = '+esc(SOURCES.topmart.origLabel)+'). 틀릴 수 있으니' : '품목 이름만 자동 판독(OCR)했고 가격은 비워 뒀어요. 가격은 「출처·데이터 정보」의 전단 원본이나')+' 매장에서 꼭 확인하세요.</div>' : '');
     var groups = {};
-    active.forEach(function(d){ (groups[d.ing||'기타'] = groups[d.ing||'기타'] || []).push(d); });
+    var gk = function(d){ return d.cat || d.ing || '기타'; }; // 간편식품(라면·햄·만두·즉석밥…)은 한 묶음으로
+    active.forEach(function(d){ (groups[gk(d)] = groups[gk(d)] || []).push(d); });
     var upc = function(d){ return isUpcoming(d, today) ? 1 : 0; };
     Object.keys(groups).forEach(function(k){ groups[k].sort(function(a,b){ return upc(a)-upc(b); }); });
     var keys = Object.keys(groups).sort(function(a,b){ return (a==='기타')-(b==='기타') || groups[b].length - groups[a].length; });
@@ -817,6 +834,7 @@ function dealRow(d){
   var priceHtml = d.price != null
     ? (d.orig ? '<span class="was">'+(off ? '<span class="off">−'+off+'%</span>' : '')+(S.origLabel ? '<span>'+esc(S.origLabel)+'</span>' : '')+'<span class="orig">'+formatWon(d.orig)+'</span></span>' : '') + '<span class="now">'+formatWon(d.price)+'</span>'
     : '<span class="cond">'+esc(d.cond)+'</span>';
+  if (d.kind) tag = '<span class="tag conv">'+esc(d.kind)+'</span>' + tag;
   return '<div class="deal"><div style="min-width:0"><div class="dn">'+esc(d.name)+'</div><div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
 }
 function fmtMD(s){ var p = s.split('-'); return (+p[1])+'/'+(+p[2]); }
@@ -872,7 +890,15 @@ $('btnAdd').addEventListener('click', function(){
 });
 
 // ---------- 레시피 ----------
-var PAGE = 30, rLimit = PAGE, rQuery = '', rCat = '', rTimer = null;
+var PAGE = 30, rLimit = PAGE, rQuery = '', rCat = '', rTimer = null, rKinds = [];
+// 종류 칩: 전체 ↔ 자취생/간편식품(여러 개, 합집합). 마지막 칩을 끄면 다시 전체.
+function syncKindChips(){ document.querySelectorAll('.kchip').forEach(function(b){ var k = b.getAttribute('data-kind'); b.setAttribute('aria-pressed', String(k ? rKinds.indexOf(k) >= 0 : !rKinds.length)); }); }
+document.querySelector('.kind-row').addEventListener('click', function(e){
+  var b = e.target.closest('.kchip'); if (!b) return;
+  var k = b.getAttribute('data-kind');
+  if (!k) rKinds = []; else { var i = rKinds.indexOf(k); if (i >= 0) rKinds.splice(i,1); else rKinds.push(k); }
+  syncKindChips(); rLimit = PAGE; renderRecipes();
+});
 RECIPE_CATS.forEach(function(c){ var o = document.createElement('option'); o.value = c; o.textContent = c; $('rCat').appendChild(o); });
 $('onlyFull').addEventListener('change', function(){ state.onlyFull = this.checked; rLimit = PAGE; renderRecipes(); });
 $('rSearch').addEventListener('input', function(){ var v = this.value; clearTimeout(rTimer); rTimer = setTimeout(function(){ rQuery = v.trim(); rLimit = PAGE; renderRecipes(); }, 200); });
@@ -997,9 +1023,18 @@ function renderRecipes(append){
     items = filterRecipes(ALL_RECIPES, rQuery, rCat).map(function(r){ return {r:r}; });
     summary = '마트를 고르면 할인 재료 기준으로 순위를 매겨 드려요. 지금은 전체 레시피 <b>'+items.length.toLocaleString('ko-KR')+'개</b>를 보여 줘요.';
   }
+  // 종류 칩 개수(지금 목록 기준) + 필터
+  var kr = function(it){ return it.s ? it.s.recipe : it.r; };
+  var cnt = {'': items.length}; RECIPE_KINDS.forEach(function(k){ cnt[k[0]] = items.filter(function(it){ return kr(it)[k[0]]; }).length; });
+  document.querySelectorAll('.kchip').forEach(function(b){ var n = cnt[b.getAttribute('data-kind')]; b.querySelector('.kc').textContent = n != null ? n.toLocaleString('ko-KR') : ''; });
+  if (rKinds.length){
+    items = items.filter(function(it){ return kindMatch(kr(it), rKinds); });
+    var kl = RECIPE_KINDS.filter(function(k){ return rKinds.indexOf(k[0]) >= 0; }).map(function(k){ return k[1]; }).join('·');
+    summary += ' <span class="muted small">· '+esc(kl)+' '+items.length.toLocaleString('ko-KR')+'개만 보는 중</span>';
+  }
   $('recipeSummary').innerHTML = summary;
   if (!items.length){
-    $('recipeList').innerHTML = '<div class="card">'+(rQuery||rCat ? emptyBox('search', '검색 결과가 없어요', '다른 이름이나 재료로 검색해 보세요.') : emptyBox('chef', '맞는 레시피가 없어요', '다른 마트를 추가하거나 할인 재료를 직접 입력해 보세요.'))+'</div>';
+    $('recipeList').innerHTML = '<div class="card">'+(rKinds.length && !rQuery && !rCat ? emptyBox('chef', '이 종류에 맞는 레시피가 없어요', '「전체」를 눌러 다른 레시피도 보세요.') : rQuery||rCat ? emptyBox('search', '검색 결과가 없어요', '다른 이름이나 재료로 검색해 보세요.') : emptyBox('chef', '맞는 레시피가 없어요', '다른 마트를 추가하거나 할인 재료를 직접 입력해 보세요.'))+'</div>';
     $('btnMore').style.display = 'none'; return;
   }
   var from = append ? rLimit - PAGE : 0;

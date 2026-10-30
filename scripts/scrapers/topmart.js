@@ -3,6 +3,7 @@
 const fs = require('fs'), os = require('os'), path = require('path');
 const { execFileSync } = require('child_process');
 const { getJson, http, isoToKST, isFood, clean } = require('../lib');
+const L = require('../../src/logic.js');
 const STORE = 'topmart-21840'; // 탑마트 진주호탄점 (전단은 전 점포 공통)
 const API = 'https://martmap.co.kr/api/stores/' + STORE;
 const PAGE = 'https://martmap.co.kr/stores/' + STORE;
@@ -30,7 +31,7 @@ function extractNames(text, dealIng) {
     const name = clean(head.replace(/[^가-힣)\/·\s]/g, ' ')).replace(/^[)\/·\s]+|[\/·\s]+$/g, '');
     if (name.replace(/[^가-힣]/g, '').length < 2 || name.length > 24) continue;
     if (/류$|류[\s\/)]|할인|행사|맛$|깜|깡/.test(name)) continue; // 분류 안내·문구
-    if (!dealIng(name)) continue; // 레시피 재료로 확인되는 이름만 (OCR 잡음 제거)
+    if (!dealIng(name) && !L.convOf(name)) continue; // 레시피 재료나 간편식품(라면·햄·만두 등)으로 확인되는 이름만 (OCR 잡음 제거)
     out.push(name);
   }
   return out;
@@ -54,7 +55,7 @@ async function run(ctx) {
     let text = '';
     try { text = ocrImage(file); } catch (e) { continue; }
     for (const name of extractNames(text, ctx.dealIng)) {
-      if (seen.has(name) || !isFood(name, ctx.dealIng)) continue; seen.add(name);
+      if (seen.has(name) || !(isFood(name, ctx.dealIng) || L.convOf(name))) continue; seen.add(name);
       items.push([name, null, null, '전단 이미지 자동 판독(OCR) · 가격은 전단 원본에서 확인', start, end, null, 'topmart', p.pageOrder]);
     }
   }

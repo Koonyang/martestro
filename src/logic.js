@@ -209,12 +209,44 @@ function dealIng(name){
   n = n.replace(/[가-힣]+(?:와|과)\s*잘?\s*어울리는/g, ' ').replace(/오리지[날널]/g, '');
   return guessIng(n);
 }
+// ---- 간편식품(가공·즉석·냉동) 전단 품목 ----
+// 첫 번째로 맞는 규칙을 써요. ing: 레시피 재료 매칭에 쓸 표준 재료(없으면 매칭 없이 「간편식품」 목록에만 보여요).
+// 양념·육수(참치액·코인육수·치킨스톡·시즈닝)와 냉동 생고기·수산·과일(냉동 대패삼겹, 냉동 새우살 등)은 간편식품으로 보지 않아요.
+var CONV_SKIP = /참치액|육수|스톡|시즈닝|코인|한우|한돈|삼겹|새우살|수산|망고|곰거리|갈비|보신탕/;
+var CONV_RULES = [
+  ['밀키트', null, /밀키트|부대찌개|플래터|짜장밥|쟁반/],
+  ['즉석밥', '즉석밥', /햇반|즉석\s*밥|컵밥|냉동\s*밥|햇쌀밥|오뚜기\s*밥/],
+  ['냉동식품', null, /피자|돈[까가]스|너겟|핫도그|꿔바로우|탕수육|볶음밥|떡갈비|동그랑땡|소바바|냉동\s*(밀키트|면|피자)/],
+  ['라면', '라면', /라면|짜파게티|짜왕|비빔면|즉석\s*면|사발면|컵누들/],
+  ['면', '우동면', /우동|칼국수|수제비/],
+  ['만두', '만두', /만두|교자|딤섬|하가우|창펀/],
+  ['즉석국·죽', null, /곰탕|즉석\s*국|미역국|육개장|죽\s*\d|죽$|죽\s*\(/],
+  ['카레·짜장', '카레', /카레|짜장|덮밥\s*소스/],
+  ['햄', '햄', /스팸|햄(?!버)|베이컨/],
+  ['소시지', '소시지', /비엔나|소시지|소세지/],
+  ['참치캔', '참치', /참치/],
+  ['어묵', '어묵', /어묵/],
+  ['맛살', '맛살', /맛살/],
+  ['떡', '떡', /떡볶이|냉동\s*떡|떡국\s*떡/],
+  ['통조림', null, /통조림/]
+];
+function convOf(name){
+  var n = String(name||'');
+  if (!n) return null;
+  if (CONV_RULES[0][2].test(n)) return {kind:CONV_RULES[0][0], ing:null}; // 밀키트는 '한우사골 부대찌개'처럼 고기 이름이 있어도 간편식품
+  if (CONV_SKIP.test(n)) return null;
+  for (var i=1;i<CONV_RULES.length;i++) if (CONV_RULES[i][2].test(n)) return {kind:CONV_RULES[i][0], ing:CONV_RULES[i][1]};
+  return null;
+}
+var CONV_CAT = '간편식품';
 function buildDeals(){
   var out = {};
   Object.keys(RAW_DEALS).forEach(function(brand){
     out[brand] = RAW_DEALS[brand].map(function(r, i){
+      // r[9] = '간편식품' (선택 칸, 예전 데이터엔 없음 → 이름으로 다시 판정)
+      var cv = convOf(r[0]); if (!cv && r[9] === CONV_CAT) cv = {kind:CONV_CAT, ing:null};
       return {id: brand+'-'+i, brand: brand, name:r[0], price:r[1], orig:r[2], cond:r[3], start:r[4], end:r[5],
-        ing: r[6] === '-' ? null : (r[6] || dealIng(r[0])), src: r[7] || brand, page: r[8] || null, real:true,
+        ing: cv ? cv.ing : (r[6] === '-' ? null : (r[6] || dealIng(r[0]))), cat: cv ? CONV_CAT : null, kind: cv ? cv.kind : null, src: r[7] || brand, page: r[8] || null, real:true,
         check: !!(SOURCES[r[7] || brand] && SOURCES[r[7] || brand].needsCheck)};
     });
   });
@@ -300,6 +332,8 @@ function expandPub(raw, cats){
   return (raw||[]).map(function(a){
     var cat = cats[a[2]] || '기타';
     var ings = a[5] ? a[5].split(',').map(function(t){ var main = /\*$/.test(t); return {k:t.replace('*',''), main:main, amt:''}; }) : [];
+    // '떡갈비'(다진 고기 반찬)는 떡이 아니에요 → 떡이 따로 없으면 떡 재료에서 빼요
+    if (!/떡(?!갈비)/.test(a[1] + ' ' + (a[6]||''))) ings = ings.filter(function(i){ return i.k !== '떡'; });
     var img = a[4] ? (/^https?:/.test(a[4]) ? a[4].replace(/^http:/,'https:') : IMG_BASE + a[4]) : '';
     return {name:a[1], emoji:PUB_EMOJI[cat]||'🥄', mins:null, cat:cat, kcal:a[3]||null, img:img, ings:ings, parts:a[6], steps:a[7].split('\n'), src:'pub', seq:a[0]};
   });
@@ -316,13 +350,42 @@ var ALL_RECIPES = (function(){
 })();
 var RECIPE_CATS = ['반찬','국&찌개','일품','밥','후식','기타'];
 
+// ---- 레시피 종류 필터: 자취생 · 간편식품 (데이터에 없는 분류라 아래 규칙으로 정해요) ----
+// 자취생: 혼자 사는 사람이 부담 없이 — 후식·기타가 아닌 끼니 요리이고, 재료 줄(양념 포함)이 7개 이하(기본 레시피는 재료 5개 이하·20분 이하),
+//         비싼 재료(소고기·전복·갈치·연어·문어 등)가 없는 것.
+// 간편식품: 마트에서 파는 가공·즉석 식품(라면·만두·햄·소시지·참치캔·어묵·맛살·카레/짜장·떡·우동면)이 주재료인 요리(기본 레시피는 부재료여도),
+//         지은 밥(=즉석밥)으로 만드는 요리,
+//         또는 10분 안에 끝나는 기본 레시피. (후식은 빼요)
+var CONV_ING = ['라면','만두','햄','소시지','참치','어묵','맛살','카레','떡','우동면'];
+var PRICEY_RE = /전복|갈치|대게|랍스터|장어|한우|관자|킹크랩|송이버섯|트러플|캐비어|와규|등심|안심|굴비|민어|도미|문어|낙지|꽃게|연어|소고기|쇠고기|소불고기|차돌/;
+function cookedRice(r){
+  return r.ings.some(function(i){ return i.k === '쌀' && /밥/.test(i.amt||''); }) || /(^|[\s,])(흰\s*|현미\s*|잡곡\s*|찬\s*)?(쌀)?밥\s*\d/.test(r.parts||'');
+}
+function ingLines(r){ return r.src === 'pub' ? String(r.parts||'').split(/,|\n/).filter(function(x){ return x.trim(); }).length : r.ings.length; }
+function recipeTags(r){
+  var meal = r.cat !== '후식' && r.cat !== '기타';
+  var text = r.name + ' ' + (r.parts||'') + ' ' + r.ings.map(function(i){ return i.k; }).join(' ');
+  var jachi = meal && !PRICEY_RE.test(text) && (r.src === 'pub' ? ingLines(r) <= 7 : (r.ings.length <= 5 && (r.mins == null || r.mins <= 20)));
+  var quick = r.cat !== '후식' && (r.ings.some(function(i){ return CONV_ING.indexOf(i.k) >= 0 && (i.main || r.src !== 'pub'); }) || cookedRice(r) || (r.mins != null && r.mins <= 10));
+  return {jachi:jachi, quick:quick};
+}
+ALL_RECIPES.forEach(function(r){ var t = recipeTags(r); r.jachi = t.jachi; r.quick = t.quick; r.rice = cookedRice(r); });
+var RECIPE_KINDS = [['jachi','자취생'],['quick','간편식품']];
+// kinds: [] 또는 ['jachi','quick'] — 하나라도 맞으면 통과(합집합)
+function kindMatch(r, kinds){
+  if (!kinds || !kinds.length) return true;
+  for (var i=0;i<kinds.length;i++) if (r[kinds[i]]) return true;
+  return false;
+}
+
 // 검색·분류 필터 (q: 검색어, cat: ''=전체)
-function filterRecipes(list, q, cat, getR){
+function filterRecipes(list, q, cat, getR, kinds){
   getR = getR || function(x){ return x; };
   var words = String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
   return list.filter(function(x){
     var r = getR(x);
     if (cat && r.cat !== cat) return false;
+    if (!kindMatch(r, kinds)) return false;
     for (var i=0;i<words.length;i++) if (r.q.indexOf(words[i]) < 0) return false;
     return true;
   });
@@ -361,6 +424,7 @@ function scoreRecipe(recipe, idx){
   recipe.ings.forEach(function(ing){
     if (ing.main) mainTotal++;
     var list = idx[ing.k];
+    if ((!list || !list.length) && ing.k === '쌀' && recipe.rice) list = idx['즉석밥']; // 지은 밥이 필요한 요리 ← 즉석밥 할인
     if (list && list.length){
       var best = list[0];
       if (ing.main) mainHit++;
@@ -386,4 +450,4 @@ function rankRecipes(recipes, deals, today){
 
 function formatWon(n){ return n==null ? '' : Number(n).toLocaleString('ko-KR') + '원'; }
 
-if (typeof module !== 'undefined') module.exports = {isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

@@ -138,6 +138,29 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   await p.click('nav button[data-tab="tab-deals"]');
   if (fake) console.log('fake update shown:', await p.evaluate(() => document.body.innerText.includes('테스트용 국산 애호박')));
+  // 간편식품 묶음 (이마트 전단: 라면·만두·햄·참치·즉석밥 …)
+  const conv = await p.$$eval('.ing-h', hs => { const h = hs.find(x => x.innerText.startsWith('간편식품')); if (!h) return null; const rows = []; let n = h.nextElementSibling; while (n && n.classList.contains('deal')) { rows.push(n.querySelector('.tag.conv') && n.querySelector('.tag.conv').innerText); n = n.nextElementSibling; } return { head: h.innerText.replace(/\s+/g, ' '), kinds: [...new Set(rows)] }; });
+  console.log('deals 간편식품:', conv); if (!conv || conv.kinds.length < 4) throw new Error('할인 재료 탭에 간편식품 묶음이 없어요');
+  // 레시피 종류 칩: 전체 ↔ 자취생/간편식품(여러 개, 합집합), 마지막 칩 끄면 전체
+  await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
+  const chips = () => p.$$eval('.kchip', bs => bs.map(b => b.getAttribute('data-kind') + ':' + b.getAttribute('aria-pressed') + ':' + b.querySelector('.kc').innerText));
+  const nCards = () => p.$$eval('#recipeList .recipe', e => e.length);
+  const sum = () => p.$eval('#recipeSummary', e => e.innerText.replace(/\s+/g, ' '));
+  let ch = await chips(); console.log('chips:', ch); if (!/^:true:/.test(ch[0]) || !/^jachi:false:\d/.test(ch[1]) || !/^quick:false:\d/.test(ch[2])) throw new Error('칩 기본 상태 이상');
+  const cnt = ch.map(x => +x.split(':')[2].replace(/,/g, ''));
+  if (!(cnt[1] > 3 && cnt[2] > 3 && cnt[1] < cnt[0] && cnt[2] < cnt[0])) throw new Error('칩 개수 이상 ' + cnt);
+  await p.click('.kchip[data-kind="quick"]'); ch = await chips(); console.log('quick:', ch, await sum());
+  if (!/^:false/.test(ch[0]) || !/^quick:true/.test(ch[2])) throw new Error('간편식품 칩 상태 이상');
+  if (await nCards() !== Math.min(30, cnt[2])) throw new Error('간편식품 카드 수 ' + await nCards() + ' != ' + cnt[2]);
+  const qNames = await p.$$eval('#recipeList .recipe h3', e => e.slice(0, 5).map(x => x.innerText)); console.log('quick top5:', qNames);
+  await p.click('.kchip[data-kind="jachi"]'); ch = await chips(); console.log('both:', ch, await sum());
+  const both = +((await sum()).match(/자취생·간편식품 ([\d,]+)개/) || [0, '0'])[1].replace(/,/g, '');
+  if (!/^jachi:true/.test(ch[1]) || !/^quick:true/.test(ch[2]) || !(both >= Math.max(cnt[1], cnt[2]) && both <= cnt[1] + cnt[2])) throw new Error('합집합 이상 ' + both);
+  if (cnt[2] > 30 || cnt[1] > 30) { const m0 = await p.$eval('#btnMore', b => b.innerText); await p.click('#btnMore'); await new Promise(r => setTimeout(r, 300)); console.log('more:', m0, '→', await nCards()); if (await nCards() !== Math.min(60, both)) throw new Error('더 보기 필터 이상'); }
+  await p.click('.kchip[data-kind="quick"]'); await p.click('.kchip[data-kind="jachi"]'); ch = await chips(); console.log('fallback:', ch);
+  if (!/^:true/.test(ch[0]) || /true/.test(ch[1] + ch[2])) throw new Error('마지막 칩 끄면 전체로 안 돌아감');
+  await p.click('.kchip[data-kind="jachi"]'); await p.click('.kchip[data-kind=""]'); ch = await chips(); if (!/^:true/.test(ch[0]) || /true/.test(ch[1])) throw new Error('전체 눌러도 다른 칩이 안 꺼짐');
+  if (await nCards() !== Math.min(30, cnt[0])) throw new Error('전체 복귀 후 카드 수 이상');
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
   console.log('nav:', await p.$$eval('nav button', bs => bs.map(b => b.innerText.trim()).join(' | ')));
   await p.click('#btnSrc'); await p.waitForFunction(() => document.getElementById('srcSheet').open, { timeout: 5000 });

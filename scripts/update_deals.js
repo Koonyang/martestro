@@ -12,13 +12,21 @@ const SCRAPERS = { emart: require('./scrapers/emart'), homeplus: require('./scra
 const MIN = { emart: 10, homeplus: 5, lottemart: 10, topmart: 5 }; // 이보다 적게 읽히면 '구조가 바뀌어 실패'로 보고 이전 데이터 유지
 const only = (process.env.ONLY || '').split(',').filter(Boolean);
 
+// 간편식품(즉석밥·라면·만두·냉동식품·밀키트·햄/소시지/참치캔·즉석국/카레·떡 등) 품목은 10번째 칸에 '간편식품' 표시.
+// 앞 9칸은 그대로라 예전 앱/데이터와 호환돼요(없는 칸은 null 로 채움).
+function tagConv(r) {
+  const cv = L.convOf(r[0]);
+  if (!cv) return r.length > 9 ? r.slice(0, 9) : r;
+  const out = r.slice(0, 9); while (out.length < 9) out.push(null);
+  out.push(L.CONV_CAT); return out;
+}
 (async () => {
   const today = process.env.TODAY || todayKST();
   const prev = JSON.parse(fs.readFileSync(FILE, 'utf8'));
   const next = { version: 1, updated: prev.updated, sources: { ...prev.sources }, deals: {}, status: { ...prev.status } };
   const alive = rows => (rows || []).filter(r => !r[5] || r[5] >= today);
   // 1) 이전 데이터에서 끝난 품목 빼기
-  for (const k of Object.keys(prev.deals)) next.deals[k] = alive(prev.deals[k]);
+  for (const k of Object.keys(prev.deals)) next.deals[k] = alive(prev.deals[k]).map(tagConv);
   // 2) 마트별 새로 읽기
   const log = [];
   for (const [mart, s] of Object.entries(SCRAPERS)) {
@@ -27,7 +35,7 @@ const only = (process.env.ONLY || '').split(',').filter(Boolean);
     try {
       const r = await s.run({ today, guessIng: L.guessIng, dealIng: L.dealIng, prevStatus: st });
       if (r.keep) { next.status[mart] = { ...st, ok: true, lastTry: today, msg: r.msg }; log.push(`${mart}: 유지 (${r.msg})`); continue; }
-      const items = alive(r.items);
+      const items = alive(r.items).map(tagConv);
       if (items.length < MIN[mart]) throw new Error(`읽은 품목이 ${items.length}개뿐 (최소 ${MIN[mart]}) — 페이지 구조가 바뀌었을 수 있음`);
       const same = JSON.stringify(items) === JSON.stringify(next.deals[mart]);
       next.deals[mart] = items;
@@ -43,6 +51,7 @@ const only = (process.env.ONLY || '').split(',').filter(Boolean);
   // 3) 바뀐 게 있을 때만 저장 (lastTry 같은 시도 기록만 바뀐 건 무시)
   const strip = o => JSON.stringify({ s: o.sources, d: o.deals, st: Object.fromEntries(Object.entries(o.status).map(([k, v]) => [k, { ...v, lastTry: undefined, msg: undefined }])) });
   console.log(log.join('\n'));
+  console.log('간편식품:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[9] === L.CONV_CAT).length).join(', '));
   if (strip(prev) === strip(next)) { console.log('변경 없음 — 저장 안 함'); return; }
   next.updated = new Date(Date.now() + 9 * 3600e3).toISOString().replace('Z', '+09:00').slice(0, 19) + '+09:00';
   // 데이터가 앱에서 정상적으로 읽히는지 마지막 확인

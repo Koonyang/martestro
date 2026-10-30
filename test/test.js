@@ -83,7 +83,7 @@ assert(tmAct.some(d=>d.name.startsWith('양파(국산·3kg') && L.isUpcoming(d,T
 assert(tmNow.some(d=>d.name.startsWith('돌문어')), '10/30 단하루 돌문어');
 assert(!L.DEALS.topmart.filter(d=>L.isActive(d,'2026-10-31')).some(d=>d.name.startsWith('돌문어')), '10/31엔 돌문어 끝');
 assert.equal(L.guessIng('돌문어(국산·100g)'), '문어'); assert.equal(L.guessIng('조방낙지'), '낙지'); assert.equal(L.guessIng('꽃게(국산·대·5마리)'), '꽃게');
-assert.equal(tm.find(d=>d.name.startsWith('청양/오이맛고추')).ing, null); assert.equal(tm.find(d=>d.name.startsWith('CJ)햇반')).ing, null);
+assert.equal(tm.find(d=>d.name.startsWith('청양/오이맛고추')).ing, null); assert.equal(tm.find(d=>d.name.startsWith('CJ)햇반')).ing, '즉석밥'); assert.equal(tm.find(d=>d.name.startsWith('CJ)햇반')).cat, '간편식품'); // 간편식품은 이제 레시피 매칭에 써요
 // 진주 호탄동 실제 OSM 결과
 const jj = JSON.parse(require('fs').readFileSync(__dirname+'/fixtures/op_jinju.json'));
 const jm = L.parseMarts(jj, 35.1617518, 128.1153464, 2);
@@ -121,4 +121,32 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   const near = L.martsFromRows(g.big.concat(g.local), 35.1617518, 128.1153464, 3);
   assert(near.some(m=>m.brand==='topmart' && m.id==='node/4655465094'), '진주 탑마트 호탄점 (타일 경로)');
   console.log('마트 타일 경로 = 실시간 검색 결과 일치 (서울시청·진주 호탄동, 1/2/3km)'); }
+{ // 간편식품 전단 품목 + 레시피 종류 필터
+  const c = n => { const v = L.convOf(n); return v && v.kind + '/' + v.ing; };
+  assert.strictEqual(c('CJ)햇반 찰기가득쌀밥(210gx8입)'), '즉석밥/즉석밥');
+  assert.strictEqual(c('봉지라면 전품목'), '라면/라면');
+  assert.strictEqual(c('교자만두/얇은피 만두 30여종'), '만두/만두');
+  assert.strictEqual(c('CJ 스팸 클래식/마일드 (200g×3입)'), '햄/햄');
+  assert.strictEqual(c('사조/오뚜기/칼보/리오마레 참치 전품목'), '참치캔/참치');
+  assert.strictEqual(c('피코크 대왕 한우사골 부대찌개 (1,638g)'), '밀키트/null');
+  assert.strictEqual(c('냉동피자 전품목'), '냉동식품/null');
+  assert.strictEqual(c('오뚜기 3분 카레/짜장 전품목 (200g)'), '카레·짜장/카레');
+  for (const n of ['참치액/코인육수 전품목', '스페인 대패 삼겹살 (2kg, 봉, 냉동)', '냉동흰다리새우살(900g)', '감홍사과 (1.3kg)', '한우 몸보신탕용 (사골)']) assert.strictEqual(L.convOf(n), null, n);
+  // 예전 데이터(9칸)도, 새 데이터(10번째 칸 '간편식품')도 똑같이 읽혀요
+  L.setDealsData({ deals: { emart: [['오뚜기 진라면 (5입)', 3980, 4980, '', '2026-10-30', '2026-11-05', null, 'emart', 1], ['CJ 햇반 (8입)', 7980, 9980, '', '2026-10-30', '2026-11-05', '-', 'emart', 1, '간편식품'], ['양파 (3kg)', 4980, 5980, '', '2026-10-30', '2026-11-05'], ['종가 포기김치 (1kg)', 8980, 9980, '', '2026-10-30', '2026-11-05']] }, sources: {} });
+  const E = L.DEALS.emart;
+  assert.deepStrictEqual(E.map(d => [d.ing, d.cat]), [['라면', '간편식품'], ['즉석밥', '간편식품'], ['양파', null], ['김치', null]]);
+  const rk = L.rankRecipes(L.ALL_RECIPES, E, '2026-10-30');
+  const kfr = rk.find(s => s.recipe.name === '김치볶음밥'); assert(kfr && kfr.matched.some(m => m.deal.ing === '즉석밥'), '밥 1공기 ← 즉석밥');
+  assert(rk.some(s => /라면/.test(s.recipe.name) && s.matched.some(m => m.deal.ing === '라면')), '라면 요리 ← 라면 할인');
+  // 종류 필터
+  const A = L.ALL_RECIPES, J = A.filter(r => r.jachi), Q = A.filter(r => r.quick);
+  assert(J.length >= 60 && J.length <= 300, '자취생 ' + J.length); assert(Q.length >= 60 && Q.length <= 300, '간편식품 ' + Q.length);
+  assert(J.every(r => r.cat !== '후식' && r.cat !== '기타')); assert(!J.some(r => r.name === '전복버터구이'));
+  assert(Q.some(r => r.name === '떡볶이') && Q.some(r => r.name === '부대찌개') && Q.some(r => r.name === '우동'));
+  assert(J.some(r => r.name === '계란말이') && !J.some(r => r.name === '소불고기'));
+  assert.strictEqual(L.filterRecipes(A, '', '', null, []).length, A.length);
+  assert.strictEqual(L.filterRecipes(A, '', '', null, ['jachi', 'quick']).length, A.filter(r => r.jachi || r.quick).length);
+  console.log('간편식품·종류 필터: 자취생', J.length, '/ 간편식품', Q.length, '/ 합집합', A.filter(r => r.jachi || r.quick).length, '/ 전체', A.length);
+}
 console.log('ALL TESTS PASSED');
