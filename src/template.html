@@ -178,10 +178,17 @@ button.stat[aria-checked=true] span{color:var(--g)}
 .dsticky .search-row{margin-top:0}
 .dsticky .kw-chips{margin:8px 0 0}
 body.deals-on .top.scrolled{border-bottom-color:transparent}
-#tab-deals .page-h{padding-top:8px}
 .dtop{padding:0 4px}
-.dtop .sum{margin:12px 0 0}
-.dtop .sortbar{margin:12px -4px 0;padding-left:4px;padding-right:4px}
+.dhead{display:flex;align-items:center;gap:10px;padding:7px 4px 0}
+.dhead .page-h{flex:1;min-width:0;padding:0}
+.dhead .page-h p{font-size:13px}
+.dhead .page-h p span{white-space:nowrap}
+#dealSummary:empty{display:none}
+.dhead .sum{display:flex;gap:5px;margin:0;flex:none}
+.dhead button.stat{padding:5px 8px;border-radius:10px;min-width:40px;text-align:center}
+.dhead .stat b{font-size:15px}
+.dhead .stat span{display:block;font-size:10.5px;white-space:nowrap}
+.dtop .sortbar{margin:16px -4px 0;padding-left:4px;padding-right:4px}
 .dlist-card{margin-top:12px;padding-top:6px}
 #tab-deals .ing-h{top:calc(var(--hdrH,56px) + var(--dsH,60px))}
 .ing-h{position:sticky;top:56px;z-index:2;display:flex;align-items:center;gap:8px;background:var(--card);padding:16px 0 6px;font-weight:800;font-size:15.5px;letter-spacing:-.03em}
@@ -556,9 +563,11 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <div id="dealKws" class="kw-chips" role="group" aria-label="검색 키워드" hidden></div>
     <div id="dealKwStatus" class="vh" role="status" aria-live="polite"></div>
   </div>
-  <div class="page-h"><h1>할인 재료</h1><p>선택한 마트에서 지금 싸게 파는 재료예요.</p></div>
-  <div class="dtop">
+  <div class="dhead">
+    <div class="page-h"><h1>할인 재료</h1><p><span>선택한 마트에서 지금</span> <span>싸게 파는 재료예요.</span></p></div>
     <div id="dealSummary"></div>
+  </div>
+  <div class="dtop">
     <div id="dSortBar" class="sortbar" role="group" aria-label="할인 재료 정렬 (다시 누르면 방향이 바뀌어요)" hidden></div>
   </div>
   <div class="card dlist-card"><div id="dealList"></div></div>
@@ -1103,7 +1112,7 @@ function renderDeals(){
     var active = activeAll.filter(function(d){ return dealMatchesKw(d, dKws); }); // 키워드가 있으면 숫자도 키워드 기준
     var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length;
     var shown = dFilt ? active.filter(function(d){ return (isUpcoming(d, today) ? 'soon' : 'today') === dFilt; }) : active;
-    $('dealSummary').innerHTML = '<div class="sum" role="radiogroup" aria-label="할인 재료 보기 필터">' + statBtn('', active.length, '할인 재료') + (hasUp ? statBtn('today', active.length-nUp, '오늘 적용') + statBtn('soon', nUp, '곧 시작') : '') + '</div>' +
+    $('dealSummary').innerHTML = '<div class="sum" role="radiogroup" aria-label="할인 재료 보기 필터">' + statBtn('', active.length, '전체') + (hasUp ? statBtn('today', active.length-nUp, '오늘 적용') + statBtn('soon', nUp, '곧 시작') : '') + '</div>' +
       '';  // 가격확인 안내 상자는 없앴어요 — 「가격확인」 태그를 누르면 말풍선으로 설명해요
     shownN = shown.length;
     var groups = {};
