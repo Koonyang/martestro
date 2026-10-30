@@ -450,4 +450,52 @@ function rankRecipes(recipes, deals, today){
 
 function formatWon(n){ return n==null ? '' : Number(n).toLocaleString('ko-KR') + '원'; }
 
-if (typeof module !== 'undefined') module.exports = {isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+
+// ---------- 화면용 품목 이름 정리 (deals.json 원문은 그대로, 검색·매칭도 원문으로) ----------
+// '수입)돼지냉동대패삼겹 1kg(스페인산·봉)' → {title:'돼지냉동대패삼겹', meta:['스페인산','1kg','봉']}
+var ORIGIN_COUNTRIES = '미국|호주|캐나다|칠레|스페인|뉴질랜드|멕시코|브라질|노르웨이|중국|베트남|태국|페루|덴마크|네덜란드|독일|프랑스|이탈리아|아일랜드|러시아|원양|칠레|필리핀|에콰도르|남아공|오스트리아|벨기에|헝가리|폴란드|핀란드|아르헨티나|우루과이|인도네시아|일본|대만|이스라엘|터키|영국|스코틀랜드';
+var ORIGIN_RE = new RegExp('^(국산|국내산|수입|수입산|원산지별도표기|원산지 별도표기|(?:'+ORIGIN_COUNTRIES+')(?:산)?|[가-힣]{1,6}산)$');
+var LEAD_ORIGIN_RE = new RegExp('^(국산|국내산|수입산?|(?:'+ORIGIN_COUNTRIES+')산)\\s+');
+var SPEC_WORD_RE = /^(각|개|팩|봉|BOX|박스|망|단|통|송이|마리|판|구|냉장|냉동|해동|대|중|소|특|대란|특란|왕란|중란|행사|기획|상품별 규격 상이|규격 상이|[12]\+*등급|1\+\+등급|무항생제|약\s*\S+)$/i;
+var SIZE_TAIL_RE = /\s+((?:약\s*)?\d[\d.,~\-]*\s*(?:kg|g|ml|l|cm|입|개입|개|구|마리|봉|팩)(?:\s*[x×*]\s*\d+\s*(?:입|개|봉|T)?)?)$/i;
+function nameOrigin(t){ return ORIGIN_RE.test(t) && !/^(유명|고|광|부)산$/.test(t); }
+function nameSpecPart(t){
+  t = t.trim(); if (!t) return true;
+  if (nameOrigin(t) || /^\d|^(약|각)\s*\d/.test(t) || SPEC_WORD_RE.test(t)) return true;
+  return t.split('/').every(function(x){ x = x.trim(); return x && (nameOrigin(x) || /^\d/.test(x) || SPEC_WORD_RE.test(x)); });
+}
+function splitDealName(raw){
+  var name = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();
+  var origins = [], specs = [], uses = [], brand = '';
+  var m = name.match(/^([^()\s]{1,8})\)\s*/); // 'CJ)햇반', '수입)소…'
+  if (m){ if (nameOrigin(m[1])) origins.push(m[1]); else brand = m[1]; name = name.slice(m[0].length); }
+  // 괄호 묶음 — 닫는 괄호가 없으면 끝까지
+  var out = '', i = 0;
+  while (i < name.length){
+    var c = name[i];
+    if (c !== '(') { out += c; i++; continue; }
+    var depth = 1, j = i + 1;
+    while (j < name.length && depth){ if (name[j] === '(') depth++; else if (name[j] === ')') depth--; j++; }
+    var inner = name.slice(i + 1, depth ? j : j - 1), parts = inner.split(/\s*·\s*|\s*,(?!\d{3})\s*/).map(function(x){ return x.replace(/^[가-힣]{1,4}:\s*(?=\S)/, function(l, o, str){ return nameOrigin(str.slice(l.length)) ? '' : l; }); }).filter(Boolean);
+    var ok = parts.length && parts.every(function(x){ return /용$/.test(x) || nameSpecPart(x); });
+    if (ok){
+      parts.forEach(function(x){ if (/용$/.test(x) && !nameSpecPart(x)) uses.push(x); else if (nameOrigin(x)) origins.push(x); else specs.push(x); });
+      out += ' ';
+    } else out += '(' + inner + (depth ? '' : ')');
+    i = j;
+  }
+  var title = out.replace(/\s+/g, ' ').trim();
+  var lm = title.match(LEAD_ORIGIN_RE); if (lm && title.length > lm[0].length){ origins.unshift(lm[1]); title = title.slice(lm[0].length); }
+  var tm = title.match(SIZE_TAIL_RE); if (tm && title.length > tm[0].length + 1){ specs.unshift(tm[1]); title = title.slice(0, title.length - tm[0].length).trim(); }
+  if (uses.length) title += ' ' + uses.join(' ');
+  if (brand) title = brand + ' ' + title;
+  title = title.replace(/\s+/g, ' ').trim();
+  if (!title) return {title: String(raw == null ? '' : raw).trim(), meta: []};
+  // 나라가 따로 있으면 '수입'은 빼요
+  if (origins.some(function(o){ return !/^(수입|수입산)$/.test(o); })) origins = origins.filter(function(o){ return !/^(수입|수입산)$/.test(o); });
+  var meta = [], seen = {};
+  origins.concat(specs).forEach(function(x){ x = x.replace(/(\d(?:kg|g|ml|l)?)\s*[x×*]\s*(\d)/gi, '$1×$2').trim(); if (x && !seen[x]){ seen[x] = 1; meta.push(x); } });
+  return {title: title, meta: meta};
+}
+
+if (typeof module !== 'undefined') module.exports = {splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

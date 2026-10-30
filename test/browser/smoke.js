@@ -103,6 +103,10 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   console.log('deals:', await p.$eval('#dealSummary', e => e.innerText.replace(/\s+/g, ' ')));
   if (await p.$('#tab-deals .notice') || /가격확인 표시|눈으로 읽어 옮겼어요/.test(await p.$eval('#tab-deals', e => e.innerText))) throw new Error('할인 재료 탭에 가격확인 안내 상자가 남아 있어요');
   if (await p.$('.legend')) throw new Error('범례가 남아 있어요');
+  // 품목 이름: 큰 글씨에 원산지·규격 괄호/「수입)」 없이, 작은 회색 줄로 따로
+  const dn = await p.$$eval('#tab-deals .deal .dn', es => es.map(e => e.textContent)); const nSpec = await p.$$eval('#tab-deals .deal .dspec', es => es.length);
+  console.log('deal names:', dn.length, 'spec lines:', nSpec, dn.slice(0, 3));
+  if (!dn.length || !nSpec || dn.some(t => /\((국산|국내산|[가-힣]+산)[·)]|^수입\)/.test(t))) throw new Error('품목 이름에 원산지 표기가 그대로 있어요');
   await p.screenshot({ path: '/tmp/martestro_deals.png' });
   await p.click('nav button[data-tab="tab-recipes"]');
   console.log('top5:', await p.$$eval('.recipe h3', els => els.slice(0, 5).map(e => e.innerText)));
@@ -145,6 +149,17 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   if (ms2.mnVis !== ms2.mn || ms2.pressed !== 'true' || !/마트/.test(ms2.chip) || ms2.open !== ms.open || ms2.other) throw new Error('표시 가격 기준 켜기 이상');
   await p.focus('#recipeList .recipe .mn-toggle'); await p.keyboard.press('Enter'); ms2 = await mnState();
   if (ms2.mnVis !== 0 || ms2.pressed !== 'false') throw new Error('키보드로 끄기 이상');
+  // 「할인 재료 비율」 막대 줄은 없고, 사진을 누르면 흰 막(65%) + 「주재료 n/m 할인 중」이 페이드 인/아웃
+  if (await p.$('#recipeList .score, #recipeList .bar')) throw new Error('할인 재료 비율 막대가 남아 있어요');
+  if (/할인 재료 비율/.test(await p.$eval('#recipeList', e => e.innerText))) throw new Error('할인 재료 비율 글자가 보여요');
+  const ovState = () => p.$eval('#recipeList .recipe', c => { const t = c.querySelector('button.thumb'), o = t && t.querySelector('.thumb-ov'); return t && { pressed: t.getAttribute('aria-pressed'), op: getComputedStyle(o).opacity, bg: getComputedStyle(o).backgroundColor, txt: o.textContent, label: t.getAttribute('aria-label'), open: c.querySelector('details') ? c.querySelector('details').open : null }; });
+  let ov = await ovState(); console.log('overlay default:', ov);
+  if (!ov || ov.pressed !== 'false' || ov.op !== '0' || !/주재료\s*\d+\/\d+\s*할인 중/.test(ov.txt) || !/할인 중/.test(ov.label) || ov.bg !== 'rgba(255, 255, 255, 0.65)') throw new Error('사진 막 기본 상태 이상');
+  await p.$eval('#recipeList .recipe button.thumb', e => e.scrollIntoView({ block: 'center' })); await p.click('#recipeList .recipe button.thumb'); await new Promise(r => setTimeout(r, 400));
+  let ov2 = await ovState(); console.log('overlay on:', ov2);
+  if (ov2.pressed !== 'true' || ov2.op !== '1' || ov2.open !== ov.open) throw new Error('사진 누르기 → 막 켜기 이상(또는 카드가 펼쳐짐)');
+  await p.focus('#recipeList .recipe button.thumb'); await p.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 400));
+  ov2 = await ovState(); if (ov2.pressed !== 'false' || ov2.op !== '0') throw new Error('키보드로 막 끄기 이상');
   await p.click('nav button[data-tab="tab-loc"]');
   await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   await p.click('nav button[data-tab="tab-deals"]');

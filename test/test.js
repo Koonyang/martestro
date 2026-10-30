@@ -149,4 +149,31 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert.strictEqual(L.filterRecipes(A, '', '', null, ['jachi', 'quick']).length, A.filter(r => r.jachi || r.quick).length);
   console.log('간편식품·종류 필터: 자취생', J.length, '/ 간편식품', Q.length, '/ 합집합', A.filter(r => r.jachi || r.quick).length, '/ 전체', A.length);
 }
+// 화면용 품목 이름 정리 (data/deals.json 실제 이름들)
+{
+  const S = L.splitDealName, eq = (n, title, meta) => assert.deepStrictEqual(S(n), {title, meta}, n);
+  eq('돼지냉장삼겹살(국산·구이/수육용·100g)', '돼지냉장삼겹살 구이/수육용', ['국산', '100g']);
+  eq('돼지냉장목살(국산·100g) 구이/수육용', '돼지냉장목살 구이/수육용', ['국산', '100g']);
+  eq('수입)돼지냉동대패삼겹 1kg(스페인산·봉)', '돼지냉동대패삼겹', ['스페인산', '1kg', '봉']);
+  eq('수입)소냉장와규등심(호주산·100g) 구이/스테이크용', '소냉장와규등심 구이/스테이크용', ['호주산', '100g']);
+  eq('수입)소냉장꽃갈비 LA식(원산지별도표기·100g)', '소냉장꽃갈비 LA식', ['원산지별도표기', '100g']);
+  eq('미국산 냉장 꽃갈비살 (100g)', '냉장 꽃갈비살', ['미국산', '100g']);
+  eq('국내산 돼지고기 삼겹살/목심 (각 100g)', '돼지고기 삼겹살/목심', ['국내산', '각 100g']);
+  eq('항공직송연어(노르웨이·500g·팩)', '항공직송연어', ['노르웨이', '500g', '팩']);
+  eq('남해안 생굴(국내산) 200G(봉)', '남해안 생굴', ['국내산', '200G', '봉']);
+  eq('CJ)햇반 찰기가득쌀밥(210gx8입)', 'CJ 햇반 찰기가득쌀밥', ['210g×8입']);
+  eq('고당도감귤(타이벡)(국산·2.8kg·BOX)', '고당도감귤(타이벡)', ['국산', '2.8kg', 'BOX']);
+  eq('국물용멸치(대멸)(멸치:국산·650g)', '국물용멸치(대멸)', ['국산', '650g']);
+  eq('피코크 대왕 한우사골 부대찌개 (1,638g)', '피코크 대왕 한우사골 부대찌개', ['1,638g']);
+  eq('돼지냉장삼겹살(국산·100g', '돼지냉장삼겹살', ['국산', '100g']); // 닫는 괄호 없음
+  eq('한우 몸보신탕용 (사골)', '한우 몸보신탕용 (사골)', []); // 규격이 아닌 괄호는 그대로
+  eq('유명산지 밤고구마 (3kg)', '유명산지 밤고구마', ['3kg']);
+  eq('양파', '양파', []);
+  // 모든 실제 이름: 빈 이름 없음, 원문은 그대로(매칭은 원문으로)
+  const raw = JSON.parse(require('fs').readFileSync(__dirname + '/../data/deals.json'));
+  const names = Object.values(raw.deals).flat().map(x => Array.isArray(x) ? x[0] : x.name);
+  names.forEach(n => { const r = S(n); assert(r.title.length > 0, n); assert(!/^수입\)/.test(r.title), n); });
+  assert.strictEqual(L.dealIng ? typeof L.dealIng : 'function', 'function');
+  console.log('품목 이름 정리:', names.length, '개 OK, 예) ', S('수입)돼지냉동대패삼겹 1kg(스페인산·봉)').title);
+}
 console.log('ALL TESTS PASSED');

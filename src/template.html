@@ -161,6 +161,8 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .deal{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);min-height:56px}
 .deal:last-child{border-bottom:0}
 .deal .dn{font-weight:600;font-size:15px;letter-spacing:-.02em}
+.deal .dspec{margin-top:2px;font-size:12px;font-weight:500;color:var(--m);letter-spacing:-.01em;line-height:1.35}
+.dspec-i{font-size:.86em;color:var(--m)}
 .deal .meta{margin-top:4px}
 .price{text-align:right;white-space:nowrap;display:flex;flex-direction:column;align-items:flex-end;gap:1px}
 .price .now{font-weight:800;font-size:16.5px;letter-spacing:-.03em;color:var(--t)}
@@ -225,11 +227,19 @@ button.kchip:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .rmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--m);font-weight:600}
 .rmeta span{display:inline-flex;align-items:center;gap:3px}
 .rmeta svg.i{width:14px;height:14px}
-.score{display:flex;align-items:center;gap:10px;margin-top:14px}
-.bar{flex:1;height:8px;background:var(--card2);border-radius:99px;overflow:hidden}
-.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--a),var(--g))}
-.score-t{font-size:12.5px;font-weight:700;color:var(--t2);white-space:nowrap}
-.score-k,.gauge .g-k{font-size:12px;font-weight:700;color:var(--m);white-space:nowrap}
+/* 레시피 사진을 누르면 흰 막(65%) 위에 주재료 할인 비율이 떠요. 다시 누르면 사진만 */
+button.thumb{padding:0;border:0;min-height:0;color:inherit;font:inherit;font-size:34px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.thumb:hover{filter:none}
+button.thumb:active{transform:none}
+button.thumb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+.thumb-ov{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:rgba(255,255,255,.65);color:#1E2A4A;text-align:center;line-height:1.2;padding-top:12px;opacity:0;transition:opacity .25s ease;pointer-events:none}
+.thumb-ov b{font-size:11px;font-weight:700;letter-spacing:-.02em}
+.thumb-ov span{font-size:13px;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
+.thumb-ov span em{font-style:normal;font-size:11px;font-weight:700}
+button.thumb[aria-pressed=true] .thumb-ov{opacity:1}
+button.thumb .rank{z-index:2}
+@media (prefers-reduced-motion:reduce){.thumb-ov{transition:none}}
+.gauge .g-k{font-size:12px;font-weight:700;color:var(--m);white-space:nowrap}
 .gauge{margin-top:12px;padding:10px 12px 11px;border-radius:12px;background:var(--card2)}
 .gauge .g-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .gauge .g-k em{font-style:normal;font-size:11px;font-weight:700;margin-left:4px;padding:1px 6px;border-radius:6px;color:var(--m);box-shadow:inset 0 0 0 1px var(--line)}
@@ -882,9 +892,9 @@ function dealRow(d){
   if (d.kind) tag = '<span class="tag conv">'+esc(d.kind)+'</span>' + tag;
   if (d.ing){ // 레시피 재료로 쓰이는 품목만 고를 수 있어요
     var sk = selKey(d), on = !!selDeals[sk];
-    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button><div style="min-width:0;flex:1">'+'<div class="dn">'+esc(d.name)+'</div><div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button><div style="min-width:0;flex:1">'+''+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
   }
-  return '<div class="deal"><div style="min-width:0"><div class="dn">'+esc(d.name)+'</div><div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+  return '<div class="deal"><div style="min-width:0">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
 }
 function fmtMD(s){ var p = s.split('-'); return (+p[1])+'/'+(+p[2]); }
 
@@ -943,6 +953,12 @@ var PAGE = 30, rLimit = PAGE, rQuery = '', rCat = '', rTimer = null, rKinds = []
 // 종류 칩: 전체 ↔ 자취생/간편식품(여러 개, 합집합). 마지막 칩을 끄면 다시 전체.
 function syncKindChips(){ document.querySelectorAll('.kchip').forEach(function(b){ var k = b.getAttribute('data-kind'); b.setAttribute('aria-pressed', String(k ? rKinds.indexOf(k) >= 0 : !rKinds.length)); }); }
 // 카드별 「표시 가격 기준」: 칩·할인 상품 목록에 매장 이름 보이기/숨기기 (기본 숨김)
+// 순위 카드 사진: 누르면 할인 비율 막이 페이드 인/아웃 (카드 펼침과는 따로)
+$('recipeList').addEventListener('click', function(e){
+  var t = e.target.closest && e.target.closest('button.thumb'); if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  t.setAttribute('aria-pressed', String(t.getAttribute('aria-pressed') !== 'true'));
+});
 $('recipeList').addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('.mn-toggle'); if (!b) return;
   e.preventDefault(); e.stopPropagation();
@@ -982,10 +998,24 @@ function recipeMeta(r){
   bits.push('<span>'+ic('bowl')+esc(r.cat)+'</span>');
   return '<div class="rmeta">'+bits.join('')+'</div>';
 }
+// 품목 이름: 큰 글씨는 깔끔한 이름, 원산지·용량은 작은 회색 줄 (원문은 title로)
+function dealNameHtml(name){
+  var n = splitDealName(name);
+  return '<div class="dn"'+(n.title !== name ? ' title="'+esc(name)+'"' : '')+'>'+esc(n.title)+'</div>' + (n.meta.length ? '<div class="dspec">'+n.meta.map(esc).join(' · ')+'</div>' : '');
+}
+function dealNameInline(name){
+  var n = splitDealName(name);
+  return esc(n.title) + (n.meta.length ? ' <span class="dspec-i">'+n.meta.map(esc).join(' · ')+'</span>' : '');
+}
 // 사진: 카드 썸네일은 화면에 보일 때만 불러와요(loading=lazy). 사진이 없으면 이모지.
-function thumb(r, rank){
-  return '<div class="thumb">'+(rank ? '<span class="rank">'+rank+'</span>' : '')+'<span aria-hidden="true">'+r.emoji+'</span>' +
-    (r.img ? '<img src="'+esc(r.img)+'" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '') + '</div>';
+function thumb(r, rank, s){
+  var inner = (rank ? '<span class="rank">'+rank+'</span>' : '')+'<span aria-hidden="true">'+r.emoji+'</span>' +
+    (r.img ? '<img src="'+esc(r.img)+'" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '');
+  if (!s) return '<div class="thumb">'+inner+'</div>';
+  // 순위 카드: 사진이 버튼 — 누르면 흰 막 위에 「주재료 n/m 할인 중」
+  var t = '주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중';
+  return '<button type="button" class="thumb" aria-pressed="false" aria-label="'+esc(r.name)+' 사진 — 할인 재료 비율 보기 ('+t+')">'+inner +
+    '<span class="thumb-ov" aria-hidden="true"><b>주재료</b><span>'+s.mainHit+'/'+s.mainTotal+' <em>할인 중</em></span></span></button>';
 }
 // ---------- 탭하면 뜻이 뜨는 태그 (가격확인·주재료) ----------
 var TIPS = {
@@ -1037,7 +1067,7 @@ function saveGauge(s){
     '<div class="g-t" aria-hidden="true">원가 <s>'+formatWon(s.origSum)+'</s> → <b>'+formatWon(s.saleSum)+'</b> · <span class="g-s">'+pct+'% 절약</span> <span class="muted">(약 '+formatWon(s.savings)+')</span></div></div>';
 }
 function rankedCard(s, idx){
-  var r = s.recipe, pct = Math.round(s.ratio*100);
+  var r = s.recipe;
   var hits = s.matched.map(function(x){
     var d = x.deal;
     var p = d.price != null ? formatWon(d.price) : d.cond;
@@ -1045,9 +1075,8 @@ function rankedCard(s, idx){
     return '<span class="ing hit'+(x.ing.main?' main':' sub')+'" title="'+esc(d.name)+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+' <small><span class="mn">'+esc(d.martName)+' </span>'+esc(p)+up+'</small>'+(d.check?tipBtn('chk','가격확인','mk chk'):'')+'</span>';
   }).join('');
   var miss = s.missing.map(function(x){ return '<span class="ing miss'+(x.ing.main?' main':'')+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+'</span>'; }).join('');
-  var detail = s.matched.map(function(x){ return '<li>'+esc(x.ing.k)+': '+esc(x.deal.name)+' <span class="mn">— '+esc(x.deal.martName)+'</span> '+(x.deal.price!=null?(x.deal.orig?'<span class="orig">'+formatWon(x.deal.orig)+'</span> ':'')+'<b>'+formatWon(x.deal.price)+'</b>':'')+' <span class="muted small">'+esc(x.deal.cond||'')+(x.deal.start && x.deal.start>todayStr()?' · '+fmtMD(x.deal.start)+'부터':'')+(x.deal.end?' · ~'+fmtMD(x.deal.end):'')+'</span>'+(x.deal.check?' '+tipBtn('chk','가격확인','tag chk'):'')+'</li>'; }).join('');
-  return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div></div>' +
-    '<div class="score" role="img" aria-label="할인 재료 비율 '+pct+'%: 주재료 '+s.mainTotal+'개 중 '+s.mainHit+'개 할인 중"><span class="score-k">할인 재료 비율</span><div class="bar"><i style="width:'+pct+'%"></i></div><span class="score-t">주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중</span></div>' +
+  var detail = s.matched.map(function(x){ return '<li>'+esc(x.ing.k)+': '+dealNameInline(x.deal.name)+' <span class="mn">— '+esc(x.deal.martName)+'</span> '+(x.deal.price!=null?(x.deal.orig?'<span class="orig">'+formatWon(x.deal.orig)+'</span> ':'')+'<b>'+formatWon(x.deal.price)+'</b>':'')+' <span class="muted small">'+esc(x.deal.cond||'')+(x.deal.start && x.deal.start>todayStr()?' · '+fmtMD(x.deal.start)+'부터':'')+(x.deal.end?' · ~'+fmtMD(x.deal.end):'')+'</span>'+(x.deal.check?' '+tipBtn('chk','가격확인','tag chk'):'')+'</li>'; }).join('');
+  return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0, s)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div></div>' +
     saveGauge(s) +
     '<div class="ings">'+hits+miss+'</div>' +
     recipeBody(r, '<div class="small"><b>할인 상품</b><ul class="deal-ul">'+detail+'</ul></div>') +
