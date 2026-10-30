@@ -127,7 +127,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if (await p.$$eval('#dealList .deal.picked', x => x.length) !== before) throw new Error('말풍선 태그가 줄 선택을 바꿈');
     await p.keyboard.press('Escape');
   }
-  // 보기 필터 = 「‹ 전체 ›」 화살표 (전체 → 오늘 적용 → 곧 시작 → 전체)
+  // 보기 필터 = 「‹ 전체 ›」 화살표 (전체 → 오늘 할인 → 곧 할인 → 전체)
   // 할인 재료 탭 위쪽: 검색줄은 카드 밖·헤더 밑 sticky, 「마트 · 날짜 기준」 줄 없음, 통계 타일은 카드 없이 바탕에, 정렬 줄은 목록 카드 맨 위
   {
     const lay = () => p.evaluate(() => { const ds = document.getElementById('dSticky'), hd = document.getElementById('top'), sum = document.querySelector('#dealSummary .dfsw');
@@ -147,16 +147,16 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       foc: document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.step : null }; });
   const dfStep = async d => { await p.click(`#dealSummary .dfa[data-step="${d}"]`); await new Promise(r => setTimeout(r, 400)); return dfState(); };
   const dfClick = async k => { for (let t = 0; t < 3; t++) { const s = await dfState(); if (s.cur === (k || 'all')) return s; await dfStep(1); } return dfState(); };
-  const NAME = { all: '전체', today: '오늘 적용', soon: '곧 시작' };
+  const NAME = { all: '전체', today: '오늘 할인', soon: '곧 할인' };
   const one = (d, k) => d.cur === k && d.name === NAME[k] && d.cnt === d.n[k] && d.rows === d.n[k] && (!d.dots.length || (d.dots.filter(x => x > 0).length === 1 && d.dots[Object.keys(NAME).indexOf(k)] > 8));
   let df = await dfState(); console.log('deal filter default:', df);
   if (df.boxes || !one(df, 'all')) throw new Error('할인 재료 보기 기본 상태 이상 ' + JSON.stringify(df));
   if (df.n.soon) {
     if (df.arrows.length !== 2 || df.arrows.some(([w, h]) => w < 44 || h < 56) || df.dots.length !== 3) throw new Error('화살표 터치 영역 이상 ' + JSON.stringify(df.arrows));
-    let d1 = await dfStep(1); if (!one(d1, 'today') || d1.up !== 0 || d1.foc !== '1') throw new Error('› 누르면 오늘 적용 ' + JSON.stringify(d1));
-    d1 = await dfStep(1); if (!one(d1, 'soon') || d1.up !== df.n.soon) throw new Error('› 한 번 더 누르면 곧 시작 ' + JSON.stringify(d1));
+    let d1 = await dfStep(1); if (!one(d1, 'today') || d1.up !== 0 || d1.foc !== '1') throw new Error('› 누르면 오늘 할인 ' + JSON.stringify(d1));
+    d1 = await dfStep(1); if (!one(d1, 'soon') || d1.up !== df.n.soon) throw new Error('› 한 번 더 누르면 곧 할인 ' + JSON.stringify(d1));
     d1 = await dfStep(1); if (!one(d1, 'all')) throw new Error('끝에서 › 누르면 전체로 돌아와야 함 ' + JSON.stringify(d1));
-    d1 = await dfStep(-1); if (!one(d1, 'soon')) throw new Error('전체에서 ‹ 누르면 곧 시작 ' + JSON.stringify(d1));
+    d1 = await dfStep(-1); if (!one(d1, 'soon')) throw new Error('전체에서 ‹ 누르면 곧 할인 ' + JSON.stringify(d1));
     d1 = await dfStep(-1); if (!one(d1, 'today')) throw new Error('‹ 이상 ' + JSON.stringify(d1));
     await p.keyboard.press('ArrowRight'); await new Promise(r => setTimeout(r, 150)); d1 = await dfState(); if (!one(d1, 'soon')) throw new Error('키보드 → 이상 ' + JSON.stringify(d1));
     await p.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 150)); d1 = await dfState(); if (!one(d1, 'all')) throw new Error('Enter(›) 이상 ' + JSON.stringify(d1));

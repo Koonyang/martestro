@@ -1046,7 +1046,7 @@ document.addEventListener('click', function(e){
   if (e.target.closest && e.target.closest('button[data-kwclear]')) clearKws();
 });
 
-// 보기 필터 = 「‹ 전체 ›」 화살표로 넘기는 하나만 고르기 (''=전체 / today=오늘 적용 / soon=곧 시작, 끝에서 처음으로 돌아가요)
+// 보기 필터 = 「‹ 전체 ›」 화살표로 넘기는 하나만 고르기 (''=전체 / today=오늘 할인 / soon=곧 할인, 끝에서 처음으로 돌아가요)
 var dFilt = '', dfOpts = [], dfDir = 0, dfPrev = -1;
 var CHEV = function(d){ return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+(d<0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7')+'"/></svg>'; };
 function dfSwitch(){
@@ -1112,7 +1112,7 @@ function renderDeals(){
     var active = activeAll.filter(function(d){ return dealMatchesKw(d, dKws); }); // 키워드가 있으면 숫자도 키워드 기준
     var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length;
     var shown = dFilt ? active.filter(function(d){ return (isUpcoming(d, today) ? 'soon' : 'today') === dFilt; }) : active;
-    dfOpts = [{k:'', l:'전체', n:active.length}].concat(hasUp ? [{k:'today', l:'오늘 적용', n:active.length-nUp}, {k:'soon', l:'곧 시작', n:nUp}] : []);
+    dfOpts = [{k:'', l:'전체', n:active.length}].concat(hasUp ? [{k:'today', l:'오늘 할인', n:active.length-nUp}, {k:'soon', l:'곧 할인', n:nUp}] : []);
     $('dealSummary').innerHTML = dfSwitch() +
       '';  // 가격확인 안내 상자는 없앴어요 — 「가격확인」 태그를 누르면 말풍선으로 설명해요
     shownN = shown.length;

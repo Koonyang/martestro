@@ -91,7 +91,7 @@ const ho = jm.find(m=>m.id==='node/4655465094'); assert(ho && ho.brand==='topmar
 const tops = jm.filter(m=>m.brand==='topmart'); assert(tops.length>=2); console.log('진주 탑마트:', tops.map(m=>m.name+' '+m.distKm.toFixed(2)+'km').join(', '), '| 목록:', jm.map(m=>m.name).join(', '));
 assert(!jm.some(m=>/낚시|이불|보일러|건설/.test(m.name)), 'non-food filtered');
 const tmRank = L.rankRecipes(L.ALL_RECIPES, tm, T); assert(tmRank.length > 100);
-console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.length, '+ 예정', tmAct.length-tmNow.length, ') · 추천 레시피', tmRank.length, '· TOP5:', tmRank.slice(0,5).map(s=>s.recipe.name+'('+s.mainHit+'/'+s.mainTotal+')').join(', '));
+console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.length, '+ 예정', tmAct.length-tmNow.length, ') · 추천 레시피', tmRank.length, '· TOP5:', tmRank.slice(0,5).map(s=>s.recipe.name+'('+s.mainHit+'/'+s.mainTotal+')').join(', '));
 
 // 현재 data/deals.json 구조 검사 (자동 갱신 결과가 앱에서 읽히는지)
 { const D = JSON.parse(require('fs').readFileSync(__dirname+'/../data/deals.json','utf8'));
