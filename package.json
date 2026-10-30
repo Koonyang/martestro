@@ -1,0 +1,13 @@
+{
+  "name": "martestro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Martestro(마르테스트로) — 우리 동네 마트 전단 할인 재료로 레시피를 추천하는 웹앱",
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "update": "node scripts/update_deals.js",
+    "build": "node scripts/build.js",
+    "test": "node test/test.js"
+  }
+}

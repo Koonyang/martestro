@@ -1,0 +1,105 @@
+// 로직 테스트: 2026-10-30 시점 고정 데이터(fixtures/deals_2026-10-30.json)로 결과가 항상 같게 검사
+const L = require('../src/logic.js'); const assert = require('assert');
+L.setDealsData(JSON.parse(require('fs').readFileSync(__dirname+'/fixtures/deals_2026-10-30.json')));
+L.setToday('2026-10-30');
+// 1. 모든 실제 딜이 재료로 매핑되는지
+let unm = [];
+for (const b in L.DEALS) for (const d of L.DEALS[b]) if (!d.ing) unm.push(b+': '+d.name);
+console.log('미매핑 딜:', unm.length ? unm : '없음');
+for (const b in L.DEALS) console.log(b, L.DEALS[b].length+'개', L.DEALS[b].map(d=>d.name.slice(0,10)+'→'+d.ing).join(' | '));
+// 2. guessIng
+assert.equal(L.guessIng('오늘좋은 순두부 (350g)'), '순두부');
+assert.equal(L.guessIng('맛있는 두부'), '두부');
+assert.equal(L.guessIng('한우 양념 소불고기'), '소고기');
+assert.equal(L.guessIng('동원 통그릴 비엔나'), '소시지');
+assert.equal(L.guessIng('국내산 삼겹살/목심'), '돼지고기');
+assert.equal(L.guessIng('무항생제 황금 닭볶음탕용'), '닭고기');
+assert.equal(L.guessIng('대추방울토마토'), '토마토');
+// 3. 브랜드 감지
+const cases = {'이마트 용산점':'emart','이마트24 시청점':'convenience','이마트 에브리데이':'emart_everyday','노브랜드 시청점':'nobrand','홈플러스 익스프레스 중림점':'homeplus_express','홈플러스 영등포점':'homeplus','롯데마트 서울역점':'lottemart','롯데슈퍼':'lottesuper','코스트코 양재점':'costco','하나로마트':'hanaro','GS더프레시 시청점':'gsfresh','GS FRESH':'gsfresh','이마트 트레이더스 월계점':'traders','우리동네마트':'local','네일마트':'local','롯데백화점본점 식품관':'dept'};
+for (const [n,b] of Object.entries(cases)) assert.equal(L.detectBrand({name:n, shop:'supermarket'}), b, n);
+assert.equal(L.detectBrand({name:'Costco', shop:'wholesale'}), 'costco');
+// 4. 거리
+const d = L.haversineKm(37.5663,126.9779,37.5547,126.9707); console.log('시청→서울역 km', d.toFixed(2)); assert(d>1.2&&d<1.6);
+// 5. parseMarts with fixture
+const fx = {elements:[
+ {type:'node',id:1,lat:37.5547,lon:126.9707,tags:{shop:'supermarket',name:'롯데마트',brand:'롯데마트'}},
+ {type:'way',id:2,center:{lat:37.60,lon:127.0},tags:{shop:'supermarket',name:'이마트 미아점'}},
+ {type:'node',id:3,lat:37.567,lon:126.978,tags:{shop:'supermarket',name:'싱싱마트'}},
+ {type:'node',id:4,lat:37.62,lon:127.05,tags:{shop:'supermarket',name:'먼동네마트'}},
+ {type:'node',id:5,lat:37.567,lon:126.979,tags:{shop:'supermarket'}},
+ {type:'node',id:6,lat:37.567,lon:126.979,tags:{shop:'wholesale',name:'청자수입상가'}}]};
+const m = L.parseMarts(fx,37.5663,126.9779,2);
+console.log(m.map(x=>x.name+'('+x.brand+','+x.distKm.toFixed(2)+'km)').join(', '));
+assert.deepEqual(m.map(x=>x.name), ['싱싱마트','롯데마트','이마트 미아점']);
+// 6. real overpass result if present
+try { const op = require('./fixtures/op.json'); const mm = L.parseMarts(op,37.5663,126.9779,2); console.log('실제 Overpass 결과(서울시청 2km):', mm.length,'곳; 상위:', mm.slice(0,8).map(x=>x.name+'/'+x.brand+'/'+x.distKm.toFixed(2)).join(', ')); assert(mm.length>10); } catch(e){ console.log('op.json 없음', e.message); }
+// 7. 추천
+const deals = [...L.DEALS.emart, ...L.DEALS.homeplus];
+const ranked = L.rankRecipes(L.RECIPES, deals, '2026-10-30');
+console.log('레시피 수', L.RECIPES.length, '추천', ranked.length);
+ranked.slice(0,8).forEach(r=>console.log(r.recipe.name, `주재료 ${r.mainHit}/${r.mainTotal}`, '절약', r.savings, '부족:', r.missing.map(x=>x.ing.k).join(',')));
+// 만료 처리: 11/5 이후엔 다 사라짐
+assert.equal(L.rankRecipes(L.RECIPES, deals, '2026-11-05').length, 0);
+// 홈플러스 보리돼지(10/30까지) → 10/31엔 일품포크로 대체
+const idx31 = L.buildDealIndex(L.DEALS.homeplus,'2026-10-31'); assert(idx31['돼지고기'][0].name.includes('일품포크'));
+const idx30 = L.buildDealIndex(L.DEALS.homeplus,'2026-10-30'); assert(idx30['돼지고기'][0].name.includes('보리')); console.log('10/30 홈플 돼지 best:', idx30['돼지고기'].map(x=>x.name).join(' / '));
+// 김치찌개 계산 검증(이마트만)
+const kimchi = L.scoreRecipe(L.RECIPES[0], L.buildDealIndex(L.DEALS.emart,'2026-10-30'));
+assert.equal(kimchi.mainHit, 3); assert.equal(kimchi.savings, 3100-1860);
+// 수동 입력 아이템
+const custom = [{name:'애호박',price:1000,orig:1500,ing:L.guessIng('애호박'),start:null,end:null}];
+const dj = L.scoreRecipe(L.RECIPES[1], L.buildDealIndex(custom,'2026-10-30')); assert.equal(dj.mainHit,1); assert.equal(dj.savings,500);
+// 레시피 재료 키가 사전에 있는지 (미역/당면은 의도적 미포함)
+const keys = new Set(L.ING_LIST); const odd = new Set(); L.RECIPES.forEach(r=>r.ings.forEach(i=>{ if(!keys.has(i.k)) odd.add(i.k); }));
+console.log('사전에 없는 레시피 재료:', [...odd]);
+
+// ---- 공공데이터 레시피 ----
+assert(L.PUB_RECIPES.length >= 950, 'pub recipes ' + L.PUB_RECIPES.length);
+assert(L.ALL_RECIPES.length >= 1000, 'all ' + L.ALL_RECIPES.length);
+const nm = new Set(); L.ALL_RECIPES.forEach(r=>{ const k=r.name.replace(/\s/g,''); assert(!nm.has(k), 'dup '+r.name); nm.add(k); });
+assert(L.ALL_RECIPES.slice(0, L.RECIPES.length).every(r=>r.src==='hand'), '직접 쓴 레시피 유지');
+L.PUB_RECIPES.forEach(r=>{ assert(r.steps.length>=1 && r.steps.length<=6); r.steps.forEach(s=>assert(s.length<=110, s)); assert(L.RECIPE_CATS.includes(r.cat)); assert(!r.img || r.img.startsWith('https://www.foodsafetykorea.go.kr/'), r.img); r.ings.forEach(i=>assert(keys.has(i.k), i.k)); assert(r.ings.filter(i=>i.main).length<=3); });
+const withMain = L.PUB_RECIPES.filter(r=>r.ings.some(i=>i.main)).length; console.log('pub recipes:', L.PUB_RECIPES.length, '· 주재료 매핑됨:', withMain, '· all:', L.ALL_RECIPES.length);
+// 오매핑 방지: 굴소스/새우젓/멸치액젓/떡갈비는 재료로 잡히면 안 됨
+const sample = (n)=>L.PUB_RECIPES.find(r=>r.name===n);
+const tt = L.PUB_RECIPES.filter(r=>/굴소스/.test(r.parts) && !/(^|[ ,])굴 /.test(r.parts) && !/굴/.test(r.name)); assert(tt.every(r=>!r.ings.some(i=>i.k==='굴')), 'oyster sauce mapped');
+const ss = L.PUB_RECIPES.filter(r=>/떡갈비/.test(r.name) && !/떡(,| \d|$)/.test(r.parts.replace(/떡갈비/g,''))); assert(ss.every(r=>!r.ings.some(i=>i.k==='떡')), 'tteokgalbi→떡');
+// 검색/분류
+const f1 = L.filterRecipes(L.ALL_RECIPES, '두부 찌개', ''); assert(f1.length>=3 && f1.every(r=>r.q.includes('두부') && r.q.includes('찌개')));
+const f2 = L.filterRecipes(L.ALL_RECIPES, '', '후식'); assert(f2.length>=50 && f2.every(r=>r.cat==='후식'));
+// 성능: 전체 랭킹 1회
+let t0=Date.now(); for(let i=0;i<20;i++) L.rankRecipes(L.ALL_RECIPES, L.DEALS.emart.concat(L.DEALS.homeplus), '2026-10-30'); console.log('rank 1,0xx recipes x20:', Date.now()-t0, 'ms');
+const top = L.rankRecipes(L.ALL_RECIPES, L.DEALS.emart, '2026-10-30'); assert(top.slice(0,10).some(s=>s.recipe.src==='hand') && top.slice(0,30).some(s=>s.recipe.src==='pub'), '기본+공공 레시피가 섞여 상위 노출');
+
+// ---- 탑마트 ----
+assert.equal(L.detectBrand({name:'서원유통 탑마트'}), 'topmart'); assert.equal(L.detectBrand({name:'탑마트'}), 'topmart'); assert.equal(L.detectBrand({name:'탑마트 진주호탄점'}), 'topmart');
+const tm = L.DEALS.topmart; assert.equal(tm.length, 93); assert(tm.every(d=>d.check && d.src==='topmart'));
+const T='2026-10-30', tmAct = tm.filter(d=>L.isActive(d,T)), tmNow = tmAct.filter(d=>!L.isUpcoming(d,T));
+assert(!tmAct.some(d=>d.end==='2026-10-29'), '10/29 종료 품목 숨김');
+assert(tmAct.some(d=>d.name.startsWith('양파(국산·3kg') && L.isUpcoming(d,T)), '11/1 단하루 양파는 예정');
+assert(tmNow.some(d=>d.name.startsWith('돌문어')), '10/30 단하루 돌문어');
+assert(!L.DEALS.topmart.filter(d=>L.isActive(d,'2026-10-31')).some(d=>d.name.startsWith('돌문어')), '10/31엔 돌문어 끝');
+assert.equal(L.guessIng('돌문어(국산·100g)'), '문어'); assert.equal(L.guessIng('조방낙지'), '낙지'); assert.equal(L.guessIng('꽃게(국산·대·5마리)'), '꽃게');
+assert.equal(tm.find(d=>d.name.startsWith('청양/오이맛고추')).ing, null); assert.equal(tm.find(d=>d.name.startsWith('CJ)햇반')).ing, null);
+// 진주 호탄동 실제 OSM 결과
+const jj = JSON.parse(require('fs').readFileSync(__dirname+'/fixtures/op_jinju.json'));
+const jm = L.parseMarts(jj, 35.1617518, 128.1153464, 2);
+const ho = jm.find(m=>m.id==='node/4655465094'); assert(ho && ho.brand==='topmart' && ho.distKm < 0.01, 'hotan');
+const tops = jm.filter(m=>m.brand==='topmart'); assert(tops.length>=2); console.log('진주 탑마트:', tops.map(m=>m.name+' '+m.distKm.toFixed(2)+'km').join(', '), '| 목록:', jm.map(m=>m.name).join(', '));
+assert(!jm.some(m=>/낚시|이불|보일러|건설/.test(m.name)), 'non-food filtered');
+const tmRank = L.rankRecipes(L.ALL_RECIPES, tm, T); assert(tmRank.length > 100);
+console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.length, '+ 예정', tmAct.length-tmNow.length, ') · 추천 레시피', tmRank.length, '· TOP5:', tmRank.slice(0,5).map(s=>s.recipe.name+'('+s.mainHit+'/'+s.mainTotal+')').join(', '));
+
+// 현재 data/deals.json 구조 검사 (자동 갱신 결과가 앱에서 읽히는지)
+{ const D = JSON.parse(require('fs').readFileSync(__dirname+'/../data/deals.json','utf8'));
+  assert(D.version===1 && D.deals && D.sources && D.status, 'deals.json schema');
+  for (const [b, rows] of Object.entries(D.deals)) { assert(Array.isArray(rows), b);
+    rows.forEach(r => { assert(typeof r[0]==='string' && r[0], b+' name'); assert(r[1]===null || typeof r[1]==='number', b+' price '+r[0]);
+      assert(!r[5] || /^\d{4}-\d\d-\d\d$/.test(r[5]), b+' end'); assert(D.sources[r[7]||b], b+' source '+(r[7]||b)); }); }
+  console.log('data/deals.json:', Object.entries(D.deals).map(([k,v])=>k+' '+v.length).join(', '), '· updated', D.updated); }
+// 탑마트 OCR 이름 추출 (분류 안내·잡음 제거)
+{ const { extractNames } = require('../scripts/scrapers/topmart');
+  const n = extractNames('대추방울토마토 4,980\n채소류 두부/콩나물류\n칼치 (국산)\n@#$ 12,900\n농심)새우깡\n한우냉장양지 100g', L.dealIng);
+  assert.deepStrictEqual(n, ['대추방울토마토','갈치','한우냉장양지'], JSON.stringify(n)); }
+console.log('ALL TESTS PASSED');

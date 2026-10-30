@@ -1,0 +1,70 @@
+name: 전단 자동 갱신 + 배포
+
+on:
+  schedule:
+    - cron: '0 20 * * *'   # 매일 05:00 KST (20:00 UTC)
+  workflow_dispatch:        # Actions 탭에서 수동 실행
+  push:
+    branches: [main]        # 코드/데이터를 직접 고치면 바로 다시 배포
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: martestro
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: OCR 도구 설치 (탑마트용 · 실패해도 계속)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-kor python3-pil
+          tesseract --version | head -1
+      - name: 전단 읽기 → data/deals.json 갱신
+        run: node scripts/update_deals.js
+      - name: 앱(index.html) 다시 만들기 + 테스트
+        run: |
+          node scripts/build.js
+          node test/test.js
+      - name: 바뀐 경우에만 커밋
+        run: |
+          git add data/deals.json index.html
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "전단 데이터 자동 갱신 $(TZ=Asia/Seoul date +'%Y-%m-%d %H:%M') KST"
+          git push
+
+  deploy:
+    needs: update
+    if: always() && (needs.update.result == 'success' || needs.update.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: 배포할 파일만 모으기
+        run: |
+          mkdir -p _site/data
+          cp index.html _site/ && cp data/deals.json _site/data/ && touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

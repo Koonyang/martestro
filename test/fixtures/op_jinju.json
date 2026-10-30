@@ -1,0 +1,264 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.4 2390de5a",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-30T07:59:01Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 368694688,
+  "lat": 35.1871700,
+  "lon": 128.1150920,
+  "tags": {
+    "name": "현대할인마트",
+    "name:en": "Hyeondae Retail Shop",
+    "name:ko": "현대할인마트",
+    "name:ko-Latn": "Hyeondaehalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694701,
+  "lat": 35.1772880,
+  "lon": 128.1069200,
+  "tags": {
+    "name": "한주할인마트",
+    "name:en": "Hanju Retail Shop",
+    "name:ko": "한주할인마트",
+    "name:ko-Latn": "Hanjuhalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694719,
+  "lat": 35.1628740,
+  "lon": 128.1149370,
+  "tags": {
+    "name": "흥한할인마트",
+    "name:en": "Heunghan Retail Shop",
+    "name:ko": "흥한할인마트",
+    "name:ko-Latn": "Heunghanhalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694760,
+  "lat": 35.1772780,
+  "lon": 128.0972680,
+  "tags": {
+    "name": "한주할인마트",
+    "name:en": "Hanju Retail Shop",
+    "name:ko": "한주할인마트",
+    "name:ko-Latn": "Hanjuhalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694770,
+  "lat": 35.1713146,
+  "lon": 128.0912947,
+  "tags": {
+    "name": "주약할인마트",
+    "name:en": "Juyak Retail Shop",
+    "name:ko": "주약할인마트",
+    "name:ko-Latn": "Juyakhalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694797,
+  "lat": 35.1789120,
+  "lon": 128.1150470,
+  "tags": {
+    "name": "현대할인마트",
+    "name:en": "Hyeondae Retail Shop",
+    "name:ko": "현대할인마트",
+    "name:ko-Latn": "Hyeondaehalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694840,
+  "lat": 35.1720210,
+  "lon": 128.1184080,
+  "tags": {
+    "name": "건설자재할인마트",
+    "name:en": "Geonseoljajae Retail Shop",
+    "name:ko": "건설자재할인마트",
+    "name:ko-Latn": "Geonseoljajaehalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694908,
+  "lat": 35.1643231,
+  "lon": 128.1057095,
+  "tags": {
+    "name": "365낚시마트",
+    "name:en": "365 Fishing Mart",
+    "name:ko": "365낚시마트",
+    "name:ko-Latn": "365 Naggsimateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694909,
+  "lat": 35.1629630,
+  "lon": 128.1160460,
+  "tags": {
+    "name": "찬호낚시마트",
+    "name:en": "Chanho Fishing Mart",
+    "name:ko": "찬호낚시마트",
+    "name:ko-Latn": "Chanhonaggsimateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694916,
+  "lat": 35.1721670,
+  "lon": 128.1257760,
+  "tags": {
+    "name": "해승낚시마트",
+    "name:en": "Haeseung Fishing Mart",
+    "name:ko": "해승낚시마트",
+    "name:ko-Latn": "Haeseungnaggsimateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694930,
+  "lat": 35.1815720,
+  "lon": 128.1040700,
+  "tags": {
+    "name": "등대낚시할인마트",
+    "name:en": "Deungdae Fishing Retail Shop",
+    "name:ko": "등대낚시할인마트",
+    "name:ko-Latn": "Deungdaenaggsihalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694948,
+  "lat": 35.1779860,
+  "lon": 128.1124880,
+  "tags": {
+    "name": "365DC문구마트",
+    "name:en": "365DC Mungu Mart",
+    "name:ko": "365DC문구마트",
+    "name:ko-Latn": "365DC Mungumateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368694973,
+  "lat": 35.1841430,
+  "lon": 128.1126830,
+  "tags": {
+    "name": "보일러할인마트",
+    "name:en": "Boilleo Retail Shop",
+    "name:ko": "보일러할인마트",
+    "name:ko-Latn": "Boilleohalinmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 368695008,
+  "lat": 35.1793470,
+  "lon": 128.1130170,
+  "tags": {
+    "name": "이불마트",
+    "name:en": "Ibul Mart",
+    "name:ko": "이불마트",
+    "name:ko-Latn": "Ibulmateu",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "node",
+  "id": 4655465094,
+  "lat": 35.1617518,
+  "lon": 128.1153464,
+  "tags": {
+    "name": "서원유통 탑마트",
+    "shop": "supermarket",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 12385970023,
+  "lat": 35.1801163,
+  "lon": 128.1395348,
+  "tags": {
+    "name": "롯데마트 진주점",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "way",
+  "id": 460133677,
+  "center": {
+    "lat": 35.1712732,
+    "lon": 128.0954618
+  },
+  "tags": {
+    "addr:city": "진주시",
+    "addr:street": "진주대로 784",
+    "building": "mart",
+    "building:levels": "1",
+    "name": "탑마트",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "way",
+  "id": 460863386,
+  "center": {
+    "lat": 35.1800987,
+    "lon": 128.1399590
+  },
+  "tags": {
+    "addr:postcode": "52851",
+    "addr:street": "동진로",
+    "building": "yes",
+    "name": "롯데몰 진주점",
+    "shop": "department_store"
+  }
+},
+{
+  "type": "way",
+  "id": 1337964793,
+  "center": {
+    "lat": 35.1868392,
+    "lon": 128.1159440
+  },
+  "tags": {
+    "addr:city": "진주시",
+    "addr:housenumber": "10",
+    "addr:province": "경상남도",
+    "addr:street": "대신로291번길",
+    "addr:subdistrict": "상대동",
+    "building": "yes",
+    "name": "진주동부농협 하나로마트",
+    "shop": "supermarket"
+  }
+}
+
+  ]
+}

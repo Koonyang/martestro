@@ -1,0 +1,38 @@
+MIT License
+
+Copyright (c) 2026 Koonyang
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+데이터 출처 표기 (Third-party data — MIT 라이선스 대상이 아님)
+-------------------------------------------------------------------------------
+
+1. 레시피 (src/pub_data.js)
+   출처: 식품의약품안전처 식품안전나라 「조리식품의 레시피 DB」(COOKRCP01) Open API
+   https://www.foodsafetykorea.go.kr  ·  공공데이터포털 https://www.data.go.kr/data/15060073/openapi.do
+   공공데이터포털 표기 이용허락범위: 제한 없음. 앱용으로 재료 목록 파싱·중복 제거 등 가공했으며,
+   주재료 분류는 자동 추정이에요. 레시피 사진은 식품안전나라 서버에서 직접 불러와요(저장소에 포함하지 않음).
+
+2. 전단 할인 정보 (data/deals.json)
+   이마트·홈플러스·롯데마트 공식 전단 페이지, 탑마트(서원유통) 전단 이미지(martmap.co.kr 경유), 마트고 집계에서
+   상품명·가격·행사기간 같은 사실 정보만 요약했어요. 상표와 전단 원본의 권리는 각 회사에 있으며, 이 프로젝트는
+   각 회사와 관계가 없어요.
+
+3. 지도 데이터: © OpenStreetMap contributors (ODbL) — Overpass API / Nominatim 으로 실행 시 조회.
