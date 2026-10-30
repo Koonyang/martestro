@@ -369,6 +369,25 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if (await p.evaluate(() => localStorage.getItem('mr_rsort')) !== '{"k":"time","rev":true}') throw new Error('레시피 정렬 저장 이상');
     console.log('recipe sort time desc:', rr.slice(0, 5).map(x => x.mins));
     await p.click('#rSortBar [data-sort="rec"]'); await W(300);
+    // 분류: 큰 select 대신 검색창 안 아이콘 → 팝오버 (하나만), 고르면 금색 점 + 칩(✕)
+    const cs = () => p.evaluate(() => { const b = document.getElementById('rCatBtn'), pop = document.getElementById('rCatPop'), f = document.querySelector('#tab-recipes .tools .field'), t = document.querySelector('#tab-recipes .tools'), ch = document.querySelector('.kind-row .catchip');
+      return { sel: !!document.getElementById('rCat') || !!document.querySelector('#tab-recipes .tools select'), fw: Math.round(f.getBoundingClientRect().width), tw: Math.round(t.getBoundingClientRect().width), hp: b.getAttribute('aria-haspopup'), ex: b.getAttribute('aria-expanded'), al: b.getAttribute('aria-label'), open: !pop.hidden && pop.getBoundingClientRect().height > 0,
+        items: [...pop.querySelectorAll('[role=menuitemradio]')].map(x => x.textContent + (x.getAttribute('aria-checked') === 'true' ? '*' : '')), dot: getComputedStyle(b.querySelector('.fdot')).display !== 'none', chip: ch ? ch.textContent : null, foc: document.activeElement && (document.activeElement.id || document.activeElement.textContent),
+        cats: [...document.querySelectorAll('#recipeList .recipe .rmeta')].map(m => m.textContent) }; });
+    let c0 = await cs(); console.log('cat ui:', {fw: c0.fw, tw: c0.tw, hp: c0.hp, al: c0.al});
+    if (c0.sel || c0.fw !== c0.tw || c0.hp !== 'menu' || c0.ex !== 'false' || c0.open || c0.dot || c0.chip) throw new Error('분류 아이콘 기본 상태 이상 ' + JSON.stringify(c0));
+    await p.click('#rCatBtn'); await W(200); let c1 = await cs();
+    if (!c1.open || c1.ex !== 'true' || c1.items.length < 5 || c1.items[0] !== '전체*' || c1.items.filter(x => x.endsWith('*')).length !== 1 || c1.foc !== '전체') throw new Error('분류 팝오버 열기 이상 ' + JSON.stringify(c1));
+    await p.keyboard.press('Escape'); await W(150); c1 = await cs(); if (c1.open || c1.ex !== 'false' || c1.foc !== 'rCatBtn') throw new Error('ESC로 닫기 이상');
+    await p.click('#rCatBtn'); await W(150); await p.click('#tab-recipes .page-h h1'); await W(150); c1 = await cs(); if (c1.open) throw new Error('바깥 누르면 닫혀야 함');
+    await p.click('#rCatBtn'); await W(150); await p.evaluate(() => [...document.querySelectorAll('#rCatPop [role=menuitemradio]')].find(x => x.textContent === '반찬').click()); await W(400); c1 = await cs();
+    if (c1.open || !c1.dot || !/반찬/.test(c1.chip || '') || !/반찬/.test(c1.al) || !c1.cats.length || !c1.cats.every(x => /반찬/.test(x)) || c1.foc !== 'rCatBtn') throw new Error('분류 반찬 선택 이상 ' + JSON.stringify(c1));
+    await p.click('#rCatBtn'); await W(150); c1 = await cs(); if (c1.items.filter(x => x.endsWith('*')).join() !== '반찬*' || c1.foc !== '반찬') throw new Error('선택 표시 이상');
+    await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter'); await W(400); c1 = await cs();
+    if (c1.open || !c1.chip || /반찬/.test(c1.chip) || !c1.cats.every(x => x.includes(c1.chip.replace('분류', '')))) throw new Error('키보드로 분류 바꾸기 이상 ' + JSON.stringify(c1));
+    await p.click('.kind-row .catchip'); await W(400); c1 = await cs();
+    if (c1.chip || c1.dot || !/전체/.test(c1.al) || c1.foc !== 'rCatBtn') throw new Error('분류 칩 ✕ 해제 이상 ' + JSON.stringify(c1));
+    console.log('category popover OK');
     await p.click('nav button[data-tab="tab-deals"]'); await W(250);
     console.log('sort pills OK');
   }

@@ -262,6 +262,27 @@ button.sp[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:in
 button.sp i{font-style:normal;font-weight:800;color:var(--g);font-size:13px;line-height:1}
 button.sp:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 @media (prefers-color-scheme:dark){button.sp[aria-pressed=true]{box-shadow:none}button.sp[aria-pressed=true] i{color:var(--a-on)}}
+/* 레시피 분류: 검색창 오른쪽 끝 작은 아이콘 → 작은 팝오버 (하나만 선택) */
+.field.has-fbtn>input{padding-right:50px}
+button.fbtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:38px;height:38px;min-height:0;padding:0;border-radius:11px;background:transparent;color:var(--m)}
+button.fbtn:hover{filter:none;background:var(--card2);color:var(--t)}
+button.fbtn[aria-expanded=true]{background:var(--card2);color:var(--t)}
+button.fbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round}
+button.fbtn.on{color:var(--a-ink)}
+button.fbtn .fdot{display:none;position:absolute;top:7px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 0 2px var(--card)}
+button.fbtn.on .fdot{display:block}
+.catpop{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:150px;background:var(--card);border-radius:14px;padding:6px;box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(15,22,38,.18);display:flex;flex-direction:column;gap:2px;animation:up .18s var(--ease) both}
+.catpop[hidden]{display:none}
+.catpop button{justify-content:flex-start;gap:8px;min-height:38px;padding:7px 10px;border-radius:10px;background:transparent;color:var(--t2);font-size:14px;font-weight:650;text-align:left}
+.catpop button:hover,.catpop button:focus-visible{filter:none;background:var(--card2);color:var(--t);outline:none}
+.catpop button .ck{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:var(--g);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;visibility:hidden}
+.catpop button[aria-checked=true]{color:var(--t);font-weight:800}
+.catpop button[aria-checked=true] .ck{visibility:visible}
+@media (prefers-color-scheme:dark){.catpop{box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.5)}button.fbtn.on{color:var(--g)}}
+button.catchip{min-height:36px;padding:6px 10px 6px 13px;border-radius:999px;font-size:13.5px;font-weight:700;gap:4px;background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g);letter-spacing:-.02em}
+button.catchip small{font-size:11px;font-weight:700;color:var(--g)}
+button.catchip svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;opacity:.8}
+@media (prefers-color-scheme:dark){button.catchip{box-shadow:none}button.catchip small{color:color-mix(in srgb,var(--a-on) 70%,transparent)}}
 button.kchip:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 @media (prefers-color-scheme:dark){button.kchip[aria-pressed=true]{box-shadow:none}button.kchip[aria-pressed=true] small{color:color-mix(in srgb,var(--a-on) 70%,transparent)}}
 .tag.conv{background:color-mix(in srgb,var(--g) 16%,transparent);color:var(--g-ink)}
@@ -543,8 +564,10 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
   </div>
   <div id="selInd" class="sel-ind" role="status" hidden></div>
   <div class="tools">
-    <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"></div>
-    <select id="rCat" aria-label="분류"><option value="">전체</option></select>
+    <div class="field has-fbtn"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색">
+      <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="레시피 분류: 전체"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i class="fdot" aria-hidden="true"></i></button>
+      <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
+    </div>
   </div>
   <div id="rSortBar" class="sortbar" role="group" aria-label="레시피 정렬 (다시 누르면 방향이 바뀌어요)"></div>
   <div id="sortStatus" class="vh" role="status" aria-live="polite"></div>
@@ -2720,9 +2743,49 @@ document.querySelector('.kind-row').addEventListener('click', function(e){
   if (!k) rKinds = []; else { var i = rKinds.indexOf(k); if (i >= 0) rKinds.splice(i,1); else rKinds.push(k); }
   syncKindChips(); rLimit = PAGE; renderRecipes();
 });
-RECIPE_CATS.forEach(function(c){ var o = document.createElement('option'); o.value = c; o.textContent = c; $('rCat').appendChild(o); });
 $('rSearch').addEventListener('input', function(){ var v = this.value; clearTimeout(rTimer); rTimer = setTimeout(function(){ rQuery = v.trim(); rLimit = PAGE; renderRecipes(); }, 200); });
-$('rCat').addEventListener('change', function(){ rCat = this.value; rLimit = PAGE; renderRecipes(); });
+// ---- 레시피 분류 팝오버 (검색창 안 아이콘) ----
+function renderCatUI(){
+  var on = !!rCat, btn = $('rCatBtn');
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-label', '레시피 분류: ' + (rCat || '전체'));
+  $('rCatPop').innerHTML = [''].concat(RECIPE_CATS).map(function(c){
+    var ck = rCat === c;
+    return '<button type="button" role="menuitemradio" data-cat="'+esc(c)+'" aria-checked="'+ck+'" tabindex="-1"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>'+esc(c || '전체')+'</button>';
+  }).join('');
+  var row = document.querySelector('.kind-row'), chip = row.querySelector('.catchip');
+  if (!on){ if (chip) chip.remove(); return; }
+  if (!chip){ chip = document.createElement('button'); chip.type = 'button'; chip.className = 'catchip'; row.appendChild(chip); }
+  chip.setAttribute('aria-label', '분류 「' + rCat + '」 필터 해제');
+  chip.innerHTML = '<small aria-hidden="true">분류</small>' + esc(rCat) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+}
+function setCat(c){ if (rCat === c) return; rCat = c; rLimit = PAGE; renderCatUI(); renderRecipes(); }
+function catOpen(){ return !$('rCatPop').hidden; }
+function openCat(){
+  renderCatUI(); $('rCatPop').hidden = false; $('rCatBtn').setAttribute('aria-expanded', 'true');
+  var b = $('rCatPop').querySelector('[aria-checked=true]') || $('rCatPop').querySelector('button'); if (b) b.focus();
+}
+function closeCat(refocus){ if (!catOpen()) return; $('rCatPop').hidden = true; $('rCatBtn').setAttribute('aria-expanded', 'false'); if (refocus) $('rCatBtn').focus(); }
+$('rCatBtn').addEventListener('click', function(e){ e.stopPropagation(); if (catOpen()) closeCat(); else openCat(); });
+$('rCatPop').addEventListener('click', function(e){
+  var b = e.target.closest('[data-cat]'); if (!b) return; e.stopPropagation();
+  setCat(b.getAttribute('data-cat')); closeCat(true);
+});
+$('rCatPop').addEventListener('keydown', function(e){
+  var all = [].slice.call(this.querySelectorAll('button')), i = all.indexOf(document.activeElement), j = -1;
+  if (e.key === 'ArrowDown') j = (i + 1) % all.length; else if (e.key === 'ArrowUp') j = (i - 1 + all.length) % all.length;
+  else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = all.length - 1;
+  else if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeCat(true); return; }
+  else if (e.key === 'Tab'){ closeCat(false); return; }
+  if (j >= 0){ e.preventDefault(); all[j].focus(); }
+});
+document.addEventListener('click', function(e){ if (catOpen() && !e.target.closest('#rCatPop, #rCatBtn')) closeCat(false); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && catOpen()){ e.preventDefault(); closeCat(true); } });
+document.querySelector('.kind-row').addEventListener('click', function(e){
+  var b = e.target.closest('.catchip'); if (!b) return;
+  setCat(''); var t = $('rCatBtn'); if (t) t.focus();
+});
+renderCatUI();
 $('btnMore').addEventListener('click', function(){ rLimit += PAGE; renderRecipes(true); });
 // 사진은 「재료·만드는 법 보기」를 펼칠 때만 불러와요 (데이터 절약)
 document.addEventListener('toggle', function(e){
