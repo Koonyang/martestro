@@ -145,6 +145,18 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert(J.every(r => r.cat !== '후식' && r.cat !== '기타')); assert(!J.some(r => r.name === '전복버터구이'));
   assert(Q.some(r => r.name === '떡볶이') && Q.some(r => r.name === '부대찌개') && Q.some(r => r.name === '우동'));
   assert(J.some(r => r.name === '계란말이') && !J.some(r => r.name === '소불고기'));
+  // 조리시간은 안 써요: 어떤 레시피에도 mins 없음, 자취생/간편식품은 재료 수·가공식품·지은 밥으로
+  assert(A.every(r => !('mins' in r)), 'mins 남음');
+  assert(!Q.some(r => r.name === '시금치나물') && Q.some(r => r.name === '계란말이') && Q.some(r => r.name === '김치볶음밥')); // 맛살·밥
+  assert(J.some(r => r.name === '고등어조림') && !J.some(r => r.name === '카레라이스') && !J.some(r => r.name === '닭볶음탕')); // 주재료 2개 이하
+  // 기본 레시피 1인분 열량 어림
+  L.RECIPES.forEach(r => { assert(r.kcalEst && r.kcal >= 30 && r.kcal <= 1000 && r.kcal % 10 === 0, r.name + ' ' + r.kcal); });
+  const kc = n => L.RECIPES.find(r => r.name === n).kcal;
+  assert(kc('김치찌개') >= 300 && kc('김치찌개') <= 500, '김치찌개 ' + kc('김치찌개'));
+  assert(kc('김치볶음밥') >= 550 && kc('김치볶음밥') <= 800, '김치볶음밥 ' + kc('김치볶음밥'));
+  assert(kc('콩나물국') < kc('된장찌개') && kc('시금치나물') < kc('제육볶음') && kc('삼겹살 상추쌈') > kc('소불고기'));
+  assert.equal(L.estKcal({name:'테스트', src:'hand', ings:[{k:'계란', amt:'2개'}]}), 80); // 110g÷2인분×140 = 77 → 80
+  assert(A.filter(r => !r.kcal).length <= 8, '열량 없는 레시피가 너무 많아요'); assert(A.every(r => r.kcal == null || (r.kcal >= 5 && r.kcal <= 1200)), '열량 데이터 오류');
   assert.strictEqual(L.filterRecipes(A, '', '', null, []).length, A.length);
   assert.strictEqual(L.filterRecipes(A, '', '', null, ['jachi', 'quick']).length, A.filter(r => r.jachi || r.quick).length);
   console.log('간편식품·종류 필터: 자취생', J.length, '/ 간편식품', Q.length, '/ 합집합', A.filter(r => r.jachi || r.quick).length, '/ 전체', A.length);
@@ -205,7 +217,10 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert.equal(L.sortLabel(D, {k:'price', rev:true}), '가격 높은순');
   assert.equal(L.sortLabel(D, {k:'end', rev:false}), '마감 임박순'); assert.equal(L.sortLabel(D, {k:'end', rev:true}), '마감 여유순');
   assert.deepEqual(L.nextSort(D, {k:'rec', rev:false}, 'rec'), {k:'rec', rev:false}); assert.equal(L.sortArrow(D, {k:'rec'}), '');
-  ['절약률 높은순','절약률 낮은순','비용 낮은순','비용 높은순','조리시간 짧은순','조리시간 긴순'].forEach((l, i) => assert.equal(L.sortLabel(R, {k:['save','cost','time'][i>>1], rev:!!(i&1)}), l));
+  ['절약률 높은순','절약률 낮은순','비용 낮은순','비용 높은순','칼로리 낮은순','칼로리 높은순'].forEach((l, i) => assert.equal(L.sortLabel(R, {k:['save','cost','kcal'][i>>1], rev:!!(i&1)}), l));
+  assert.deepEqual(R.map(d => d.k), ['rec','save','cost','kcal']); // 조리시간 정렬은 없앴어요
+  assert.deepEqual(L.normSort(R, {k:'time', rev:true}), {k:'rec', rev:false}); // 예전에 저장한 조리시간 → 추천순
+  assert.equal(L.sortArrow(R, {k:'kcal', rev:false}), '↑'); assert.equal(L.sortArrow(R, {k:'kcal', rev:true}), '↓');
   const ds = [{name:'a', price:1000, orig:2000, end:'2026-11-03'}, {name:'b', price:500, end:'2026-10-31'}, {name:'c', cond:'1+1'}, {name:'d', price:3000, orig:3300, end:'2026-11-01'}, {name:'e', price:800, orig:1000}];
   const nm = l => l.map(x => x.name).join('');
   assert.equal(nm(L.sortDeals(ds, {k:'rec'})), 'abcde');
@@ -227,7 +242,7 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   const chk = (k, rev, desc) => { const o = L.sortRecipes(rk, {k, rev}).map(s => L.recipeSortVal(k, s)); const f = o.indexOf(null);
     if (f >= 0) assert(o.slice(f).every(v => v == null), k); const v = o.slice(0, f < 0 ? o.length : f); assert(v.length > 1, k);
     for (let i = 1; i < v.length; i++) assert(desc ? v[i] <= v[i-1] : v[i] >= v[i-1], k+rev); };
-  chk('save', false, true); chk('save', true, false); chk('cost', false, false); chk('cost', true, true); chk('time', false, false); chk('time', true, true);
+  chk('save', false, true); chk('save', true, false); chk('cost', false, false); chk('cost', true, true); chk('kcal', false, false); chk('kcal', true, true);
   assert.deepEqual(L.sortRecipes(rk, {k:'rec'}).map(s => s.recipe.name), rk.map(s => s.recipe.name));
   // {s}/{r} 섞인 목록 + get, 원 레시피는 절약률 값이 없어 뒤로
   const mix = [{r:L.RECIPES[0]}, {s:rk[0]}]; assert.equal(L.sortRecipes(mix, {k:'save'}, it => it.s || it.r)[0], rk[0].savePct ? mix[1] : mix[0]);

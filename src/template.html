@@ -172,8 +172,18 @@ button.stat[aria-checked=true] span{color:var(--g)}
 .stat b{display:block;white-space:nowrap;font-size:19px;font-weight:800;letter-spacing:-.03em;color:var(--t)}
 .stat span{font-size:12px;color:var(--m);font-weight:600}
 .stat.hl{background:var(--a2)}.stat.hl b{color:var(--a-ink)}
-.sel-marts{font-size:13.5px;color:var(--t2)}
-.sel-marts b{color:var(--t)}
+/* 할인 재료 탭: 검색줄은 헤더 밑에 붙는 막대, 통계 타일·정렬은 카드 없이 바탕에 */
+.dsticky{position:sticky;top:var(--hdrH,56px);z-index:15;margin:-4px -16px 0;padding:6px 16px 8px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
+.dsticky.stuck{border-bottom-color:var(--line)}
+.dsticky .search-row{margin-top:0}
+.dsticky .kw-chips{margin:8px 0 0}
+body.deals-on .top.scrolled{border-bottom-color:transparent}
+#tab-deals .page-h{padding-top:8px}
+.dtop{padding:0 4px}
+.dtop .sum{margin:12px 0 0}
+.dtop .sortbar{margin:12px -4px 0;padding-left:4px;padding-right:4px}
+.dlist-card{margin-top:12px;padding-top:6px}
+#tab-deals .ing-h{top:calc(var(--hdrH,56px) + var(--dsH,60px))}
 .ing-h{position:sticky;top:56px;z-index:2;display:flex;align-items:center;gap:8px;background:var(--card);padding:16px 0 6px;font-weight:800;font-size:15.5px;letter-spacing:-.03em}
 .ing-h span{font-size:12px;font-weight:700;color:var(--m);background:var(--card2);border-radius:999px;padding:1px 8px}
 .deal{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);min-height:56px}
@@ -306,7 +316,7 @@ button.thumb{padding:0;border:0;min-height:0;color:inherit;font:inherit;font-siz
 button.thumb:hover{filter:none}
 button.thumb:active{transform:none}
 button.thumb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
-.thumb-ov{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:rgba(255,255,255,.5);color:#1E2A4A;text-align:center;line-height:1.2;padding-top:12px;opacity:1;text-shadow:0 0 3px rgba(255,255,255,.95),0 0 1px #fff;transition:opacity .25s ease;pointer-events:none}
+.thumb-ov{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:rgba(255,255,255,.5);color:#1E2A4A;text-align:center;line-height:1.2;padding-top:1.5px;opacity:1;text-shadow:0 0 3px rgba(255,255,255,.95),0 0 1px #fff;transition:opacity .25s ease;pointer-events:none}
 .thumb-ov b{font-size:11px;font-weight:700;letter-spacing:-.02em}
 .thumb-ov span{font-size:13px;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
 .thumb-ov span em{font-style:normal;font-size:11px;font-weight:700}
@@ -527,19 +537,22 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 
 <!-- ② 할인 재료 -->
 <section class="tab" id="tab-deals">
-  <div class="page-h"><h1>할인 재료</h1><p>선택한 마트에서 지금 싸게 파는 재료예요.</p></div>
-  <div class="card">
-    <form id="dealSearch" class="search-row kw-form" role="search" aria-label="할인 재료 키워드 검색" style="margin-top:0">
+  <!-- 검색줄: 카드 밖, 헤더 바로 아래에 붙어서 스크롤해도 따라와요 (헤더 + 검색 = 위쪽 막대) -->
+  <div class="dsticky" id="dSticky">
+    <form id="dealSearch" class="search-row kw-form" role="search" aria-label="할인 재료 키워드 검색" >
       <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="dSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="재료·상품·마트 검색 (예: 돼지)" aria-label="할인 재료 검색 키워드" aria-describedby="dKwHint"></div>
       <button type="submit" id="dSearchGo">확인</button>
     </form>
     <span id="dKwHint" class="vh">키워드를 넣고 확인을 누르면 필터로 추가돼요. 여러 개를 넣으면 하나라도 맞는 재료를 보여 줘요.</span>
     <div id="dealKws" class="kw-chips" role="group" aria-label="검색 키워드" hidden></div>
     <div id="dealKwStatus" class="vh" role="status" aria-live="polite"></div>
+  </div>
+  <div class="page-h"><h1>할인 재료</h1><p>선택한 마트에서 지금 싸게 파는 재료예요.</p></div>
+  <div class="dtop">
     <div id="dealSummary"></div>
     <div id="dSortBar" class="sortbar" role="group" aria-label="할인 재료 정렬 (다시 누르면 방향이 바뀌어요)" hidden></div>
-    <div id="dealList"></div>
   </div>
+  <div class="card dlist-card"><div id="dealList"></div></div>
   <div class="card">
     <div class="card-h"><h2><span class="ic-box"><svg class="i"><use href="#i-pen"/></svg></span>할인 재료 직접 추가</h2></div>
     <p class="desc">동네 마트처럼 전단 정보가 없는 곳은 매장에서 본 할인 상품을 적어 두세요. 이 기기(브라우저)에만 저장돼요.</p>
@@ -656,7 +669,9 @@ function showTab(id){
   $('btnSetup').setAttribute('aria-label', setup ? '위치·마트 설정 닫기' : '위치·마트 설정' + (state.loc ? ' (지금: ' + state.loc.label + ')' : ''));
   document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('on', t.id===id); });
   document.querySelectorAll('nav button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-tab')===id); });
+  document.body.classList.toggle('deals-on', id==='tab-deals');
   if (id==='tab-deals') renderDeals();
+  if (id==='tab-deals') syncBars();
   if (id==='tab-recipes') renderRecipes();
   window.scrollTo(0,0);
   if (typeof updateFab === 'function') updateFab();
@@ -666,7 +681,17 @@ $('btnSetup').addEventListener('click', function(){ showTab(document.body.classL
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && document.body.classList.contains('setup') && !document.querySelector('.tip-pop:not([hidden])')) showTab(lastTab); });
 function shortLoc(l){ if (!l) return ''; var t = String(l.label || ''); if (t === '현재 위치') return t; return t.split(',')[0].trim(); }
 function renderLocName(){ $('locName').textContent = shortLoc(state.loc); if (!document.body.classList.contains('setup')) $('btnSetup').setAttribute('aria-label', '위치·마트 설정' + (state.loc ? ' (지금: ' + state.loc.label + ')' : '')); }
-window.addEventListener('scroll', function(){ $('top').classList.toggle('scrolled', window.scrollY > 4); }, {passive:true});
+// 헤더·할인 재료 검색줄 높이를 CSS 변수로 (검색줄은 헤더 바로 밑에, 묶음 제목은 검색줄 밑에 붙어요)
+function syncBars(){
+  var r = document.documentElement.style, ds = $('dSticky');
+  r.setProperty('--hdrH', $('top').offsetHeight + 'px');
+  if (ds && ds.offsetParent) r.setProperty('--dsH', ds.offsetHeight + 'px');
+  // 검색줄은 원래 자리가 헤더 바로 밑이라, 조금이라도 스크롤하면 붙은 상태 (아래 경계선 표시)
+  if (ds) ds.classList.toggle('stuck', !!ds.offsetParent && window.scrollY > 0);
+}
+window.addEventListener('scroll', function(){ $('top').classList.toggle('scrolled', window.scrollY > 4); syncBars(); }, {passive:true});
+window.addEventListener('resize', syncBars);
+if (window.ResizeObserver) new ResizeObserver(syncBars).observe($('dSticky'));
 
 // ---------- 위치 ----------
 function setStatus(html, isErr){ $('locStatus').innerHTML = isErr ? '<div class="err">'+html+'</div>' : html ? ic('pin')+'<div>'+html+'</div>' : ''; }
@@ -970,8 +995,8 @@ $('dealSearch').addEventListener('submit', function(e){
   var inp = $('dSearch'), before = dKws.length;
   dKws = addKw(dKws, inp.value);
   inp.value = '';
-  if (dKws.length !== before) renderDeals();
-  inp.focus();
+  if (dKws.length !== before){ renderDeals(); kwToTop(); }
+  inp.focus({preventScroll:true});
 });
 function renderKws(){
   var el = $('dealKws');
@@ -982,13 +1007,15 @@ function renderKws(){
   }).join('') + (dKws.length > 1 ? '<button type="button" class="kw-clear" data-kwclear="1">모두 지우기</button>' : '');
 }
 function josaWa(w){ var c = String(w).charCodeAt(String(w).length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '과' : '와'; }
-function clearKws(){ dKws = []; renderDeals(); $('dSearch').focus(); }
+function clearKws(){ dKws = []; renderDeals(); kwToTop(); $('dSearch').focus({preventScroll:true}); }
+// 키워드 칩을 넣거나 지우면 걸러진 목록을 처음부터 보도록 맨 위로 (움직임 줄이기 설정이면 바로)
+function kwToTop(){ var rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; window.scrollTo({top: 0, behavior: rm ? 'auto' : 'smooth'}); }
 document.addEventListener('click', function(e){
   var x = e.target.closest && e.target.closest('#dealKws button.kw-x');
   if (x){
-    var i = +x.getAttribute('data-kw'); dKws.splice(i, 1); renderDeals();
+    var i = +x.getAttribute('data-kw'); dKws.splice(i, 1); renderDeals(); kwToTop();
     var xs = document.querySelectorAll('#dealKws button.kw-x');
-    (xs[Math.min(i, xs.length - 1)] || $('dSearch')).focus();
+    (xs[Math.min(i, xs.length - 1)] || $('dSearch')).focus({preventScroll:true});
     return;
   }
   if (e.target.closest && e.target.closest('button[data-kwclear]')) clearKws();
@@ -1056,8 +1083,7 @@ function renderDeals(){
     var active = activeAll.filter(function(d){ return dealMatchesKw(d, dKws); }); // 키워드가 있으면 숫자도 키워드 기준
     var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length;
     var shown = dFilt ? active.filter(function(d){ return (isUpcoming(d, today) ? 'soon' : 'today') === dFilt; }) : active;
-    $('dealSummary').innerHTML = '<div class="sel-marts">'+marts.map(function(m){ return '<b>'+esc(m.name)+'</b>'; }).join(' · ')+' <span class="muted small">· '+fmtMD(today)+' 기준</span></div>' +
-      '<div class="sum" role="radiogroup" aria-label="할인 재료 보기 필터">' + statBtn('', active.length, '할인 재료') + (hasUp ? statBtn('today', active.length-nUp, '오늘 적용') + statBtn('soon', nUp, '곧 시작') : '') + '</div>' +
+    $('dealSummary').innerHTML = '<div class="sum" role="radiogroup" aria-label="할인 재료 보기 필터">' + statBtn('', active.length, '할인 재료') + (hasUp ? statBtn('today', active.length-nUp, '오늘 적용') + statBtn('soon', nUp, '곧 시작') : '') + '</div>' +
       '';  // 가격확인 안내 상자는 없앴어요 — 「가격확인」 태그를 누르면 말풍선으로 설명해요
     shownN = shown.length;
     var groups = {};
@@ -1246,8 +1272,7 @@ function recipeBody(r, detailExtra){
 }
 function recipeMeta(r){
   var bits = [];
-  if (r.mins) bits.push('<span>'+ic('clock')+r.mins+'분</span>');
-  if (r.kcal) bits.push('<span>'+ic('flame')+r.kcal+'kcal</span>');
+  if (r.kcal) bits.push(r.kcalEst ? '<span title="재료 분량으로 어림한 1인분 열량">'+ic('flame')+'약 '+r.kcal+'kcal</span>' : '<span>'+ic('flame')+r.kcal+'kcal</span>');
   bits.push('<span>'+ic('bowl')+esc(r.cat)+'</span>');
   return '<div class="rmeta">'+bits.join('')+'</div>';
 }
@@ -1395,10 +1420,10 @@ function recipeItems(){
     var kl = RECIPE_KINDS.filter(function(k){ return rKinds.indexOf(k[0]) >= 0; }).map(function(k){ return k[1]; }).join('·');
     summary += ' <span class="muted small">· '+esc(kl)+' '+items.length.toLocaleString('ko-KR')+'개만 보는 중</span>';
   }
-  // 정렬: 할인 재료로 순위 매긴 레시피끼리, 검색으로만 나온 레시피는 그 뒤에 (조리시간 순이면 그쪽도 정렬)
+  // 정렬: 할인 재료로 순위 매긴 레시피끼리, 검색으로만 나온 레시피는 그 뒤에 (칼로리 순이면 그쪽도 정렬)
   if (rSort.k !== 'rec'){
     var rs = items.filter(function(it){ return it.s; }), rr = items.filter(function(it){ return !it.s; });
-    items = sortRecipes(rs, rSort, function(it){ return it.s; }).concat(rSort.k === 'time' ? sortRecipes(rr, rSort, function(it){ return it.r; }) : rr);
+    items = sortRecipes(rs, rSort, function(it){ return it.s; }).concat(rSort.k === 'kcal' ? sortRecipes(rr, rSort, function(it){ return it.r; }) : rr);
   }
   return {items:items, summary:summary, cnt:cnt, marts:marts, sel:sel};
 }
