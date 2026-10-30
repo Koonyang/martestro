@@ -456,7 +456,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
   </div>
 
   <div class="card">
-    <div class="card-h"><h2><span class="ic-box"><svg class="i"><use href="#i-paper"/></svg></span>위치 없이 전단만 보기</h2></div>
+    <div class="card-h"><h2><span class="ic-box"><svg class="i"><use href="#i-paper"/></svg></span>위치 설정 없이 대형마트 정보 확인</h2></div>
     <p class="desc">대형마트 전단은 전국 공통 행사라 위치 없이도 고를 수 있어요. (점포별로 다를 수 있어요)</p>
     <div class="chips" id="brandChips"></div>
   </div>
@@ -2209,7 +2209,7 @@ function findMartsLive(){
     if (done) return;
     if (++failed >= OVERPASS.length){
       done = true; clearTimeout(skTimer);
-      setStatus('지도 서버(OpenStreetMap)가 바빠서 마트 목록을 못 가져왔어요. 잠시 후 다시 시도해 주세요. 그동안 아래 「위치 없이 전단만 보기」로 대형마트 할인은 볼 수 있어요.', true);
+      setStatus('지도 서버(OpenStreetMap)가 바빠서 마트 목록을 못 가져왔어요. 잠시 후 다시 시도해 주세요. 그동안 아래 「위치 설정 없이 대형마트 정보 확인」으로 대형마트 할인은 볼 수 있어요.', true);
       renderMarts(); scrollPending = null;
     }
   }
@@ -2326,7 +2326,7 @@ function renderBrandChips(){
   setTimeout(updateFab, 0);
   $('brandChips').innerHTML = DATA_BRANDS.map(function(b){
     var id = 'brand:' + b, on = state.selected.indexOf(id) >= 0;
-    return '<button class="chip'+(on?' on':'')+'" data-id="'+id+'" aria-pressed="'+on+'">'+esc(BRANDS[b].label)+' 전단</button>';
+    return '<button class="chip'+(on?' on':'')+'" data-id="'+id+'" aria-pressed="'+on+'">'+esc(BRANDS[b].label)+'</button>';
   }).join('');
 }
 $('brandChips').addEventListener('click', function(e){
@@ -2337,7 +2337,7 @@ $('brandChips').addEventListener('click', function(e){
 
 // ---------- 선택된 마트 → 할인 목록 ----------
 function martById(id){
-  if (id.indexOf('brand:') === 0){ var b = id.slice(6); return {id:id, name:BRANDS[b].label+(b==='topmart'?' (전 점포 공통 전단)':' (전국 전단)'), brand:b, virtual:true}; }
+  if (id.indexOf('brand:') === 0){ var b = id.slice(6); return {id:id, name:BRANDS[b].label, brand:b, virtual:true}; }
   for (var i=0;i<state.marts.length;i++) if (state.marts[i].id===id) return state.marts[i];
   if (state.custom[id]) return {id:id, name:state.custom[id].name, brand:state.custom[id].brand||'local'};
   return null;
@@ -2376,7 +2376,7 @@ function renderDeals(){
   var marts = selectedMarts();
   if (!marts.length){
     $('dealSummary').innerHTML = '';
-    $('dealList').innerHTML = emptyBox('basket', '선택한 마트가 없어요', '「위치·마트」 탭에서 마트를 체크하거나<br>「위치 없이 전단만 보기」에서 전단을 골라 주세요.') + '<button class="sec block" data-go="tab-loc">마트 고르러 가기</button>';
+    $('dealList').innerHTML = emptyBox('basket', '선택한 마트가 없어요', '「위치·마트」 탭에서 마트를 체크하거나<br>「위치 설정 없이 대형마트 정보 확인」에서 마트를 골라 주세요.') + '<button class="sec block" data-go="tab-loc">마트 고르러 가기</button>';
   } else {
     var deals = collectDeals(), today = todayStr();
     var active = deals.filter(function(d){ return isActive(d, today); });

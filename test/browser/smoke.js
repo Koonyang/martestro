@@ -44,12 +44,17 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   async function useAddr(place) { await p.$eval('#addr', e => { e.value = ''; }); await p.type('#addr', place); await p.click('#btnAddr'); }
   async function useGeo(place) { const [latitude, longitude] = PLACES[place]; await p.setGeolocation({ latitude, longitude }); await p.click('#btnGeo'); }
   if (await p.$('#presets')) throw new Error('빠른 위치 설정 줄이 아직 있어요');
-  // 「위치 없이 전단만 보기」는 위치 없이도 동작해야 해요
+  // 「위치 설정 없이 대형마트 정보 확인」은 위치 없이도 동작해야 해요
   const noLocChips = await p.$$eval('#brandChips button', bs => bs.map(x => x.innerText.trim()));
-  if (!noLocChips.some(t => t.includes('이마트'))) throw new Error('위치 없이 전단만 보기 버튼 없음');
+  if (!noLocChips.some(t => t.includes('이마트'))) throw new Error('위치 설정 없이 대형마트 정보 확인 버튼 없음');
+  if (noLocChips.some(t => /전단/.test(t)) || !noLocChips.includes('이마트')) throw new Error('마트 버튼은 마트 이름만: ' + noLocChips.join(','));
+  const noLocTitle = await p.$eval('#brandChips', e => e.closest('.card').querySelector('h2').innerText.trim());
+  if (noLocTitle !== '위치 설정 없이 대형마트 정보 확인') throw new Error('섹션 이름: ' + noLocTitle);
+  if (/위치 없이 전단만 보기/.test(await p.$eval('body', e => e.innerHTML))) throw new Error('옛 섹션 이름이 남아 있어요');
   await p.$$eval('#brandChips button', bs => bs.find(x => x.innerText.includes('이마트')).click());
   await p.click('nav button[data-tab="tab-deals"]'); const noLocDeals = await p.$eval('#dealSummary', e => e.innerText.replace(/\s+/g, ' '));
   console.log('no-location deals:', noLocDeals.slice(0, 60)); if (!/이마트/.test(noLocDeals)) throw new Error('위치 없이 이마트 전단 안 보임');
+  if (/전국 전단|공통 전단/.test(noLocDeals)) throw new Error('요약에 (전국 전단) 남음: ' + noLocDeals.slice(0, 80));
   await p.$$eval('#brandChips button', bs => bs.find(x => x.innerText.includes('이마트')).click());
   await p.click('nav button[data-tab="tab-loc"]');
   // 새 위치가 정해지면 마트 목록으로 자동 스크롤되는지 (반경 변경 때는 안 움직임)
