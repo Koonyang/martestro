@@ -2,6 +2,7 @@ raw/
 node_modules/
 *.png
 !docs/*.png
+!assets/logos/*.png
 tmp/
 _site/
 .DS_Store
