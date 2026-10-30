@@ -326,7 +326,16 @@ var RECIPES = [
 // 손으로 쓴 레시피의 분류
 var HAND_CAT = {'김치찌개':'국&찌개','된장찌개':'국&찌개','순두부찌개':'국&찌개','콩나물국':'국&찌개','소고기미역국':'국&찌개','부대찌개':'국&찌개','참치김치찌개':'국&찌개','아욱된장국':'국&찌개','떡만둣국':'국&찌개','배추된장국':'국&찌개','황태국':'국&찌개','닭볶음탕':'국&찌개',
   '김치볶음밥':'밥','새우볶음밥':'밥','연어덮밥':'밥','카레라이스':'밥','떡볶이':'일품','우동':'일품','삼겹살 상추쌈':'일품','잡채':'일품','고구마맛탕':'후식','단호박찜':'후식'};
-RECIPES.forEach(function(r){ r.cat = HAND_CAT[r.name] || '반찬'; r.src = 'hand'; });
+// 추가 레시피(src/hand_recipes.js): 분류·인분을 직접 적고, 사진은 assets/recipes/ (출처가 없으면 AI 생성 이미지)
+var _hm = (typeof HAND_MORE_RAW !== 'undefined') ? {raw:HAND_MORE_RAW, cr:HAND_IMG_CREDIT} : null;
+if (!_hm && typeof require !== 'undefined'){ try { var _hmm = require('./hand_recipes.js'); _hm = {raw:_hmm.HAND_MORE_RAW, cr:_hmm.HAND_IMG_CREDIT}; } catch(e){} }
+var HAND_IMG_CREDITS = _hm ? _hm.cr : {};
+if (_hm) _hm.raw.forEach(function(a){
+  var r = R(a[0], a[1], 0, a[4], a[5]); r.cat = a[2]; r.serv = a[3]; r.img = 'assets/recipes/' + a[6] + '.webp';
+  if (_hm.cr[a[6]]) r.imgCredit = _hm.cr[a[6]]; else r.imgAi = true;
+  RECIPES.push(r);
+});
+RECIPES.forEach(function(r){ r.cat = r.cat || HAND_CAT[r.name] || '반찬'; r.src = 'hand'; });
 
 // ---- 공공데이터 레시피 (식품안전나라 COOKRCP01) → 레시피 객체 ----
 var PUB_EMOJI = {'반찬':'🥢','국&찌개':'🍲','일품':'🍽️','밥':'🍚','후식':'🍮','기타':'🥄'};
@@ -426,9 +435,9 @@ function buildDealIndex(deals, today){
 //  · 한 끼 사용량: 레시피 분량 ÷ 인분 (공공 레시피=1인분 g 표기, 직접 다듬은 기본 레시피=2인분, 밥 1공기 요리는 1인분)
 //    분량이 없거나 못 읽으면 재료별 1인분 기본값 (MEAL_DEFAULT_G)
 //  · 한 끼 가격 = 팩 가격 × 사용량/팩 무게 (10원 단위 반올림; 100g당 가격이면 100g 기준으로 곱해요). 팩 크기를 모르면 null → 「1팩 기준」
-var MEAL_DEFAULT_G = {돼지고기:150,소고기:150,닭고기:200,오리고기:150,순두부:175,두부:150,계란:80,양파:80,감자:150,고구마:150,당근:50,대파:30,애호박:100,단호박:150,양배추:100,배추:150,시금치:80,버섯:70,파프리카:75,상추:60,마늘:10,김치:100,어묵:70,소시지:60,햄:50,참치:50,고등어:150,오징어:120,새우:80,굴:100,갈치:150,전복:120,연어:120,콩나물:100,숙주:100,청경채:60,미나리:50,아욱:80,토마토:150,오이:100,떡:150,만두:180,라면:120,카레:25,된장:20,고추장:15,참기름:5,우동면:200,맛살:40,치즈:20,쌀:90,즉석밥:210,멸치:15,황태:20,명란:30,유부:20,우유:200,문어:100,낙지:120,꽃게:250,브로콜리:80};
+var MEAL_DEFAULT_G = {돼지고기:150,소고기:150,닭고기:200,오리고기:150,순두부:175,두부:150,계란:80,양파:80,감자:150,고구마:150,당근:50,대파:30,애호박:100,단호박:150,양배추:100,배추:150,시금치:80,버섯:70,파프리카:75,상추:60,마늘:10,김치:100,어묵:70,소시지:60,햄:50,참치:50,고등어:150,오징어:120,새우:80,굴:100,갈치:150,전복:120,연어:120,콩나물:100,숙주:100,청경채:60,미나리:50,아욱:80,토마토:150,오이:100,떡:150,만두:180,라면:120,카레:25,된장:20,고추장:15,참기름:5,우동면:200,맛살:40,치즈:20,쌀:90,즉석밥:210,멸치:15,황태:20,명란:30,유부:20,우유:200,문어:100,낙지:120,꽃게:250,브로콜리:80,가지:100,마요네즈:15,새우젓:5,김:3,무:80,케첩:20};
 // 한 개(단위) 무게 g. 숫자 하나면 '개' 기준
-var PIECE_G = {양파:200,감자:150,고구마:200,당근:150,애호박:300,단호박:800,양배추:{통:1500,포기:1500,장:50,개:1500},배추:{포기:2500,통:2500,단:1000,장:50,개:2500},대파:{대:100,뿌리:100,단:800,개:100},두부:{모:300,개:300},순두부:{봉:350,개:350},계란:{개:55,구:55,알:55},마늘:{쪽:5,톨:5,통:40,개:5},파프리카:150,토마토:200,오이:200,브로콜리:{개:300,송이:300},버섯:{개:35,송이:35,봉:150,팩:150},시금치:{단:300,포기:30},미나리:{단:250},청경채:{포기:40,개:40},상추:{장:10,잎:10,봉:150},콩나물:{봉:300},숙주:{봉:300},고등어:{마리:400,손:800},갈치:{마리:500,토막:80},오징어:{마리:250},문어:{마리:500},낙지:{마리:150},꽃게:{마리:250},새우:{마리:25,미:25},전복:{마리:70,미:70,개:70},닭고기:{마리:1000},오리고기:{마리:1500},라면:{봉:120,개:120},만두:{개:30},소시지:{개:20},어묵:{장:30,개:30},햄:{캔:340,개:340},참치:{캔:150,개:150},맛살:{줄:20,개:20},김치:{포기:2500},즉석밥:{개:210,공기:210},우동면:{봉:200,개:200},치즈:{장:20},명란:{개:50,덩이:50},유부:{장:10},굴:{봉:300}};
+var PIECE_G = {양파:200,감자:150,고구마:200,당근:150,애호박:300,단호박:800,양배추:{통:1500,포기:1500,장:50,개:1500},배추:{포기:2500,통:2500,단:1000,장:50,개:2500},대파:{대:100,뿌리:100,단:800,개:100},두부:{모:300,개:300},순두부:{봉:350,개:350},계란:{개:55,구:55,알:55},마늘:{쪽:5,톨:5,통:40,개:5},파프리카:150,토마토:200,오이:200,브로콜리:{개:300,송이:300},버섯:{개:35,송이:35,봉:150,팩:150},시금치:{단:300,포기:30},미나리:{단:250},청경채:{포기:40,개:40},상추:{장:10,잎:10,봉:150},콩나물:{봉:300},숙주:{봉:300},고등어:{마리:400,손:800},갈치:{마리:500,토막:80},오징어:{마리:250},문어:{마리:500},낙지:{마리:150},꽃게:{마리:250},새우:{마리:25,미:25},전복:{마리:70,미:70,개:70},닭고기:{마리:1000},오리고기:{마리:1500},라면:{봉:120,개:120},만두:{개:30},소시지:{개:20},어묵:{장:30,개:30},햄:{캔:340,개:340},참치:{캔:150,개:150},맛살:{줄:20,개:20},김치:{포기:2500},즉석밥:{개:210,공기:210},우동면:{봉:200,개:200},치즈:{장:20},명란:{개:50,덩이:50},유부:{장:10},굴:{봉:300},가지:150,무:1200,김:{장:2.5}};
 var UNIT_G = {큰술:15,스푼:15,작은술:5,티스푼:5,컵:200,줌:50,공기:210};
 function pieceG(k, u){
   var w = PIECE_G[k];
@@ -486,7 +495,7 @@ function amtGrams(t, k){
   return null;
 }
 var MEAL_ALIAS = {계란:['달걀','계란'],소고기:['쇠고기','소고기','양지','우둔','사태','차돌','소불고기'],돼지고기:['돼지','삼겹','목살','앞다리','뒷다리'],닭고기:['닭'],오리고기:['오리'],즉석밥:['밥'],쌀:['쌀','밥'],라면:['라면'],우동면:['우동'],새우:['새우'],버섯:['버섯']};
-function recipeServ(r){ if (r.src === 'pub') return 1; return r.ings.some(function(i){ return /1\s*공기/.test(i.amt || ''); }) ? 1 : 2; }
+function recipeServ(r){ if (r.src === 'pub') return 1; if (r.serv) return r.serv; return r.ings.some(function(i){ return /1\s*공기/.test(i.amt || ''); }) ? 1 : 2; }
 // 한 끼에 쓰는 g
 function mealGrams(r, ing){
   r._mg = r._mg || {};
@@ -518,7 +527,8 @@ function round10(v){ return Math.max(10, Math.round(v / 10) * 10); }
 var KCAL_100G = {김치:20,돼지고기:250,소고기:200,닭고기:125,오리고기:300,두부:85,순두부:50,계란:140,대파:30,양파:35,된장:190,고추장:210,애호박:20,감자:70,고구마:130,
   당근:35,버섯:25,마늘:125,맛살:100,시금치:30,콩나물:30,참기름:900,어묵:140,쌀:360,햄:300,소시지:280,미역:15,상추:15,고등어:120,갈치:90,오징어:90,양배추:30,
   새우:90,굴:70,연어:200,파프리카:25,당면:350,라면:450,떡:230,카레:400,토마토:18,단호박:65,참치:230,청경채:15,전복:80,아욱:25,미나리:20,만두:220,배추:15,
-  멸치:0,명란:130,황태:350,우동면:150};
+  멸치:0,명란:130,황태:350,우동면:150,
+  숙주:15,가지:20,오이:15,마요네즈:680,새우젓:60,김:400,무:20,케첩:110,치즈:300};
 var KCAL_EXTRA = [ // [요리 이름 규칙, 레시피 전체에 더하는 kcal(기름·설탕·물엿·밀가루)]
   [/볶음|구이|말이|전$|부침/, 110], [/맛탕/, 300], [/불고기|제육|조림|떡볶이|잡채|닭볶음탕/, 60], [/전$/, 120]];
 function estKcal(r){
@@ -691,4 +701,4 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

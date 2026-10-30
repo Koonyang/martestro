@@ -311,4 +311,40 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert(/body\{[^}]*line-height:1\.705/.test(T));
   console.log('line-height ×1.1 OK (' + lhs.length + '+' + inl.length + ')');
 }
+
+// ---- 직접 쓴 추가 레시피 (src/hand_recipes.js) + 사진 ----
+{ const fs = require('fs'), path = require('path');
+  const H = require('../src/hand_recipes.js'); const more = L.RECIPES.slice(43);
+  assert.strictEqual(more.length, H.HAND_MORE_RAW.length); assert(more.length >= 40 && more.length <= 60, '추가 레시피 수 ' + more.length);
+  assert.strictEqual(L.RECIPES.length, 43 + more.length);
+  const pubNames = new Set(L.PUB_RECIPES.map(r => r.name.replace(/\s/g, ''))), seen = new Set();
+  L.RECIPES.forEach(r => { const k = r.name.replace(/\s/g, ''); assert(!seen.has(k), '이름 중복 ' + r.name); seen.add(k); assert(!pubNames.has(k), '공공 레시피와 이름 중복 ' + r.name); });
+  const ING = new Set(L.ING_LIST.concat(['당면','가지','마요네즈','새우젓','김','무','케첩','미역']));
+  more.forEach(r => {
+    assert(L.RECIPE_CATS.includes(r.cat) && r.cat !== '후식', '분류 ' + r.name);
+    assert(r.serv === 1 || r.serv === 2, '인분 ' + r.name);
+    assert(r.ings.some(i => i.main), '주재료 ' + r.name); assert(r.ings.every(i => ING.has(i.k)), '재료 키 ' + r.name + ' ' + r.ings.map(i => i.k));
+    assert(r.ings.every(i => i.amt), '분량 ' + r.name); assert(r.steps.length >= 3, '만드는 법 ' + r.name);
+    assert(r.kcal >= 40 && r.kcal <= 900 && r.kcalEst, '열량 ' + r.name + ' ' + r.kcal);
+    assert(/^assets\/recipes\/[a-z0-9-]+\.webp$/.test(r.img) && fs.existsSync(path.join(__dirname, '..', r.img)), '사진 파일 ' + r.name);
+    assert(fs.statSync(path.join(__dirname, '..', r.img)).size < 120000, '사진 용량 ' + r.name);
+    if (r.imgAi) assert(!r.imgCredit); else { const c = r.imgCredit; assert(c && /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(c.u) && c.a && c.t, '사진 출처 ' + r.name);
+      assert(/^(CC0|CC BY(-SA)? [\d.]+( kr)?|퍼블릭 도메인)$/.test(c.l) && !/NC|ND/.test(c.l), '사진 라이선스 ' + r.name + ' ' + c.l); }
+  });
+  L.RECIPES.slice(0, 43).forEach(o => assert(!o.serv && !o.img, '기존 레시피 그대로 ' + o.name));
+  // 기존 규칙(재료 5개·주재료 2개 이하, 비싼 재료 X → 자취생 / 가공식품·지은 밥 → 간편식품)
+  const t = n => more.find(r => r.name === n);
+  assert(t('참치마요덮밥').jachi && t('참치마요덮밥').quick && t('참치마요덮밥').rice);
+  assert(!t('소고기 숙주볶음').jachi, '소고기는 자취생 아님'); assert(!t('라볶이').jachi && t('라볶이').quick, '재료 6개');
+  assert.strictEqual(L.recipeServ(t('간장계란밥')), 1); assert.strictEqual(L.recipeServ(t('어묵탕')), 2);
+  const ai = more.filter(r => r.imgAi).length, real = more.length - ai;
+  const jachi = L.ALL_RECIPES.filter(r => r.jachi).length, quick = L.ALL_RECIPES.filter(r => r.quick).length;
+  console.log('추가 레시피', more.length, '· 실제 사진', real, '· AI', ai, '· 자취생 +' + more.filter(r => r.jachi).length, '(전체 ' + jachi + ') · 간편식품 +' + more.filter(r => r.quick).length, '(전체 ' + quick + ')');
+  assert(real >= 15 && ai >= 1);
+  // 화면: AI 사진에만 작은 「AI 생성 이미지」 표시, 출처 화면에 사진 출처
+  const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  assert(/\.ai-lbl\{[^}]*bottom:4px[^}]*z-index:2[^}]*font-size:8px/.test(html), 'AI 표시 스타일');
+  assert(html.includes("r.img && r.imgAi ? '<span class=\"ai-lbl\">AI 생성 이미지</span>'"), '썸네일 AI 표시');
+  assert(html.includes('function photoCredits()') && html.includes('photoCredits() +'), '사진 출처');
+}
 console.log('ALL TESTS PASSED');

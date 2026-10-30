@@ -322,6 +322,11 @@ button.thumb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .thumb-ov span em{font-style:normal;font-size:11px;font-weight:700}
 button.thumb[aria-pressed=true] .thumb-ov{opacity:0}
 button.thumb .rank{z-index:2}
+.ai-lbl{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:2;padding:1.5px 4px;border-radius:6px;background:rgba(20,26,40,.5);color:rgba(255,255,255,.95);font-size:8px;font-weight:600;line-height:1.1;letter-spacing:-.02em;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s}
+.thumb img.ok~.ai-lbl,.big-wrap .ai-lbl{opacity:1}
+.big-wrap{position:relative;margin-top:8px}
+.big-wrap .big-img{margin-top:0;display:block}
+.big-wrap .ai-lbl{bottom:8px;font-size:10px;padding:2px 6px;border-radius:8px}
 @media (prefers-reduced-motion:reduce){.thumb-ov{transition:none}}
 .gauge .g-k{font-size:12px;font-weight:700;color:var(--m);white-space:nowrap}
 .gauge{margin-top:12px;padding:10px 12px 11px;border-radius:12px;background:var(--card2)}
@@ -411,6 +416,8 @@ button.tipb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .src-item{padding:14px 0;border-bottom:1px solid var(--line)}
 .src-item:last-child{border-bottom:0}
 .src-item .t{font-weight:700;font-size:14.5px;margin:6px 0 2px;letter-spacing:-.02em}
+.src-item .credits{margin:8px 0 0;padding-left:16px;color:var(--m);overflow-wrap:break-word}
+.src-item .credits li{margin:3px 0}
 .src-item .muted{font-size:12.5px;line-height:1.76}
 .src-item a{font-size:12.5px;font-weight:600;word-break:break-all}
 /* empty & skeleton */
@@ -1265,6 +1272,8 @@ $('pantryNote').textContent = '※ ' + PANTRY_NOTE + ' 「가격확인」 표시
 function recipeBody(r, detailExtra){
   var ingTxt = r.src === 'pub' ? esc(r.parts || '') : r.ings.map(function(i){ return esc(i.k)+(i.amt?' '+esc(i.amt):''); }).join(', ');
   var img = r.img ? '<img class="big-img" data-src="'+esc(r.img)+'" alt="'+esc(r.name)+' 사진" loading="lazy" onerror="this.style.display=\'none\'">' : '';
+  // AI로 만든 사진은 사진 아래쪽에 작게 「AI 생성 이미지」
+  if (r.img && r.imgAi) img = '<div class="big-wrap"><img class="big-img" data-src="'+esc(r.img)+'" alt="'+esc(r.name)+' 사진 (AI 생성 이미지)" loading="lazy" onerror="this.parentNode.style.display=\'none\'"><span class="ai-lbl">AI 생성 이미지</span></div>';
   var src = r.src === 'pub' ? '<div class="muted small">출처: 식품의약품안전처 식품안전나라 「조리식품의 레시피 DB」 (일련번호 '+r.seq+')</div>' : '';
   return '<details><summary>재료·만드는 법 보기</summary>' + img +
     '<div class="ingtxt"><b>재료</b> '+ingTxt+'</div>' +
@@ -1288,7 +1297,8 @@ function dealNameInline(name){
 // 사진: 카드 썸네일은 화면에 보일 때만 불러와요(loading=lazy). 사진이 없으면 이모지.
 function thumb(r, rank, s){
   var inner = (rank ? '<span class="rank">'+rank+'</span>' : '')+'<span aria-hidden="true">'+r.emoji+'</span>' +
-    (r.img ? '<img src="'+esc(r.img)+'" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '');
+    (r.img ? '<img src="'+esc(r.img)+'" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '') +
+    (r.img && r.imgAi ? '<span class="ai-lbl">AI 생성 이미지</span>' : '');
   if (!s) return '<div class="thumb">'+inner+'</div>';
   // 순위 카드: 사진이 버튼 — 누르면 흰 막 위에 「주재료 n/m 할인 중」
   var t = '주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중';
@@ -1461,6 +1471,13 @@ function renderRecipes(append){
 
 // ---------- 출처 ----------
 var MART_LABEL = {emart:'이마트',homeplus:'홈플러스',lottemart:'롯데마트',topmart:'탑마트',costco:'코스트코'};
+// 직접 쓴 레시피 사진: 실제 사진은 위키미디어 공용(자유 이용 허락) 출처를 모두 적고, 나머지는 AI 생성 이미지라고 밝혀요
+function photoCredits(){
+  var real = RECIPES.filter(function(r){ return r.imgCredit; }), ai = RECIPES.filter(function(r){ return r.img && r.imgAi; });
+  if (!real.length && !ai.length) return '';
+  return '<div class="src-item"><span class="tag real">레시피 사진</span><div class="t">직접 쓴 레시피 사진 '+(real.length+ai.length)+'장</div><span class="muted small">실제 사진 '+real.length+'장은 위키미디어 공용의 자유 이용 사진이에요(640×480으로 잘라 줄임). AI 생성 이미지 '+ai.length+'장은 사진 아래에 「AI 생성 이미지」라고 표시했어요.</span>' +
+    '<ul class="credits small">' + real.map(function(r){ var c = r.imgCredit; return '<li>'+esc(r.name)+' — <a href="'+esc(c.u)+'" target="_blank" rel="noopener">'+esc(c.t)+'</a> · '+esc(c.a)+' · '+(c.lu ? '<a href="'+esc(c.lu)+'" target="_blank" rel="noopener">'+esc(c.l)+'</a>' : esc(c.l))+'</li>'; }).join('') + '</ul></div>';
+}
 function renderSources(){
 var st = (DEALS_META && DEALS_META.status) || {};
 var up = DEALS_META && DEALS_META.updated;
@@ -1472,7 +1489,7 @@ $('srcList').innerHTML = Object.keys(SOURCES).map(function(k){
   var s = SOURCES[k];
   return '<div class="src-item"><span class="tag '+(s.needsCheck?'chk':'real')+'">'+(s.official?'공식':s.needsCheck?'전단 이미지 판독':'2차 정리')+'</span><div class="t">'+esc(s.label)+'</div><span class="muted small">행사기간: '+esc(s.period)+' · 확인일: '+esc(s.checked)+'</span><br><a class="small" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.url)+'</a>'+(s.pages && s.pages.length ? '<br><span class="small">전단 원본 이미지: '+s.pages.map(function(u,i){ return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+(i+1)+'면</a>'; }).join(' · ')+'</span>' : '')+(s.note?'<br><span class="muted small">'+esc(s.note)+'</span>':'')+'</div>';
 }).join('') + (PUB_INFO ? '<div class="src-item"><span class="tag real">공공데이터</span><div class="t">레시피: '+esc(PUB_INFO.source)+'</div><span class="muted small">제공: 식품의약품안전처 · 이용허락범위: 제한 없음(공공데이터포털 표기) · 수집일: '+esc(PUB_INFO.fetched)+'<br>전체 '+PUB_INFO.total+'건(공개 샘플 호출로 받을 수 있는 최대치) 중 중복·재료 파싱 불가를 빼고 '+PUB_INFO.kept+'건 수록. 주재료 표시는 재료 목록으로 자동 추정했어요. 사진은 식품안전나라 서버에서 화면에 보일 때 불러와요.</span><br><a class="small" href="https://www.foodsafetykorea.go.kr/api/openApiInfo.do?menu_grp=MENU_GRP31&menu_no=661&show_cnt=10&start_idx=1&svc_no=COOKRCP01" target="_blank" rel="noopener">식품안전나라 Open API 안내</a> · <a class="small" href="https://www.data.go.kr/data/15060073/openapi.do" target="_blank" rel="noopener">공공데이터포털</a></div>' : '') +
-  '<div class="src-item"><span class="tag real">직접 작성</span><div class="t">기본 레시피 '+RECIPES.length+'개</div><span class="muted small">흔한 집밥 레시피를 앱용으로 짧게 정리했어요.</span></div>' + '<div class="muted small" style="margin-top:12px">코스트코는 공개 전단이 없어 마트고 집계 일부만 넣었고 자동 갱신되지 않아요. 트레이더스·노브랜드·하나로마트·GS더프레시·동네마트는 전단 데이터가 없어서 「할인 재료 직접 추가」로 입력해 주세요.</div>';
+  '<div class="src-item"><span class="tag real">직접 작성</span><div class="t">기본 레시피 '+RECIPES.length+'개</div><span class="muted small">흔한 집밥 레시피를 앱용으로 짧게 정리했어요. 분량·만드는 법은 직접 썼어요.</span></div>' + photoCredits() + '<div class="muted small" style="margin-top:12px">코스트코는 공개 전단이 없어 마트고 집계 일부만 넣었고 자동 갱신되지 않아요. 트레이더스·노브랜드·하나로마트·GS더프레시·동네마트는 전단 데이터가 없어서 「할인 재료 직접 추가」로 입력해 주세요.</div>';
 }
 var DATA_LIVE = false;
 renderSources();

@@ -322,6 +322,11 @@ button.thumb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .thumb-ov span em{font-style:normal;font-size:11px;font-weight:700}
 button.thumb[aria-pressed=true] .thumb-ov{opacity:0}
 button.thumb .rank{z-index:2}
+.ai-lbl{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);z-index:2;padding:1.5px 4px;border-radius:6px;background:rgba(20,26,40,.5);color:rgba(255,255,255,.95);font-size:8px;font-weight:600;line-height:1.1;letter-spacing:-.02em;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s}
+.thumb img.ok~.ai-lbl,.big-wrap .ai-lbl{opacity:1}
+.big-wrap{position:relative;margin-top:8px}
+.big-wrap .big-img{margin-top:0;display:block}
+.big-wrap .ai-lbl{bottom:8px;font-size:10px;padding:2px 6px;border-radius:8px}
 @media (prefers-reduced-motion:reduce){.thumb-ov{transition:none}}
 .gauge .g-k{font-size:12px;font-weight:700;color:var(--m);white-space:nowrap}
 .gauge{margin-top:12px;padding:10px 12px 11px;border-radius:12px;background:var(--card2)}
@@ -411,6 +416,8 @@ button.tipb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .src-item{padding:14px 0;border-bottom:1px solid var(--line)}
 .src-item:last-child{border-bottom:0}
 .src-item .t{font-weight:700;font-size:14.5px;margin:6px 0 2px;letter-spacing:-.02em}
+.src-item .credits{margin:8px 0 0;padding-left:16px;color:var(--m);overflow-wrap:break-word}
+.src-item .credits li{margin:3px 0}
 .src-item .muted{font-size:12.5px;line-height:1.76}
 .src-item a{font-size:12.5px;font-weight:600;word-break:break-all}
 /* empty & skeleton */
@@ -1619,6 +1626,68 @@ var PUB_RAW = [[18,"버섯 두유 소스 볶음",0,285,"uploadimg/cook/10_00018_
 [3781,"오소부코",2,1033,"uploadimg/20260724/20260724060804_1784884084651.jpg","양파*,당근,마늘,치즈","현미 80g, 양파 60g, 당근 30g, 셀러리 20g, 다진 마늘 20g, 닭뼈육수 300g, 청주 30g, 깻잎 8g, 참나물 12g, 사과식초 10g, 레몬즙 10g, 소금 1g, 후추 2g, 올리브유 60g, 파르미지아노 치즈 13g","현미는 2시간 이상 물에 불린다. 소고기에 소금, 후추로 밑간하고 달군 팬에 올리브유(20g)를 두르고 소고기 겉면을 바싹 익힌다.\n양파, 셀러리, 당근을 잘게 다진다. 올리브유(10g)를 두른 팬에 손질한 양파(30g), 당근, 셀러리, 다진 마늘(10g)을 넣고 볶다가 익힌 소고기, 닭뼈육수(150g), 청주를 넣고…\n깻잎, 참나물을 잘게 다진다. 볼에 손질한 깻잎, 참나물, 사과식초, 레몬즙, 올리브유(20g)를 넣고 섞어 그레몰라타 소스를 만든다.\n올리브유(10g)를 두른 팬에 손질한 양파(30g), 다진 마늘(10g)을 넣고 볶은 후 불린 현미, 닭뼈육수(150g)를 넣고 조려 리소토를 만든다.\n그릇에 리소토를 담고 파르미지아노 치즈를 갈아 올린다.\n리소토 위에 조린 소고기를 얹고 그레몰라타 소스를 곁들여 마무리한다."]];
 if (typeof module !== "undefined") module.exports = {PUB_META:PUB_META, PUB_CATS:PUB_CATS, PUB_RAW:PUB_RAW};
 
+// 직접 쓴 추가 레시피 (2026-10 확장) — 할인 전단에 자주 나오는 재료(돼지·닭·소고기, 계란, 두부, 콩나물, 애호박, 감자,
+// 버섯, 김치, 어묵, 참치캔, 햄·소시지, 라면·우동, 만두)로 만드는 집밥. 문장은 모두 직접 썼어요.
+// H(이름, 이모지, 분류, 인분, 재료[[재료, 주재료여부, 분량]], 조리 순서, 사진 파일 이름)
+// 사진: assets/recipes/<파일>.webp — HAND_IMG_CREDIT에 있으면 실제 사진(위키미디어 공용, 출처 표기), 없으면 AI 생성 이미지
+var HAND_MORE_RAW = [
+  ['간장제육볶음','🥓','반찬',2,[['돼지고기',1,'앞다리살 300g'],['양파',1,'1개'],['대파',0,'1대'],['당근',0,'1/3개'],['마늘',0,'1큰술']],['간장 3큰술, 설탕 1큰술 반, 맛술 1큰술, 다진 마늘, 후추를 섞어 양념장을 만들어요.','얇게 썬 돼지고기를 양념장에 버무려 15분쯤 둬요.','달군 팬에 고기를 펼쳐 센 불로 볶다가 양파와 당근을 넣어요.','대파를 넣고 국물이 거의 없어질 때까지 볶아 윤기를 내요.'],'jeyuk-ganjang'],
+  ['대패삼겹 숙주볶음','🥓','반찬',2,[['돼지고기',1,'대패삼겹 300g'],['숙주',1,'1봉'],['대파',0,'1/2대'],['마늘',0,'1작은술']],['팬에 대패삼겹을 기름 없이 올려 바삭하게 구워요.','기름이 너무 많으면 조금 덜어 내고 마늘과 대파를 넣어 향을 내요.','숙주를 한꺼번에 넣고 센 불에서 30초만 뒤적여요.','간장 1큰술, 굴소스 약간, 후추로 간하고 바로 불을 꺼요.'],'daepae-sukju'],
+  ['애호박 돼지고기볶음','🥒','반찬',2,[['애호박',1,'1개'],['돼지고기',1,'150g'],['양파',0,'1/2개'],['마늘',0,'1작은술']],['애호박은 반달 모양으로, 돼지고기는 한입 크기로 썰어요.','고기에 소금·후추를 조금 뿌려 기름 두른 팬에 먼저 볶아요.','고기 색이 변하면 마늘·양파·애호박을 넣어요.','새우젓이나 소금으로 간하고 애호박이 살짝 투명해지면 깨를 뿌려요.'],'hobak-dwaeji'],
+  ['목살구이와 양파절임','🥩','반찬',2,[['돼지고기',1,'목살 400g'],['양파',1,'1개'],['상추',0,'1/2봉']],['양파를 얇게 채 썰어 간장 3, 식초 2, 설탕 1, 물 3 비율 소스에 담가 둬요.','목살 앞뒤에 소금과 후추를 뿌려요.','달군 팬에 중불로 굽다가 한 번만 뒤집어 속까지 익혀요.','한입 크기로 잘라 양파절임, 상추와 함께 먹어요.'],'moksal-yangpa'],
+  ['콩나물불고기','🌶️','반찬',2,[['돼지고기',1,'300g'],['콩나물',1,'1봉'],['고추장',0,'2큰술'],['대파',0,'1대'],['양파',0,'1/2개']],['고추장, 고춧가루 1큰술, 간장 2큰술, 설탕, 다진 마늘로 양념을 만들어 고기에 버무려요.','넓은 팬에 콩나물을 깔고 그 위에 양념 고기와 양파를 올려요.','뚜껑을 덮고 중불에서 5분쯤 익혀 콩나물 숨을 죽여요.','뚜껑을 열고 대파를 넣어 고루 볶아요. 남은 양념에 밥을 볶아 먹어도 좋아요.'],'kongbul'],
+  ['돼지고기 김치두루치기','🍲','반찬',2,[['돼지고기',1,'250g'],['김치',1,'1컵'],['양파',0,'1/2개'],['대파',0,'1/2대'],['두부',0,'1/2모']],['돼지고기와 김치를 한입 크기로 썰어요.','팬에 고기를 볶다가 기름이 나오면 김치를 넣고 같이 볶아요.','고춧가루 1큰술, 설탕 약간, 물 반 컵을 넣고 자작하게 끓여요.','양파·대파를 넣어 한 번 더 볶고, 데우거나 부친 두부를 곁들여요.'],'duruchigi'],
+  ['돼지고기 감자 고추장찌개','🍲','국&찌개',2,[['돼지고기',1,'150g'],['감자',1,'2개'],['고추장',1,'2큰술'],['애호박',0,'1/3개'],['양파',0,'1/2개'],['대파',0,'1/2대']],['냄비에 돼지고기를 볶아 기름을 내요.','물 600ml를 붓고 고추장과 고춧가루 반 큰술을 풀어요.','깍둑썬 감자를 넣고 10분 끓여요.','애호박·양파를 넣어 5분 더 끓이고 대파와 국간장으로 마무리해요.'],'dwaeji-gamja-jjigae'],
+  ['돼지고기 가지볶음','🍆','반찬',2,[['가지',1,'2개'],['돼지고기',1,'다진 고기 150g'],['대파',0,'1대'],['마늘',0,'1작은술']],['가지는 길쭉하게 썰고, 대파는 송송 썰어요.','기름에 대파와 마늘을 볶아 파기름을 내요.','다진 고기를 넣고 보슬보슬하게 볶아요.','가지를 넣고 간장 2큰술, 설탕 약간을 둘러 가지가 말랑해질 때까지 볶아요.'],'dwaeji-gaji'],
+  ['돼지고기 양배추볶음','🥬','반찬',2,[['돼지고기',1,'200g'],['양배추',1,'1/4통'],['양파',0,'1/2개'],['당근',0,'약간']],['양배추는 손바닥 반 크기로 큼직하게 썰어요.','돼지고기를 먼저 볶아 소금·후추로 밑간해요.','양파·당근·양배추를 넣고 센 불에서 빠르게 볶아요.','간장 1큰술과 굴소스 약간으로 맛을 맞춰요.'],'dwaeji-yangbaechu'],
+  ['닭다리살 간장구이','🍗','반찬',2,[['닭고기',1,'닭다리살 400g'],['대파',0,'1대'],['마늘',0,'1큰술']],['닭다리살 두꺼운 부분에 칼집을 넣어 고르게 익게 해요.','껍질 쪽부터 팬에 올려 노릇해질 때까지 구워요.','간장 3, 설탕 1, 물 3, 다진 마늘을 섞어 붓고 졸여요.','소스가 끈적해지면 썰어서 채 썬 대파를 올려요.'],'dakdari-ganjang'],
+  ['닭가슴살 양배추볶음','🐔','반찬',2,[['닭고기',1,'닭가슴살 300g'],['양배추',1,'1/6통'],['양파',0,'1/2개'],['고추장',0,'1큰술']],['닭가슴살은 결대로 길게 썰어 소금·후추를 뿌려요.','고추장, 간장 1큰술, 고춧가루, 설탕 약간으로 양념을 만들어요.','팬에 닭가슴살을 볶다가 양파·양배추를 넣어요.','양념을 넣고 센 불에서 1~2분만 더 볶아요.'],'dakgaseum-yangbaechu'],
+  ['닭고기 감자 간장조림','🍗','반찬',2,[['닭고기',1,'닭볶음탕용 600g'],['감자',1,'2개'],['당근',0,'1/3개'],['양파',0,'1개'],['대파',0,'1대'],['당면',0,'50g']],['닭은 끓는 물에 한 번 데쳐 헹구고, 당면은 물에 불려 둬요.','간장 5큰술, 설탕 2큰술, 다진 마늘, 물 2컵을 넣고 닭을 끓여요.','15분 뒤 감자·당근을 넣고 10분 더 졸여요.','양파·대파·당면을 넣고 당면이 익을 때까지 졸이면 끝.'],'dak-gamja-jorim'],
+  ['닭고기 버섯덮밥','🍳','밥',1,[['닭고기',1,'닭다리살 120g'],['계란',1,'1개'],['버섯',0,'한 줌'],['양파',0,'1/4개'],['쌀',0,'밥 1공기']],['작은 팬에 물 반 컵, 간장 2큰술, 설탕 1큰술을 넣고 끓여요.','한입 크기 닭고기와 양파·버섯을 넣고 5분 익혀요.','풀어 둔 계란을 빙 둘러 붓고 뚜껑을 덮어 반숙으로 익혀요.','밥 위에 국물째 미끄러지듯 올려요.'],'dak-beoseot-deopbap'],
+  ['소고기 양파덮밥','🐮','밥',1,[['소고기',1,'불고기용 120g'],['양파',1,'1/2개'],['쌀',0,'밥 1공기'],['대파',0,'약간']],['물 반 컵에 간장 2큰술, 설탕 1큰술, 맛술 1큰술을 넣어 끓여요.','채 썬 양파를 넣고 숨이 죽을 때까지 끓여요.','소고기를 펼쳐 넣고 색이 변할 정도로만 익혀요.','밥에 국물과 함께 올리고 대파를 뿌려요.'],'sogogi-yangpa-deopbap'],
+  ['소고기 숙주볶음','🥩','반찬',2,[['소고기',1,'200g'],['숙주',1,'1봉'],['대파',0,'1/2대'],['마늘',0,'1작은술']],['소고기는 간장 1큰술, 설탕·후추 약간에 버무려요.','팬에 마늘과 대파를 볶아 향을 내고 고기를 넣어요.','고기가 거의 익으면 숙주를 넣어요.','센 불에서 30초 뒤적여 아삭할 때 불을 꺼요.'],'sogogi-sukju'],
+  ['소고기 애호박국','🥣','국&찌개',2,[['소고기',1,'국거리 100g'],['애호박',1,'1/2개'],['대파',0,'1/2대'],['마늘',0,'1작은술']],['냄비에 참기름을 조금 두르고 소고기를 볶아요.','물 700ml를 붓고 끓으면 거품을 걷어요.','반달 썬 애호박과 마늘을 넣고 5분 끓여요.','국간장과 소금으로 간하고 대파를 넣어요.'],'sogogi-hobakguk'],
+  ['대파 계란국','🥚','국&찌개',2,[['계란',1,'2개'],['대파',1,'1대'],['양파',0,'1/4개']],['물 700ml에 양파를 넣고 끓여 단맛을 우려요.','국간장, 소금으로 간을 맞춰요.','풀어 둔 계란을 가늘게 돌려 붓고 바로 젓지 말고 기다려요.','계란이 몽글하게 떠오르면 대파를 듬뿍 넣고 불을 꺼요.'],'daepa-gyeranguk'],
+  ['간장계란밥','🍳','밥',1,[['쌀',0,'밥 1공기'],['계란',1,'1개'],['참기름',0,'1작은술'],['대파',0,'약간']],['계란을 팬에 반숙 프라이로 부쳐요.','따뜻한 밥 위에 계란을 올려요.','간장 1작은술과 참기름을 두르고 대파를 뿌려요.','노른자를 터뜨려 쓱쓱 비벼 먹어요.'],'ganjang-gyeranbap'],
+  ['김치 계란볶음','🥚','반찬',2,[['김치',1,'1컵'],['계란',1,'3개'],['대파',0,'약간']],['김치를 잘게 썰어요.','팬에 기름을 두르고 김치를 2분쯤 볶아 신맛을 날려요.','김치를 한쪽으로 밀고 계란물을 부어 반쯤 익혀요.','김치와 계란을 크게 섞고 대파를 넣어 마무리해요.'],'kimchi-gyeran'],
+  ['계란 감자샐러드','🥔','반찬',2,[['감자',1,'2개'],['계란',1,'2개'],['마요네즈',0,'3큰술'],['오이',0,'1/3개'],['양파',0,'1/4개']],['감자는 껍질을 벗겨 삶거나 전자레인지에 익혀 으깨요.','계란은 완숙으로 삶아 굵게 다져요.','오이·양파는 얇게 썰어 소금에 살짝 절였다 물기를 짜요.','모두 섞고 마요네즈, 소금, 후추로 간해요.'],'gamja-salad'],
+  ['대파 계란찜','🥚','반찬',2,[['계란',1,'3개'],['대파',0,'1/3대'],['새우젓',0,'1/2작은술']],['계란 3개에 물 180ml를 넣고 곱게 풀어요.','새우젓이나 소금으로 간하고 송송 썬 대파를 넣어요.','뚝배기에 붓고 약불에서 바닥을 저어 가며 익혀요.','몽글해지면 뚜껑을 덮어 2~3분 뜸을 들여요.'],'gyeranjjim'],
+  ['두부김치','🧈','반찬',2,[['두부',1,'1모'],['김치',1,'1컵'],['돼지고기',0,'100g'],['대파',0,'약간']],['두부는 끓는 소금물에 데워 도톰하게 썰어요.','돼지고기를 볶다가 김치를 넣어 함께 볶아요.','설탕 약간, 고춧가루, 참기름으로 맛을 내요.','접시에 두부를 두르고 가운데에 김치볶음을 올려요.'],'dubu-kimchi'],
+  ['두부구이 양념장','🧈','반찬',2,[['두부',1,'1모'],['대파',0,'약간']],['두부를 1cm 두께로 썰어 키친타월로 물기를 빼요.','소금을 살짝 뿌려 기름 두른 팬에 앞뒤로 노릇하게 구워요.','간장 2큰술, 고춧가루, 다진 대파, 참기름, 깨로 양념장을 만들어요.','구운 두부 위에 양념장을 한 숟가락씩 올려요.'],'dubu-gui'],
+  ['애호박 두부찌개','🍲','국&찌개',2,[['애호박',1,'1/2개'],['두부',1,'1/2모'],['고추장',0,'1큰술'],['양파',0,'1/2개'],['대파',0,'약간']],['멸치육수나 물 500ml에 고추장과 고춧가루 약간을 풀어요.','양파와 애호박을 넣고 5분 끓여요.','두부를 깍둑썰어 넣고 5분 더 끓여요.','새우젓이나 국간장으로 간하고 대파를 넣어요.'],'hobak-dubu-jjigae'],
+  ['순두부 계란탕','🥣','국&찌개',2,[['순두부',1,'1봉'],['계란',1,'2개'],['대파',0,'1/2대'],['버섯',0,'약간']],['물 600ml를 끓여 국간장과 소금으로 간해요.','순두부를 숟가락으로 큼직하게 떠 넣어요.','버섯을 넣고 한소끔 끓으면 계란물을 둘러 부어요.','계란이 익으면 대파와 후추로 마무리해요.'],'sundubu-gyerantang'],
+  ['두부 참치조림','🥫','반찬',2,[['두부',1,'1모'],['참치',1,'1캔'],['양파',0,'1/2개'],['대파',0,'1/2대']],['두부를 도톰하게 썰어 팬에 노릇하게 부쳐요.','간장 3큰술, 고춧가루 1큰술, 설탕, 마늘, 물 반 컵으로 양념을 만들어요.','냄비에 양파를 깔고 두부, 기름 뺀 참치를 올려요.','양념을 붓고 중불에서 국물이 자작해질 때까지 졸여요.'],'dubu-chamchi'],
+  ['콩나물 김치국','🥣','국&찌개',2,[['콩나물',1,'1/2봉'],['김치',1,'1/2컵'],['대파',0,'1/2대'],['마늘',0,'1작은술']],['김치를 잘게 썰어 냄비에 살짝 볶아요.','물 800ml를 붓고 콩나물을 넣어 뚜껑을 덮고 끓여요.','콩나물이 익으면 마늘을 넣고 국간장·소금으로 간해요.','대파를 넣고 한 번 더 끓여요.'],'kongnamul-kimchiguk'],
+  ['콩나물 어묵볶음','🍢','반찬',2,[['어묵',1,'3장'],['콩나물',1,'1/2봉'],['대파',0,'약간']],['어묵은 길게 썰고 콩나물은 씻어 물기를 빼요.','팬에 기름을 두르고 어묵을 먼저 볶아요.','콩나물과 물 2큰술을 넣고 뚜껑을 덮어 2분 익혀요.','간장 1큰술, 올리고당 약간, 대파, 깨로 마무리해요.'],'kongnamul-eomuk'],
+  ['애호박 새우젓볶음','🥒','반찬',2,[['애호박',1,'1개'],['새우젓',0,'1작은술'],['마늘',0,'1작은술'],['양파',0,'1/4개']],['애호박을 반달 모양으로 도톰하게 썰어요.','팬에 기름을 두르고 마늘과 양파를 볶아요.','애호박을 넣고 다진 새우젓으로 간해요.','애호박이 살짝 투명해지면 깨와 참기름을 둘러요.'],'hobak-saeujeot'],
+  ['감자 햄볶음','🥔','반찬',2,[['감자',1,'2개'],['햄',1,'100g'],['양파',0,'1/2개']],['감자는 채 썰어 찬물에 담가 전분을 빼요.','햄과 양파도 감자와 비슷한 굵기로 썰어요.','기름 두른 팬에 감자를 먼저 볶다가 반쯤 익으면 햄·양파를 넣어요.','소금·후추로 간하고 감자가 부서지기 전에 불을 꺼요.'],'gamja-ham'],
+  ['버섯 계란볶음','🍄','반찬',2,[['버섯',1,'200g'],['계란',1,'2개'],['대파',0,'약간']],['버섯은 먹기 좋게 찢거나 썰어요.','계란을 부드럽게 스크램블해서 덜어 둬요.','같은 팬에 버섯을 센 불로 볶아 소금·후추로 간해요.','계란을 다시 넣고 대파와 함께 가볍게 섞어요.'],'beoseot-gyeran'],
+  ['버섯 된장덮밥','🍄','밥',1,[['버섯',1,'한 줌'],['된장',1,'1큰술'],['애호박',0,'1/4개'],['양파',0,'1/4개'],['쌀',0,'밥 1공기']],['버섯·애호박·양파를 작게 깍둑썰어요.','팬에 기름을 두르고 채소를 볶아요.','물 반 컵에 된장을 풀어 붓고 자작하게 끓여요.','전분물 약간으로 걸쭉하게 만들어 밥 위에 얹어요.'],'beoseot-doenjang-deopbap'],
+  ['참치김치덮밥','🥫','밥',1,[['참치',1,'1/2캔'],['김치',1,'1/2컵'],['양파',0,'1/4개'],['쌀',0,'밥 1공기'],['계란',0,'1개']],['김치와 양파를 잘게 썰어요.','팬에 김치를 볶다가 양파와 기름 뺀 참치를 넣어요.','설탕 약간과 참기름으로 맛을 맞춰요.','밥 위에 올리고 계란 프라이를 얹어요.'],'chamchi-kimchi-deopbap'],
+  ['어묵탕','🍢','국&찌개',2,[['어묵',1,'6장'],['무',0,'1/6개'],['대파',0,'1/2대'],['멸치',0,'육수용 한 줌']],['물 1L에 멸치와 무를 넣고 15분 끓여 육수를 내요.','멸치를 건지고 어묵을 큼직하게 썰어 (꼬치에 꽂아도 좋아요) 넣어요.','국간장과 소금으로 간하고 5분 더 끓여요.','대파를 넣고, 매운 걸 좋아하면 청양고추도 넣어요.'],'eomuktang'],
+  ['어묵 감자조림','🍢','반찬',2,[['어묵',1,'3장'],['감자',1,'1개'],['양파',0,'1/4개']],['감자는 작게 깍둑썰고 어묵은 네모나게 썰어요.','팬에 감자를 먼저 볶다가 물 반 컵을 넣어 익혀요.','어묵·양파와 간장 2큰술, 설탕 1작은술을 넣어요.','국물이 거의 졸면 올리고당과 깨로 윤기를 내요.'],'eomuk-gamja-jorim'],
+  ['참치마요덮밥','🥫','밥',1,[['참치',1,'1/2캔'],['마요네즈',0,'1큰술'],['계란',0,'1개'],['쌀',0,'밥 1공기'],['김',0,'약간']],['참치는 기름을 꼭 짜요.','계란은 소금 약간 넣어 스크램블해요.','간장 1큰술, 설탕 반 큰술, 물 1큰술을 데워 소스를 만들어요.','밥 위에 계란·참치를 올리고 소스, 마요네즈, 김가루를 뿌려요.'],'chamchi-mayo'],
+  ['참치 주먹밥','🍙','밥',1,[['참치',1,'1/2캔'],['쌀',0,'밥 1공기'],['마요네즈',0,'1작은술'],['참기름',0,'1작은술'],['김',0,'김밥김 1장']],['참치 기름을 빼고 마요네즈를 섞어요.','밥에 참기름, 소금, 깨를 넣고 섞어요.','밥을 손바닥에 펴서 참치를 넣고 동그랗게 뭉쳐요.','잘게 부순 김을 묻히거나 김으로 감싸요.'],'chamchi-jumeokbap'],
+  ['참치 계란말이','🥚','반찬',2,[['계란',1,'4개'],['참치',1,'1/2캔'],['대파',0,'약간'],['당근',0,'약간']],['계란을 풀고 기름 뺀 참치, 다진 대파·당근, 소금을 넣어요.','약불 팬에 계란물을 얇게 부어요.','반쯤 익으면 한쪽 끝에서부터 돌돌 말아요.','남은 계란물을 더 부어 이어 말고, 식으면 썰어요.'],'chamchi-gyeranmari'],
+  ['소시지 야채볶음','🌭','반찬',2,[['소시지',1,'15개'],['양파',0,'1/2개'],['파프리카',0,'1/2개'],['케첩',0,'2큰술']],['소시지에 칼집을 내고 끓는 물에 살짝 데쳐요.','양파와 파프리카를 큼직하게 썰어요.','팬에 소시지와 채소를 볶아요.','케첩 2, 간장 1/2, 올리고당 1 비율 소스를 넣고 고루 섞어요.'],'sausage-yachae'],
+  ['햄 계란덮밥','🍳','밥',1,[['햄',1,'1/4캔'],['계란',1,'1개'],['쌀',0,'밥 1공기']],['캔햄을 도톰하게 2~3장 썰어요.','팬에 햄을 앞뒤로 노릇하게 구워요.','같은 팬에 계란 프라이를 해요.','밥 위에 햄과 계란을 올리고 간장 약간을 둘러요.'],'ham-gyeran-deopbap'],
+  ['햄 김치볶음','🥫','반찬',2,[['햄',1,'1/2캔'],['김치',1,'1컵'],['양파',0,'1/2개']],['햄은 깍둑썰고 김치는 한입 크기로 썰어요.','팬에 햄을 볶아 기름을 내요.','김치와 양파를 넣고 설탕 약간을 더해 볶아요.','김치가 부드러워지면 참기름과 깨로 마무리해요.'],'ham-kimchi'],
+  ['라볶이','🍜','일품',2,[['떡',1,'200g'],['라면',1,'1개'],['어묵',0,'2장'],['고추장',0,'2큰술'],['대파',0,'1/2대'],['계란',0,'삶은 것 2개']],['물 500ml에 고추장, 고춧가루, 설탕, 간장을 풀어 끓여요.','떡과 어묵을 넣고 5분 끓여요.','라면 사리를 넣고 면이 풀릴 때까지 끓여요.','대파와 삶은 계란을 넣고 국물이 조금 남았을 때 불을 꺼요.'],'rabokki'],
+  ['콩나물 해장라면','🍜','일품',1,[['라면',1,'1개'],['콩나물',1,'한 줌'],['대파',0,'약간'],['계란',0,'1개']],['물 550ml에 콩나물을 넣고 뚜껑을 덮어 끓여요.','물이 끓으면 면과 스프를 넣어요.','2분 뒤 계란을 넣고 휘젓지 않고 익혀요.','대파를 넣고 고춧가루 약간으로 칼칼하게 마무리해요.'],'kongnamul-ramyeon'],
+  ['라면 볶음밥','🍳','밥',1,[['라면',1,'1/2개'],['쌀',0,'밥 1공기'],['김치',0,'1/4컵'],['계란',0,'1개']],['라면을 봉지째 잘게 부숴 끓는 물에 1분만 삶아 건져요.','팬에 김치를 볶다가 밥과 면을 넣어요.','스프를 1/3만 넣어 간하며 고루 볶아요.','계란 프라이를 올려 마무리해요.'],'ramyeon-bokkeumbap'],
+  ['볶음우동','🍜','일품',1,[['우동면',1,'1봉'],['돼지고기',0,'50g'],['양배추',0,'2장'],['양파',0,'1/4개'],['당근',0,'약간']],['우동면은 끓는 물에 1분 데쳐 풀어 둬요.','팬에 돼지고기를 볶다가 채소를 넣어요.','면과 간장 1큰술, 굴소스 1큰술, 설탕 약간을 넣어요.','센 불에서 빠르게 볶아 후추로 마무리해요.'],'bokkeum-udon'],
+  ['카레우동','🍛','일품',1,[['우동면',1,'1봉'],['카레',1,'1/4봉(25g)'],['양파',0,'1/4개'],['돼지고기',0,'50g'],['대파',0,'약간']],['냄비에 돼지고기와 양파를 볶아요.','물 400ml를 붓고 끓으면 카레가루를 풀어요.','우동면을 넣고 2분 더 끓여요.','농도가 되직해지면 그릇에 담고 대파를 올려요.'],'curry-udon'],
+  ['만두전골','🥟','국&찌개',2,[['만두',1,'8개'],['버섯',0,'한 줌'],['배추',0,'2장'],['대파',0,'1/2대'],['두부',0,'1/3모'],['양파',0,'1/2개']],['전골냄비에 배추·양파를 깔고 만두, 두부, 버섯을 둘러 담아요.','멸치육수 700ml에 국간장, 고춧가루, 다진 마늘을 풀어 부어요.','중불에서 만두가 떠오를 때까지 끓여요.','대파를 올리고 식탁에서 끓이며 먹어요.'],'mandu-jeongol'],
+  ['비빔만두','🥟','일품',2,[['만두',1,'8개'],['양배추',0,'2장'],['오이',0,'1/2개'],['고추장',0,'1큰술'],['당근',0,'약간']],['만두를 팬에 앞뒤로 바삭하게 구워요.','양배추·오이·당근을 가늘게 채 썰어요.','고추장, 식초, 설탕, 참기름으로 새콤달콤한 양념을 만들어요.','채소를 양념에 버무려 만두와 함께 담아요.'],'bibim-mandu'],
+  ['만두 계란국','🥟','국&찌개',2,[['만두',1,'6개'],['계란',1,'1개'],['대파',0,'1/2대']],['육수나 물 800ml를 끓여 국간장으로 간해요.','만두를 넣고 떠오를 때까지 끓여요.','계란물을 둘러 붓고 잠시 그대로 둬요.','대파를 넣고 후추를 뿌려요.'],'mandu-gyeranguk'],
+  ['대파 계란볶음밥','🍚','밥',1,[['쌀',0,'밥 1공기'],['계란',1,'2개'],['대파',1,'1/2대']],['대파를 송송 썰어 기름에 볶아 파기름을 내요.','계란을 넣고 반쯤 익을 때까지 저어요.','밥을 넣고 계란과 함께 고슬하게 볶아요.','간장 반 큰술을 팬 가장자리에 둘러 향을 내고 소금으로 간해요.'],'daepa-bokkeumbap'],
+  ['소시지 감자조림','🥔','반찬',2,[['감자',1,'2개'],['소시지',1,'10개'],['양파',0,'1/2개']],['감자는 깍둑썰고 소시지는 반으로 잘라요.','팬에 감자를 볶다가 물 1컵, 간장 3큰술, 설탕 1큰술을 넣어요.','감자가 거의 익으면 소시지와 양파를 넣어요.','국물이 졸면 올리고당과 깨로 마무리해요.'],'sausage-gamja'],
+  ['간장 떡볶이','🍢','일품',2,[['떡',1,'300g'],['어묵',0,'2장'],['양파',0,'1/2개'],['대파',0,'1대'],['버섯',0,'한 줌']],['떡은 물에 헹궈 말랑하게 두고, 채소와 어묵을 썰어요.','간장 3큰술, 설탕 1큰술, 참기름, 마늘로 양념을 만들어요.','팬에 양파·버섯·어묵을 볶다가 떡과 양념, 물 반 컵을 넣어요.','국물이 거의 졸면 대파를 넣고 깨를 뿌려요.'],'ganjang-tteokbokki']
+];
+// 실제 사진 출처 (위키미디어 공용). 여기 없는 사진은 AI 생성 이미지예요.
+var HAND_IMG_CREDIT = {"kongbul": {"t": "Homemade kongnamul-bulgogi 1.jpg","u": "https://commons.wikimedia.org/wiki/File:Homemade_kongnamul-bulgogi_1.jpg","a": "에그란","l": "CC BY 4.0","lu": "https://creativecommons.org/licenses/by/4.0"},"duruchigi": {"t": "Gimchi-duruchigi.jpg","u": "https://commons.wikimedia.org/wiki/File:Gimchi-duruchigi.jpg","a": "대경라이프","l": "CC BY-SA 4.0","lu": "https://creativecommons.org/licenses/by-sa/4.0"},"dwaeji-yangbaechu": {"t": "Pork and cabbage stir fry with daikon miso soup and brown rice 回鍋肉もどきと大根の味噌汁、玄米.jpg","u": "https://commons.wikimedia.org/wiki/File:Pork_and_cabbage_stir_fry_with_daikon_miso_soup_and_brown_rice_%E5%9B%9E%E9%8D%8B%E8%82%89%E3%82%82%E3%81%A9%E3%81%8D%E3%81%A8%E5%A4%A7%E6%A0%B9%E3%81%AE%E5%91%B3%E5%99%8C%E6%B1%81%E3%80%81%E7%8E%84%E7%B1%B3.jpg","a": "naotakem","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"dak-gamja-jorim": {"t": "Korean.food-Andong-Jjimdakk.jpg","u": "https://commons.wikimedia.org/wiki/File:Korean.food-Andong-Jjimdakk.jpg","a": "ebifry","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"dak-beoseot-deopbap": {"t": "Oyakodon 003.jpg","u": "https://commons.wikimedia.org/wiki/File:Oyakodon_003.jpg","a": "Ocdp","l": "CC0","lu": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"},"sogogi-yangpa-deopbap": {"t": "Gyuu-don 001.jpg","u": "https://commons.wikimedia.org/wiki/File:Gyuu-don_001.jpg","a": "Ocdp","l": "CC0","lu": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"},"ganjang-gyeranbap": {"t": "Ganjang-gyeran-bap 1.jpg","u": "https://commons.wikimedia.org/wiki/File:Ganjang-gyeran-bap_1.jpg","a": "건강한 레시피","l": "CC BY 4.0","lu": "https://creativecommons.org/licenses/by/4.0"},"gamja-salad": {"t": "Potato salad with egg and mayonnaise.jpg","u": "https://commons.wikimedia.org/wiki/File:Potato_salad_with_egg_and_mayonnaise.jpg","a": "Zeamays","l": "퍼블릭 도메인","lu": ""},"gyeranjjim": {"t": "Gyeranjjim.jpg","u": "https://commons.wikimedia.org/wiki/File:Gyeranjjim.jpg","a": "letter001","l": "CC BY 2.5","lu": "https://creativecommons.org/licenses/by/2.5"},"dubu-kimchi": {"t": "Dubu-kimchi.jpg","u": "https://commons.wikimedia.org/wiki/File:Dubu-kimchi.jpg","a": "Chloe Lim","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"eomuktang": {"t": "Eomuk-tang.jpg","u": "https://commons.wikimedia.org/wiki/File:Eomuk-tang.jpg","a": "Chloe Lim","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"chamchi-jumeokbap": {"t": "Jumeok-bap 2.jpg","u": "https://commons.wikimedia.org/wiki/File:Jumeok-bap_2.jpg","a": "GuHyeok Jeong","l": "CC0","lu": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"},"ham-gyeran-deopbap": {"t": "SPAM and Eggs.jpg","u": "https://commons.wikimedia.org/wiki/File:SPAM_and_Eggs.jpg","a": "Arnold Gatilao from Fremont, CA, USA","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"rabokki": {"t": "Ra-bokki.jpg","u": "https://commons.wikimedia.org/wiki/File:Ra-bokki.jpg","a": "farmtv","l": "CC BY 4.0","lu": "https://creativecommons.org/licenses/by/4.0"},"bokkeum-udon": {"t": "Yaki-udon.jpg","u": "https://commons.wikimedia.org/wiki/File:Yaki-udon.jpg","a": "Blue Lotus (Flickr)","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"curry-udon": {"t": "Curry Udon.jpg","u": "https://commons.wikimedia.org/wiki/File:Curry_Udon.jpg","a": "Pacamah","l": "CC BY-SA 4.0","lu": "https://creativecommons.org/licenses/by-sa/4.0"},"mandu-jeongol": {"t": "Mandu-jeongol.jpg","u": "https://commons.wikimedia.org/wiki/File:Mandu-jeongol.jpg","a": "경빈마마","l": "CC BY 2.0 kr","lu": "https://creativecommons.org/licenses/by/2.0/kr/deed.en"},"bibim-mandu": {"t": "Bibim-mandu.jpg","u": "https://commons.wikimedia.org/wiki/File:Bibim-mandu.jpg","a": "Jens Ohlig","l": "CC BY-SA 2.0","lu": "https://creativecommons.org/licenses/by-sa/2.0"},"mandu-gyeranguk": {"t": "Mandu-guk.jpg","u": "https://commons.wikimedia.org/wiki/File:Mandu-guk.jpg","a": "Chloe Lim","l": "CC BY 2.0","lu": "https://creativecommons.org/licenses/by/2.0"},"ganjang-tteokbokki": {"t": "Ganjang-tteok-bokki.jpg","u": "https://commons.wikimedia.org/wiki/File:Ganjang-tteok-bokki.jpg","a": "Scudsvlad","l": "CC BY-SA 4.0","lu": "https://creativecommons.org/licenses/by-sa/4.0"}};
+if (typeof module !== 'undefined') module.exports = {HAND_MORE_RAW:HAND_MORE_RAW, HAND_IMG_CREDIT:HAND_IMG_CREDIT};
+
 // ===== 데이터 & 순수 로직 (node 테스트 가능) =====
 var TODAY_FIXED = null; // 테스트용
 
@@ -1947,7 +2016,16 @@ var RECIPES = [
 // 손으로 쓴 레시피의 분류
 var HAND_CAT = {'김치찌개':'국&찌개','된장찌개':'국&찌개','순두부찌개':'국&찌개','콩나물국':'국&찌개','소고기미역국':'국&찌개','부대찌개':'국&찌개','참치김치찌개':'국&찌개','아욱된장국':'국&찌개','떡만둣국':'국&찌개','배추된장국':'국&찌개','황태국':'국&찌개','닭볶음탕':'국&찌개',
   '김치볶음밥':'밥','새우볶음밥':'밥','연어덮밥':'밥','카레라이스':'밥','떡볶이':'일품','우동':'일품','삼겹살 상추쌈':'일품','잡채':'일품','고구마맛탕':'후식','단호박찜':'후식'};
-RECIPES.forEach(function(r){ r.cat = HAND_CAT[r.name] || '반찬'; r.src = 'hand'; });
+// 추가 레시피(src/hand_recipes.js): 분류·인분을 직접 적고, 사진은 assets/recipes/ (출처가 없으면 AI 생성 이미지)
+var _hm = (typeof HAND_MORE_RAW !== 'undefined') ? {raw:HAND_MORE_RAW, cr:HAND_IMG_CREDIT} : null;
+if (!_hm && typeof require !== 'undefined'){ try { var _hmm = require('./hand_recipes.js'); _hm = {raw:_hmm.HAND_MORE_RAW, cr:_hmm.HAND_IMG_CREDIT}; } catch(e){} }
+var HAND_IMG_CREDITS = _hm ? _hm.cr : {};
+if (_hm) _hm.raw.forEach(function(a){
+  var r = R(a[0], a[1], 0, a[4], a[5]); r.cat = a[2]; r.serv = a[3]; r.img = 'assets/recipes/' + a[6] + '.webp';
+  if (_hm.cr[a[6]]) r.imgCredit = _hm.cr[a[6]]; else r.imgAi = true;
+  RECIPES.push(r);
+});
+RECIPES.forEach(function(r){ r.cat = r.cat || HAND_CAT[r.name] || '반찬'; r.src = 'hand'; });
 
 // ---- 공공데이터 레시피 (식품안전나라 COOKRCP01) → 레시피 객체 ----
 var PUB_EMOJI = {'반찬':'🥢','국&찌개':'🍲','일품':'🍽️','밥':'🍚','후식':'🍮','기타':'🥄'};
@@ -2047,9 +2125,9 @@ function buildDealIndex(deals, today){
 //  · 한 끼 사용량: 레시피 분량 ÷ 인분 (공공 레시피=1인분 g 표기, 직접 다듬은 기본 레시피=2인분, 밥 1공기 요리는 1인분)
 //    분량이 없거나 못 읽으면 재료별 1인분 기본값 (MEAL_DEFAULT_G)
 //  · 한 끼 가격 = 팩 가격 × 사용량/팩 무게 (10원 단위 반올림; 100g당 가격이면 100g 기준으로 곱해요). 팩 크기를 모르면 null → 「1팩 기준」
-var MEAL_DEFAULT_G = {돼지고기:150,소고기:150,닭고기:200,오리고기:150,순두부:175,두부:150,계란:80,양파:80,감자:150,고구마:150,당근:50,대파:30,애호박:100,단호박:150,양배추:100,배추:150,시금치:80,버섯:70,파프리카:75,상추:60,마늘:10,김치:100,어묵:70,소시지:60,햄:50,참치:50,고등어:150,오징어:120,새우:80,굴:100,갈치:150,전복:120,연어:120,콩나물:100,숙주:100,청경채:60,미나리:50,아욱:80,토마토:150,오이:100,떡:150,만두:180,라면:120,카레:25,된장:20,고추장:15,참기름:5,우동면:200,맛살:40,치즈:20,쌀:90,즉석밥:210,멸치:15,황태:20,명란:30,유부:20,우유:200,문어:100,낙지:120,꽃게:250,브로콜리:80};
+var MEAL_DEFAULT_G = {돼지고기:150,소고기:150,닭고기:200,오리고기:150,순두부:175,두부:150,계란:80,양파:80,감자:150,고구마:150,당근:50,대파:30,애호박:100,단호박:150,양배추:100,배추:150,시금치:80,버섯:70,파프리카:75,상추:60,마늘:10,김치:100,어묵:70,소시지:60,햄:50,참치:50,고등어:150,오징어:120,새우:80,굴:100,갈치:150,전복:120,연어:120,콩나물:100,숙주:100,청경채:60,미나리:50,아욱:80,토마토:150,오이:100,떡:150,만두:180,라면:120,카레:25,된장:20,고추장:15,참기름:5,우동면:200,맛살:40,치즈:20,쌀:90,즉석밥:210,멸치:15,황태:20,명란:30,유부:20,우유:200,문어:100,낙지:120,꽃게:250,브로콜리:80,가지:100,마요네즈:15,새우젓:5,김:3,무:80,케첩:20};
 // 한 개(단위) 무게 g. 숫자 하나면 '개' 기준
-var PIECE_G = {양파:200,감자:150,고구마:200,당근:150,애호박:300,단호박:800,양배추:{통:1500,포기:1500,장:50,개:1500},배추:{포기:2500,통:2500,단:1000,장:50,개:2500},대파:{대:100,뿌리:100,단:800,개:100},두부:{모:300,개:300},순두부:{봉:350,개:350},계란:{개:55,구:55,알:55},마늘:{쪽:5,톨:5,통:40,개:5},파프리카:150,토마토:200,오이:200,브로콜리:{개:300,송이:300},버섯:{개:35,송이:35,봉:150,팩:150},시금치:{단:300,포기:30},미나리:{단:250},청경채:{포기:40,개:40},상추:{장:10,잎:10,봉:150},콩나물:{봉:300},숙주:{봉:300},고등어:{마리:400,손:800},갈치:{마리:500,토막:80},오징어:{마리:250},문어:{마리:500},낙지:{마리:150},꽃게:{마리:250},새우:{마리:25,미:25},전복:{마리:70,미:70,개:70},닭고기:{마리:1000},오리고기:{마리:1500},라면:{봉:120,개:120},만두:{개:30},소시지:{개:20},어묵:{장:30,개:30},햄:{캔:340,개:340},참치:{캔:150,개:150},맛살:{줄:20,개:20},김치:{포기:2500},즉석밥:{개:210,공기:210},우동면:{봉:200,개:200},치즈:{장:20},명란:{개:50,덩이:50},유부:{장:10},굴:{봉:300}};
+var PIECE_G = {양파:200,감자:150,고구마:200,당근:150,애호박:300,단호박:800,양배추:{통:1500,포기:1500,장:50,개:1500},배추:{포기:2500,통:2500,단:1000,장:50,개:2500},대파:{대:100,뿌리:100,단:800,개:100},두부:{모:300,개:300},순두부:{봉:350,개:350},계란:{개:55,구:55,알:55},마늘:{쪽:5,톨:5,통:40,개:5},파프리카:150,토마토:200,오이:200,브로콜리:{개:300,송이:300},버섯:{개:35,송이:35,봉:150,팩:150},시금치:{단:300,포기:30},미나리:{단:250},청경채:{포기:40,개:40},상추:{장:10,잎:10,봉:150},콩나물:{봉:300},숙주:{봉:300},고등어:{마리:400,손:800},갈치:{마리:500,토막:80},오징어:{마리:250},문어:{마리:500},낙지:{마리:150},꽃게:{마리:250},새우:{마리:25,미:25},전복:{마리:70,미:70,개:70},닭고기:{마리:1000},오리고기:{마리:1500},라면:{봉:120,개:120},만두:{개:30},소시지:{개:20},어묵:{장:30,개:30},햄:{캔:340,개:340},참치:{캔:150,개:150},맛살:{줄:20,개:20},김치:{포기:2500},즉석밥:{개:210,공기:210},우동면:{봉:200,개:200},치즈:{장:20},명란:{개:50,덩이:50},유부:{장:10},굴:{봉:300},가지:150,무:1200,김:{장:2.5}};
 var UNIT_G = {큰술:15,스푼:15,작은술:5,티스푼:5,컵:200,줌:50,공기:210};
 function pieceG(k, u){
   var w = PIECE_G[k];
@@ -2107,7 +2185,7 @@ function amtGrams(t, k){
   return null;
 }
 var MEAL_ALIAS = {계란:['달걀','계란'],소고기:['쇠고기','소고기','양지','우둔','사태','차돌','소불고기'],돼지고기:['돼지','삼겹','목살','앞다리','뒷다리'],닭고기:['닭'],오리고기:['오리'],즉석밥:['밥'],쌀:['쌀','밥'],라면:['라면'],우동면:['우동'],새우:['새우'],버섯:['버섯']};
-function recipeServ(r){ if (r.src === 'pub') return 1; return r.ings.some(function(i){ return /1\s*공기/.test(i.amt || ''); }) ? 1 : 2; }
+function recipeServ(r){ if (r.src === 'pub') return 1; if (r.serv) return r.serv; return r.ings.some(function(i){ return /1\s*공기/.test(i.amt || ''); }) ? 1 : 2; }
 // 한 끼에 쓰는 g
 function mealGrams(r, ing){
   r._mg = r._mg || {};
@@ -2139,7 +2217,8 @@ function round10(v){ return Math.max(10, Math.round(v / 10) * 10); }
 var KCAL_100G = {김치:20,돼지고기:250,소고기:200,닭고기:125,오리고기:300,두부:85,순두부:50,계란:140,대파:30,양파:35,된장:190,고추장:210,애호박:20,감자:70,고구마:130,
   당근:35,버섯:25,마늘:125,맛살:100,시금치:30,콩나물:30,참기름:900,어묵:140,쌀:360,햄:300,소시지:280,미역:15,상추:15,고등어:120,갈치:90,오징어:90,양배추:30,
   새우:90,굴:70,연어:200,파프리카:25,당면:350,라면:450,떡:230,카레:400,토마토:18,단호박:65,참치:230,청경채:15,전복:80,아욱:25,미나리:20,만두:220,배추:15,
-  멸치:0,명란:130,황태:350,우동면:150};
+  멸치:0,명란:130,황태:350,우동면:150,
+  숙주:15,가지:20,오이:15,마요네즈:680,새우젓:60,김:400,무:20,케첩:110,치즈:300};
 var KCAL_EXTRA = [ // [요리 이름 규칙, 레시피 전체에 더하는 kcal(기름·설탕·물엿·밀가루)]
   [/볶음|구이|말이|전$|부침/, 110], [/맛탕/, 300], [/불고기|제육|조림|떡볶이|잡채|닭볶음탕/, 60], [/전$/, 120]];
 function estKcal(r){
@@ -2312,7 +2391,7 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
 
 </script>
 <script>
@@ -2948,6 +3027,8 @@ $('pantryNote').textContent = '※ ' + PANTRY_NOTE + ' 「가격확인」 표시
 function recipeBody(r, detailExtra){
   var ingTxt = r.src === 'pub' ? esc(r.parts || '') : r.ings.map(function(i){ return esc(i.k)+(i.amt?' '+esc(i.amt):''); }).join(', ');
   var img = r.img ? '<img class="big-img" data-src="'+esc(r.img)+'" alt="'+esc(r.name)+' 사진" loading="lazy" onerror="this.style.display=\'none\'">' : '';
+  // AI로 만든 사진은 사진 아래쪽에 작게 「AI 생성 이미지」
+  if (r.img && r.imgAi) img = '<div class="big-wrap"><img class="big-img" data-src="'+esc(r.img)+'" alt="'+esc(r.name)+' 사진 (AI 생성 이미지)" loading="lazy" onerror="this.parentNode.style.display=\'none\'"><span class="ai-lbl">AI 생성 이미지</span></div>';
   var src = r.src === 'pub' ? '<div class="muted small">출처: 식품의약품안전처 식품안전나라 「조리식품의 레시피 DB」 (일련번호 '+r.seq+')</div>' : '';
   return '<details><summary>재료·만드는 법 보기</summary>' + img +
     '<div class="ingtxt"><b>재료</b> '+ingTxt+'</div>' +
@@ -2971,7 +3052,8 @@ function dealNameInline(name){
 // 사진: 카드 썸네일은 화면에 보일 때만 불러와요(loading=lazy). 사진이 없으면 이모지.
 function thumb(r, rank, s){
   var inner = (rank ? '<span class="rank">'+rank+'</span>' : '')+'<span aria-hidden="true">'+r.emoji+'</span>' +
-    (r.img ? '<img src="'+esc(r.img)+'" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '');
+    (r.img ? '<img src="'+esc(r.img)+'" alt="" loading="lazy" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '') +
+    (r.img && r.imgAi ? '<span class="ai-lbl">AI 생성 이미지</span>' : '');
   if (!s) return '<div class="thumb">'+inner+'</div>';
   // 순위 카드: 사진이 버튼 — 누르면 흰 막 위에 「주재료 n/m 할인 중」
   var t = '주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중';
@@ -3144,6 +3226,13 @@ function renderRecipes(append){
 
 // ---------- 출처 ----------
 var MART_LABEL = {emart:'이마트',homeplus:'홈플러스',lottemart:'롯데마트',topmart:'탑마트',costco:'코스트코'};
+// 직접 쓴 레시피 사진: 실제 사진은 위키미디어 공용(자유 이용 허락) 출처를 모두 적고, 나머지는 AI 생성 이미지라고 밝혀요
+function photoCredits(){
+  var real = RECIPES.filter(function(r){ return r.imgCredit; }), ai = RECIPES.filter(function(r){ return r.img && r.imgAi; });
+  if (!real.length && !ai.length) return '';
+  return '<div class="src-item"><span class="tag real">레시피 사진</span><div class="t">직접 쓴 레시피 사진 '+(real.length+ai.length)+'장</div><span class="muted small">실제 사진 '+real.length+'장은 위키미디어 공용의 자유 이용 사진이에요(640×480으로 잘라 줄임). AI 생성 이미지 '+ai.length+'장은 사진 아래에 「AI 생성 이미지」라고 표시했어요.</span>' +
+    '<ul class="credits small">' + real.map(function(r){ var c = r.imgCredit; return '<li>'+esc(r.name)+' — <a href="'+esc(c.u)+'" target="_blank" rel="noopener">'+esc(c.t)+'</a> · '+esc(c.a)+' · '+(c.lu ? '<a href="'+esc(c.lu)+'" target="_blank" rel="noopener">'+esc(c.l)+'</a>' : esc(c.l))+'</li>'; }).join('') + '</ul></div>';
+}
 function renderSources(){
 var st = (DEALS_META && DEALS_META.status) || {};
 var up = DEALS_META && DEALS_META.updated;
@@ -3155,7 +3244,7 @@ $('srcList').innerHTML = Object.keys(SOURCES).map(function(k){
   var s = SOURCES[k];
   return '<div class="src-item"><span class="tag '+(s.needsCheck?'chk':'real')+'">'+(s.official?'공식':s.needsCheck?'전단 이미지 판독':'2차 정리')+'</span><div class="t">'+esc(s.label)+'</div><span class="muted small">행사기간: '+esc(s.period)+' · 확인일: '+esc(s.checked)+'</span><br><a class="small" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.url)+'</a>'+(s.pages && s.pages.length ? '<br><span class="small">전단 원본 이미지: '+s.pages.map(function(u,i){ return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+(i+1)+'면</a>'; }).join(' · ')+'</span>' : '')+(s.note?'<br><span class="muted small">'+esc(s.note)+'</span>':'')+'</div>';
 }).join('') + (PUB_INFO ? '<div class="src-item"><span class="tag real">공공데이터</span><div class="t">레시피: '+esc(PUB_INFO.source)+'</div><span class="muted small">제공: 식품의약품안전처 · 이용허락범위: 제한 없음(공공데이터포털 표기) · 수집일: '+esc(PUB_INFO.fetched)+'<br>전체 '+PUB_INFO.total+'건(공개 샘플 호출로 받을 수 있는 최대치) 중 중복·재료 파싱 불가를 빼고 '+PUB_INFO.kept+'건 수록. 주재료 표시는 재료 목록으로 자동 추정했어요. 사진은 식품안전나라 서버에서 화면에 보일 때 불러와요.</span><br><a class="small" href="https://www.foodsafetykorea.go.kr/api/openApiInfo.do?menu_grp=MENU_GRP31&menu_no=661&show_cnt=10&start_idx=1&svc_no=COOKRCP01" target="_blank" rel="noopener">식품안전나라 Open API 안내</a> · <a class="small" href="https://www.data.go.kr/data/15060073/openapi.do" target="_blank" rel="noopener">공공데이터포털</a></div>' : '') +
-  '<div class="src-item"><span class="tag real">직접 작성</span><div class="t">기본 레시피 '+RECIPES.length+'개</div><span class="muted small">흔한 집밥 레시피를 앱용으로 짧게 정리했어요.</span></div>' + '<div class="muted small" style="margin-top:12px">코스트코는 공개 전단이 없어 마트고 집계 일부만 넣었고 자동 갱신되지 않아요. 트레이더스·노브랜드·하나로마트·GS더프레시·동네마트는 전단 데이터가 없어서 「할인 재료 직접 추가」로 입력해 주세요.</div>';
+  '<div class="src-item"><span class="tag real">직접 작성</span><div class="t">기본 레시피 '+RECIPES.length+'개</div><span class="muted small">흔한 집밥 레시피를 앱용으로 짧게 정리했어요. 분량·만드는 법은 직접 썼어요.</span></div>' + photoCredits() + '<div class="muted small" style="margin-top:12px">코스트코는 공개 전단이 없어 마트고 집계 일부만 넣었고 자동 갱신되지 않아요. 트레이더스·노브랜드·하나로마트·GS더프레시·동네마트는 전단 데이터가 없어서 「할인 재료 직접 추가」로 입력해 주세요.</div>';
 }
 var DATA_LIVE = false;
 renderSources();
