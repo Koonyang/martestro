@@ -173,6 +173,24 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* recipes */
 .tools{display:flex;gap:8px;margin-top:14px}
+/* 할인 품목 고르기 (체크 동그라미 + 고른 줄 강조) */
+.deal.pickable{cursor:pointer;-webkit-tap-highlight-color:transparent;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:12px;transition:background .15s}
+.deal.pickable .pick{flex:0 0 auto;width:26px;height:26px;min-height:0;padding:0;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.75px var(--line);color:transparent;display:inline-flex;align-items:center;justify-content:center;margin-right:-2px}
+.deal.pickable .pick svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.deal.pickable:hover .pick{box-shadow:inset 0 0 0 1.75px var(--g)}
+.deal.picked{background:color-mix(in srgb,var(--g) 12%,transparent);box-shadow:inset 3px 0 0 var(--g)}
+.deal.picked .pick{background:var(--a);color:var(--g);box-shadow:inset 0 0 0 1.5px var(--g)}
+.deal.picked .dn{color:var(--a-ink, var(--a))}
+.deal .pick:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+@media (prefers-color-scheme:dark){.deal.picked .pick{background:var(--g);color:var(--a-on)}.deal.picked .dn{color:var(--g)}}
+.sel-ind{display:flex;align-items:center;gap:8px;margin-top:12px;padding:6px 6px 6px 14px;border-radius:999px;background:var(--a);color:var(--a-on);font-size:13.5px;font-weight:650;max-width:100%;box-shadow:inset 0 0 0 1.5px var(--g)}
+.sel-ind[hidden]{display:none}
+.sel-ind .si-k{color:var(--g);font-weight:800;flex:0 0 auto;font-size:12.5px}
+.sel-ind .si-v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sel-ind button.si-x{flex:0 0 auto;width:32px;height:32px;min-height:0;padding:0;border-radius:50%;background:color-mix(in srgb,var(--a-on) 14%,transparent);color:inherit}
+.sel-ind .si-x svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round}
+.sel-ind .si-x:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+@media (prefers-color-scheme:dark){.sel-ind{background:#26324F;color:#EEF1F8;box-shadow:inset 0 0 0 1.5px var(--g)}}
 /* 카드별 매장 이름 표시 (기본 숨김) + 밑줄 텍스트 토글 */
 .recipe .mn{display:none}
 .recipe.show-mn .mn{display:inline}
@@ -452,6 +470,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <button type="button" class="kchip" data-kind="jachi" aria-pressed="false" title="재료 적고 저렴한 한 끼">자취생 <small class="kc"></small></button>
     <button type="button" class="kchip" data-kind="quick" aria-pressed="false" title="라면·만두·햄·참치·즉석밥 같은 간편식품으로">간편식품 <small class="kc"></small></button>
   </div>
+  <div id="selInd" class="sel-ind" role="status" hidden></div>
   <div class="tools">
     <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"></div>
     <select id="rCat" aria-label="분류"><option value="">전체</option></select>
@@ -492,6 +511,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
  </div>
 </dialog>
 
+<button id="fabR" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-pot"/></svg><span>해당 재료로 레시피 추천 <i class="sep">·</i></span><b id="fabRN">0개</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인 <i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <nav aria-label="메뉴"><div class="nav-in">
   <button data-tab="tab-loc" class="on"><svg class="i"><use href="#i-pin"/></svg>위치·마트</button>
@@ -2194,12 +2214,27 @@ $('martList').addEventListener('change', function(e){
 function updateFab(){
   var n = selectedMarts().length, tab = document.querySelector('section.tab.on');
   var show = n > 0 && tab && tab.id === 'tab-loc';
+  // 할인 재료 탭: 재료를 1개 이상 고르면 「해당 재료로 레시피 추천 · N개」
+  var showR = !!(tab && tab.id === 'tab-deals' && Object.keys(selDeals).length);
+  if (showR){ var nR = recipeItems().items.length; $('fabRN').textContent = nR.toLocaleString('ko-KR') + '개'; $('fabR').setAttribute('aria-label', '해당 재료로 레시피 추천 · ' + nR + '개'); }
+  $('fabR').classList.toggle('show', showR); $('fabR').setAttribute('aria-hidden', showR ? 'false' : 'true'); $('fabR').tabIndex = showR ? 0 : -1;
   $('fabN').textContent = n + '곳';
-  $('fab').classList.toggle('show', !!show); document.body.classList.toggle('has-fab', !!show);
+  $('fab').classList.toggle('show', !!show); document.body.classList.toggle('has-fab', !!(show || showR));
   $('fab').setAttribute('aria-hidden', show ? 'false' : 'true'); $('fab').tabIndex = show ? 0 : -1;
   $('fab').setAttribute('aria-label', '할인 식재료 확인 · ' + n + '곳');
 }
 $('fab').addEventListener('click', function(){ showTab('tab-deals'); });
+$('fabR').addEventListener('click', function(){ rLimit = PAGE; showTab('tab-recipes'); });
+// 할인 품목 고르기: 줄을 누르거나(마우스·터치) 왼쪽 체크 버튼(키보드). 가격확인 말풍선 태그는 캡처 단계에서 먼저 막혀요.
+$('dealList').addEventListener('click', function(e){
+  var row = e.target.closest('.deal[data-sel]'); if (!row) return;
+  var k = row.getAttribute('data-sel'), on = !selDeals[k];
+  if (on) selDeals[k] = row.getAttribute('data-ing'); else delete selDeals[k];
+  row.classList.toggle('picked', on); var pb = row.querySelector('.pick'); if (pb) pb.setAttribute('aria-pressed', String(on));
+  rLimit = PAGE; updateFab();
+});
+function clearSel(){ selDeals = {}; rLimit = PAGE; renderRecipes(); updateFab(); }
+document.addEventListener('click', function(e){ if (e.target.closest && e.target.closest('#selClear, #selClear2')) clearSel(); });
 // 출처·데이터 정보 시트 (dialog) — 닫기 버튼·ESC·바깥 누르면 닫힘
 function openSources(){ var d = $('srcSheet'); if (d.showModal) { if (!d.open) d.showModal(); } else d.setAttribute('open',''); $('srcSheet').querySelector('.sheet-in').scrollTop = 0; }
 function closeSources(){ var d = $('srcSheet'); if (d.close) d.close(); else d.removeAttribute('open'); }
@@ -2258,10 +2293,10 @@ function renderDeals(){
   } else {
     var deals = collectDeals(), today = todayStr();
     var active = deals.filter(function(d){ return isActive(d, today); });
-    var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length, nChk = active.filter(function(d){ return d.check; }).length;
+    var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length;
     $('dealSummary').innerHTML = '<div class="sel-marts">'+marts.map(function(m){ return '<b>'+esc(m.name)+'</b>'; }).join(' · ')+' <span class="muted small">· '+fmtMD(today)+' 기준</span></div>' +
       '<div class="sum"><div class="stat hl"><b>'+active.length+'</b><span>할인 재료</span></div>' + (nUp ? '<div class="stat"><b>'+(active.length-nUp)+'</b><span>오늘 적용</span></div><div class="stat"><b>'+nUp+'</b><span>곧 시작</span></div>' : '') + '</div>' +
-      (nChk ? '<div class="notice" style="margin-top:12px"><b>가격확인</b> 표시: 탑마트 전단은 이미지라 '+(SOURCES.topmart && SOURCES.topmart.origLabel ? '가격을 눈으로 읽어 옮겼어요(취소선 가격 = '+esc(SOURCES.topmart.origLabel)+'). 틀릴 수 있으니' : '품목 이름만 자동 판독(OCR)했고 가격은 비워 뒀어요. 가격은 「출처·데이터 정보」의 전단 원본이나')+' 매장에서 꼭 확인하세요.</div>' : '');
+      '';  // 가격확인 안내 상자는 없앴어요 — 「가격확인」 태그를 누르면 말풍선으로 설명해요
     var groups = {};
     var gk = function(d){ return d.cat || d.ing || '기타'; }; // 간편식품(라면·햄·만두·즉석밥…)은 한 묶음으로
     active.forEach(function(d){ (groups[gk(d)] = groups[gk(d)] || []).push(d); });
@@ -2273,6 +2308,7 @@ function renderDeals(){
     }).join('') : emptyBox('tag', '등록된 할인 재료가 없어요', '선택한 마트에 전단 데이터가 없어요. 아래에서 직접 추가해 보세요.');
   }
   renderCustomForm();
+  pruneSel(); updateFab();
 }
 
 function dealRow(d){
@@ -2286,6 +2322,10 @@ function dealRow(d){
     ? (d.orig ? '<span class="was">'+(off ? '<span class="off">−'+off+'%</span>' : '')+(S.origLabel ? '<span>'+esc(S.origLabel)+'</span>' : '')+'<span class="orig">'+formatWon(d.orig)+'</span></span>' : '') + '<span class="now">'+formatWon(d.price)+'</span>'
     : '<span class="cond">'+esc(d.cond)+'</span>';
   if (d.kind) tag = '<span class="tag conv">'+esc(d.kind)+'</span>' + tag;
+  if (d.ing){ // 레시피 재료로 쓰이는 품목만 고를 수 있어요
+    var sk = selKey(d), on = !!selDeals[sk];
+    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button><div style="min-width:0;flex:1">'+'<div class="dn">'+esc(d.name)+'</div><div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+  }
   return '<div class="deal"><div style="min-width:0"><div class="dn">'+esc(d.name)+'</div><div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
 }
 function fmtMD(s){ var p = s.split('-'); return (+p[1])+'/'+(+p[2]); }
@@ -2461,8 +2501,21 @@ function plainCard(r){
     (keys ? '<div class="need">주재료</div><div class="ings" style="margin-top:6px">'+keys+'</div>' : '') + recipeBody(r) + '</div>';
 }
 
-function renderRecipes(append){
-  var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+// ---------- 할인 재료 탭에서 고른 재료 → 레시피 필터 ----------
+// selDeals: {선택키: 재료} (마트가 바뀌어 사라진 품목은 pruneSel 에서 빠져요)
+var selDeals = {};
+function selKey(d){ return d.mine ? 'mine|' + d.id : (d.brand || '') + '|' + d.name; }
+function pruneSel(){
+  if (!Object.keys(selDeals).length) return;
+  var today = todayStr(), live = {};
+  collectDeals().forEach(function(d){ if (d.ing && isActive(d, today)) live[selKey(d)] = d.ing; });
+  Object.keys(selDeals).forEach(function(k){ if (!live[k]) delete selDeals[k]; else selDeals[k] = live[k]; });
+}
+function selIngs(){ var o = []; Object.keys(selDeals).forEach(function(k){ if (o.indexOf(selDeals[k]) < 0) o.push(selDeals[k]); }); return o; }
+// 레시피가 고른 재료를 몇 개 쓰는지 (즉석밥 ↔ 지은 밥 필요한 레시피)
+function selHits(r, ings){ var n = 0; ings.forEach(function(k){ if (r.ings.some(function(i){ return i.k === k; }) || (k === '즉석밥' && r.rice)) n++; }); return n; }
+
+function recipeItems(){
   var marts = selectedMarts();
   var items = []; // {s} 또는 {r}
   var summary;
@@ -2482,24 +2535,44 @@ function renderRecipes(append){
     items = filterRecipes(ALL_RECIPES, rQuery, rCat).map(function(r){ return {r:r}; });
     summary = '마트를 고르면 할인 재료 기준으로 순위를 매겨 드려요. 지금은 전체 레시피 <b>'+items.length.toLocaleString('ko-KR')+'개</b>를 보여 줘요.';
   }
-  // 종류 칩 개수(지금 목록 기준) + 필터
   var kr = function(it){ return it.s ? it.s.recipe : it.r; };
+  // 고른 재료가 하나라도 들어간 레시피만, 많이 쓰는 순서로 앞에 (같으면 원래 순위)
+  pruneSel();
+  var sel = selIngs();
+  if (sel.length){
+    items = items.map(function(it, i){ return {it:it, h:selHits(kr(it), sel), i:i}; }).filter(function(x){ return x.h > 0; })
+      .sort(function(a, b){ return (b.h - a.h) || (a.i - b.i); }).map(function(x){ return x.it; });
+    summary += ' <span class="muted small">· 고른 재료가 든 레시피 '+items.length.toLocaleString('ko-KR')+'개</span>';
+  }
+  // 종류 칩 개수(지금 목록 기준) + 필터
   var cnt = {'': items.length}; RECIPE_KINDS.forEach(function(k){ cnt[k[0]] = items.filter(function(it){ return kr(it)[k[0]]; }).length; });
-  document.querySelectorAll('.kchip').forEach(function(b){ var n = cnt[b.getAttribute('data-kind')]; b.querySelector('.kc').textContent = n != null ? n.toLocaleString('ko-KR') : ''; });
   if (rKinds.length){
     items = items.filter(function(it){ return kindMatch(kr(it), rKinds); });
     var kl = RECIPE_KINDS.filter(function(k){ return rKinds.indexOf(k[0]) >= 0; }).map(function(k){ return k[1]; }).join('·');
     summary += ' <span class="muted small">· '+esc(kl)+' '+items.length.toLocaleString('ko-KR')+'개만 보는 중</span>';
   }
+  return {items:items, summary:summary, cnt:cnt, marts:marts, sel:sel};
+}
+function renderSelInd(sel){
+  var el = $('selInd');
+  if (!sel.length){ el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = '<span class="si-k">선택 재료</span><span class="si-v">'+sel.map(esc).join(', ')+'</span><button type="button" id="selClear" class="si-x" aria-label="선택 재료 지우기 ('+esc(sel.join(', '))+')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+}
+function renderRecipes(append){
+  var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+  var R = recipeItems(), items = R.items, summary = R.summary, cnt = R.cnt, marts = R.marts;
+  document.querySelectorAll('.kchip').forEach(function(b){ var n = cnt[b.getAttribute('data-kind')]; b.querySelector('.kc').textContent = n != null ? n.toLocaleString('ko-KR') : ''; });
+  renderSelInd(R.sel);
   $('recipeSummary').innerHTML = summary;
   if (!items.length){
-    $('recipeList').innerHTML = '<div class="card">'+(rKinds.length && !rQuery && !rCat ? emptyBox('chef', '이 종류에 맞는 레시피가 없어요', '「전체」를 눌러 다른 레시피도 보세요.') : rQuery||rCat ? emptyBox('search', '검색 결과가 없어요', '다른 이름이나 재료로 검색해 보세요.') : emptyBox('chef', '맞는 레시피가 없어요', '다른 마트를 추가하거나 할인 재료를 직접 입력해 보세요.'))+'</div>';
+    $('recipeList').innerHTML = '<div class="card">'+(R.sel.length ? emptyBox('chef', '고른 재료가 들어간 레시피가 없어요', (rKinds.length || rQuery || rCat ? '종류·검색 조건을 풀거나 ' : '') + '할인 재료 탭에서 다른 재료를 골라 보세요.') + '<button class="sec block" id="selClear2">선택 재료 지우기</button>' : rKinds.length && !rQuery && !rCat ? emptyBox('chef', '이 종류에 맞는 레시피가 없어요', '「전체」를 눌러 다른 레시피도 보세요.') : rQuery||rCat ? emptyBox('search', '검색 결과가 없어요', '다른 이름이나 재료로 검색해 보세요.') : emptyBox('chef', '맞는 레시피가 없어요', '다른 마트를 추가하거나 할인 재료를 직접 입력해 보세요.'))+'</div>';
     $('btnMore').style.display = 'none'; return;
   }
   var from = append ? rLimit - PAGE : 0;
   var html = items.slice(from, rLimit).map(function(it, i){
     var n = from + i;
-    if (it.s) return rankedCard(it.s, rQuery || rCat ? 99 : n);
+    if (it.s) return rankedCard(it.s, rQuery || rCat || R.sel.length ? 99 : n);
     var head = (marts.length && n > 0 && items[n-1].s) ? '<div class="divider">할인 재료는 없지만 검색된 레시피</div>' : '';
     return head + plainCard(it.r);
   }).join('');
