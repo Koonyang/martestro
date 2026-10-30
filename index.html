@@ -318,8 +318,6 @@ nav button.on svg.i{--ff:color-mix(in srgb,var(--g) 35%,transparent)}
       <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="addr" placeholder="동네·주소 (예: 신촌동, 강남역)" autocomplete="off" enterkeyhint="search" aria-label="동네 또는 주소"></div>
       <button id="btnAddr" class="sec">검색</button>
     </div>
-    <div class="label">빠른 선택</div>
-    <div class="chips scroll" id="presets"></div>
     <div class="opts">
       <div class="opt-l"><span>반경</span>
         <div class="seg" id="radiusSeg" role="radiogroup" aria-label="검색 반경"></div>
@@ -1805,11 +1803,6 @@ var GEO_LABEL = ic('loc')+'현재 위치로 찾기';
 function load(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
 function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
-var PRESETS = [
-  ['서울 시청',37.5663,126.9779],['강남역',37.4979,127.0276],['신촌',37.5552,126.9369],['홍대입구',37.5572,126.9245],
-  ['잠실',37.5133,127.1001],['수원역',37.2664,127.0001],['부산 서면',35.1577,129.0592],['대전 둔산',36.3515,127.3780],
-  ['대구 동성로',35.8692,128.5960],['광주 상무',35.1527,126.8517],['진주 호탄동',35.1617518,128.1153464]
-];
 var OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 var DATA_BRANDS = ['emart','homeplus','lottemart','costco','topmart'];
 
@@ -1844,15 +1837,9 @@ $('radiusSeg').innerHTML = [].map.call($('radius').options, function(o){ return 
 $('radiusSeg').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b || b.getAttribute('data-v')===$('radius').value) return; $('radius').value = b.getAttribute('data-v'); $('radius').dispatchEvent(new Event('change')); });
 syncSeg();
 
-$('presets').innerHTML = PRESETS.map(function(p,i){ return '<button class="chip" data-i="'+i+'">'+esc(p[0])+'</button>'; }).join('');
-$('presets').addEventListener('click', function(e){
-  var b = e.target.closest('button'); if (!b) return;
-  var p = PRESETS[+b.getAttribute('data-i')];
-  setLocation(p[1], p[2], p[0]);
-});
 
 $('btnGeo').addEventListener('click', function(){
-  if (!navigator.geolocation){ setStatus('이 브라우저는 위치 기능을 지원하지 않아요. 주소를 입력하거나 빠른 선택을 이용해 주세요.', true); return; }
+  if (!navigator.geolocation){ setStatus('이 브라우저는 위치 기능을 지원하지 않아요. 동네 이름이나 주소를 입력해 주세요.', true); return; }
   var btn = $('btnGeo'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>위치 확인 중…';
   navigator.geolocation.getCurrentPosition(function(pos){
     btn.disabled = false; btn.innerHTML = GEO_LABEL;
@@ -1861,7 +1848,7 @@ $('btnGeo').addEventListener('click', function(){
     btn.disabled = false; btn.innerHTML = GEO_LABEL;
     var msg = err.code===1 ? '위치 권한이 거부됐어요.' : '위치를 가져오지 못했어요.';
     if (location.protocol === 'file:') msg += ' (파일로 직접 연 경우 일부 브라우저는 위치를 막아요.)';
-    setStatus(msg + ' 아래에 동네 이름을 입력하거나 빠른 선택을 눌러 주세요.', true);
+    setStatus(msg + ' 아래에 동네 이름이나 주소를 입력해 주세요.', true);
   }, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
 });
 
@@ -1876,7 +1863,7 @@ function geocode(){
     setLocation(+js[0].lat, +js[0].lon, label);
   }).catch(function(){
     btn.disabled = false; btn.textContent = '검색';
-    setStatus('주소 검색 서버에 연결하지 못했어요. 잠시 후 다시 시도하거나 빠른 선택을 이용해 주세요.', true);
+    setStatus('주소 검색 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.', true);
   });
 }
 $('btnAddr').addEventListener('click', geocode);
@@ -1886,7 +1873,21 @@ $('incConv').addEventListener('change', function(){ if (state.loc) findMarts(); 
 
 function setLocation(lat, lon, label){
   state.loc = {lat:lat, lon:lon, label:label}; persist();
+  scrollPending = state.loc;   // 새 위치일 때만 목록으로 자동 스크롤 (반경·편의점 토글은 제외)
   findMarts();
+}
+// 새 위치의 마트 목록이 그려지면 목록 카드로 부드럽게 스크롤 (고정 헤더 높이만큼 띄움)
+var scrollPending = null;
+function scrollToMarts(){
+  if (!scrollPending || scrollPending !== state.loc) return;
+  scrollPending = null;
+  var card = $('martList').closest('.card') || $('martList');
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    var top = $('top') ? $('top').getBoundingClientRect().height : 0;
+    var y = card.getBoundingClientRect().top + window.pageYOffset - top - 8;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({top: Math.max(0, y), behavior: reduce ? 'auto' : 'smooth'});
+  }); });
 }
 
 function fetchWithTimeout(url, opts, ms){
@@ -1922,6 +1923,7 @@ function applyMarts(list, how){
   clearTimeout(skTimer);
   setStatus('<b>'+esc(L0.label)+'</b> 기준 · 마트 '+state.marts.length+'곳을 찾았어요.' + (how ? ' <span class="muted small">'+how+'</span>' : ''));
   renderMarts();
+  scrollToMarts();
 }
 var skTimer = null;
 function findMarts(){
@@ -1960,7 +1962,7 @@ function findMartsLive(){
     if (++failed >= OVERPASS.length){
       done = true; clearTimeout(skTimer);
       setStatus('지도 서버(OpenStreetMap)가 바빠서 마트 목록을 못 가져왔어요. 잠시 후 다시 시도해 주세요. 그동안 아래 「위치 없이 전단만 보기」로 대형마트 할인은 볼 수 있어요.', true);
-      renderMarts();
+      renderMarts(); scrollPending = null;
     }
   }
   OVERPASS.forEach(function(url){
@@ -1997,7 +1999,7 @@ function renderMarts(){
     (smalls.length ? '<div class="group-h">동네 마트·기타 <span>'+smalls.length+'곳</span></div>' + smalls.map(martRow).join('') : '');
   renderBrandChips();
 }
-var SHOP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.2 3.5h15.6l2 5.6a2.7 2.7 0 0 1-4.9 1.7 2.8 2.8 0 0 1-4.9 0 2.8 2.8 0 0 1-4.9 0A2.7 2.7 0 0 1 2.2 9.1z"/><path d="M4 12.4V20a1 1 0 0 0 1 1h5v-5.2h4V21h5a1 1 0 0 0 1-1v-7.6a4.4 4.4 0 0 1-3.1.4 4.2 4.2 0 0 1-1.9-1 4.3 4.3 0 0 1-5.9 0 4.2 4.2 0 0 1-1.9 1 4.4 4.4 0 0 1-3.2-.4z"/></svg>';
+var SHOP_SVG = window.SHOP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.2 3.5h15.6l2 5.6a2.7 2.7 0 0 1-4.9 1.7 2.8 2.8 0 0 1-4.9 0 2.8 2.8 0 0 1-4.9 0A2.7 2.7 0 0 1 2.2 9.1z"/><path d="M4 12.4V20a1 1 0 0 0 1 1h5v-5.2h4V21h5a1 1 0 0 0 1-1v-7.6a4.4 4.4 0 0 1-3.1.4 4.2 4.2 0 0 1-1.9-1 4.3 4.3 0 0 1-5.9 0 4.2 4.2 0 0 1-1.9 1 4.4 4.4 0 0 1-3.2-.4z"/></svg>';
 // brand key -> [logo file, full-bleed app icon?]
 var LOGOS = {emart:['emart'], emart_everyday:['emart'], homeplus:['homeplus'], homeplus_express:['homeplus'],
   lottemart:['lotte'], lottesuper:['lotte'], costco:['costco'], topmart:['topmart'], hanaro:['hanaro',1], kims:['kims',1], gsfresh:['gs']};
@@ -2305,7 +2307,7 @@ if (window.fetch && location.protocol !== 'file:') {
   }).catch(function(){});
 }
 if (state.loc) setStatus('마지막 위치: <b>'+esc(state.loc.label)+'</b> (다시 찾으려면 위 버튼을 눌러 주세요)');
-else setStatus('위치를 정해 주세요. 위치 권한이 싫다면 동네 이름 입력이나 빠른 선택도 돼요.');
+else setStatus('위치를 정해 주세요. 위치 권한이 싫다면 동네 이름이나 주소를 입력해도 돼요.');
 })();
 </script>
 </body>
