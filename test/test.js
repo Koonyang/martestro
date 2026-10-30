@@ -211,16 +211,20 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   let c = L.normSort(D, null); assert.deepEqual(c, {k:'rec', rev:false});
   assert.deepEqual(L.normSort(D, {k:'zzz', rev:true}), {k:'rec', rev:false});
   assert.deepEqual(L.normSort(D, {k:'rec', rev:true}), {k:'rec', rev:false});
-  c = L.nextSort(D, c, 'off'); assert.deepEqual(c, {k:'off', rev:false}); assert.equal(L.sortLabel(D, c), '할인율 높은순'); assert.equal(L.sortArrow(D, c), '↓');
-  c = L.nextSort(D, c, 'off'); assert.deepEqual(c, {k:'off', rev:true}); assert.equal(L.sortLabel(D, c), '할인율 낮은순'); assert.equal(L.sortArrow(D, c), '↑');
-  c = L.nextSort(D, c, 'price'); assert.deepEqual(c, {k:'price', rev:false}); assert.equal(L.sortLabel(D, c), '가격 낮은순'); assert.equal(L.sortArrow(D, c), '↑');
+  c = L.nextSort(D, c, 'off'); assert.deepEqual(c, {k:'off', rev:false}); assert.equal(L.sortLabel(D, c), '할인율 높은순'); assert.equal(L.sortArrow(D, c), '↑');
+  c = L.nextSort(D, c, 'off'); assert.deepEqual(c, {k:'off', rev:true}); assert.equal(L.sortLabel(D, c), '할인율 낮은순'); assert.equal(L.sortArrow(D, c), '↓');
+  c = L.nextSort(D, c, 'price'); assert.deepEqual(c, {k:'price', rev:false}); assert.equal(L.sortLabel(D, c), '가격 낮은순'); assert.equal(L.sortArrow(D, c), '↓');
   assert.equal(L.sortLabel(D, {k:'price', rev:true}), '가격 높은순');
   assert.equal(L.sortLabel(D, {k:'end', rev:false}), '마감 임박순'); assert.equal(L.sortLabel(D, {k:'end', rev:true}), '마감 여유순');
   assert.deepEqual(L.nextSort(D, {k:'rec', rev:false}, 'rec'), {k:'rec', rev:false}); assert.equal(L.sortArrow(D, {k:'rec'}), '');
   ['절약률 높은순','절약률 낮은순','비용 낮은순','비용 높은순','칼로리 낮은순','칼로리 높은순'].forEach((l, i) => assert.equal(L.sortLabel(R, {k:['save','cost','kcal'][i>>1], rev:!!(i&1)}), l));
   assert.deepEqual(R.map(d => d.k), ['rec','save','cost','kcal']); // 조리시간 정렬은 없앴어요
   assert.deepEqual(L.normSort(R, {k:'time', rev:true}), {k:'rec', rev:false}); // 예전에 저장한 조리시간 → 추천순
-  assert.equal(L.sortArrow(R, {k:'kcal', rev:false}), '↑'); assert.equal(L.sortArrow(R, {k:'kcal', rev:true}), '↓');
+  assert.equal(L.sortArrow(R, {k:'kcal', rev:false}), '↓'); assert.equal(L.sortArrow(R, {k:'kcal', rev:true}), '↑');
+  // 모든 정렬 이름(기본·반대)이 뜻에 맞는 화살표를 가져요
+  [D, R].forEach(defs => defs.filter(d => d.dir).forEach(d => [false, true].forEach(rev => { const l = L.sortLabel(defs, {k:d.k, rev}), a = L.sortArrow(defs, {k:d.k, rev});
+    assert.equal(a, /높은|많은|큰|임박/.test(l) ? '↑' : '↓', l + ' → ' + a); assert(a, l); })));
+  assert.equal(L.sortArrow(D, {k:'end', rev:false}), '↑'); assert.equal(L.sortArrow(D, {k:'end', rev:true}), '↓');
   const ds = [{name:'a', price:1000, orig:2000, end:'2026-11-03'}, {name:'b', price:500, end:'2026-10-31'}, {name:'c', cond:'1+1'}, {name:'d', price:3000, orig:3300, end:'2026-11-01'}, {name:'e', price:800, orig:1000}];
   const nm = l => l.map(x => x.name).join('');
   assert.equal(nm(L.sortDeals(ds, {k:'rec'})), 'abcde');
