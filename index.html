@@ -173,6 +173,15 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 /* recipes */
 .tools{display:flex;gap:8px;margin-top:14px}
+/* 카드별 매장 이름 표시 (기본 숨김) + 밑줄 텍스트 토글 */
+.recipe .mn{display:none}
+.recipe.show-mn .mn{display:inline}
+.mn-row{display:flex;justify-content:flex-end;margin:6px -4px -8px 0}
+button.mn-toggle{background:none;box-shadow:none;border:0;min-height:32px;padding:4px 6px;font-size:12px;font-weight:600;letter-spacing:-.01em;color:var(--m);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--g) 70%,transparent);text-underline-offset:3px;text-decoration-thickness:1px;border-radius:6px;cursor:pointer}
+button.mn-toggle:hover{color:var(--g-ink);transform:none}
+button.mn-toggle[aria-pressed=true]{color:var(--g-ink);text-decoration-color:var(--g)}
+button.mn-toggle:focus-visible{outline:2px solid var(--g);outline-offset:1px}
+@media (prefers-color-scheme:dark){button.mn-toggle:hover,button.mn-toggle[aria-pressed=true]{color:var(--g)}}
 /* 레시피 종류 필터 칩 (전체 / 자취생 / 간편식품 — 자취생·간편식품은 함께 고를 수 있음) */
 .kind-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 button.kchip{min-height:36px;padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:700;gap:5px;background:var(--card);color:var(--t2);box-shadow:inset 0 0 0 1px var(--line);letter-spacing:-.02em}
@@ -2335,6 +2344,13 @@ $('btnAdd').addEventListener('click', function(){
 var PAGE = 30, rLimit = PAGE, rQuery = '', rCat = '', rTimer = null, rKinds = [];
 // 종류 칩: 전체 ↔ 자취생/간편식품(여러 개, 합집합). 마지막 칩을 끄면 다시 전체.
 function syncKindChips(){ document.querySelectorAll('.kchip').forEach(function(b){ var k = b.getAttribute('data-kind'); b.setAttribute('aria-pressed', String(k ? rKinds.indexOf(k) >= 0 : !rKinds.length)); }); }
+// 카드별 「표시 가격 기준」: 칩·할인 상품 목록에 매장 이름 보이기/숨기기 (기본 숨김)
+$('recipeList').addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('.mn-toggle'); if (!b) return;
+  e.preventDefault(); e.stopPropagation();
+  var card = b.closest('.recipe'), on = !card.classList.contains('show-mn');
+  card.classList.toggle('show-mn', on); b.setAttribute('aria-pressed', String(on));
+});
 document.querySelector('.kind-row').addEventListener('click', function(e){
   var b = e.target.closest('.kchip'); if (!b) return;
   var k = b.getAttribute('data-kind');
@@ -2428,15 +2444,16 @@ function rankedCard(s, idx){
     var d = x.deal;
     var p = d.price != null ? formatWon(d.price) : d.cond;
     var up = isUpcoming(d, todayStr()) ? ' · '+fmtMD(d.start)+'부터' : '';
-    return '<span class="ing hit'+(x.ing.main?' main':' sub')+'" title="'+esc(d.name)+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+' <small>'+esc(d.martName)+' '+esc(p)+up+'</small>'+(d.check?tipBtn('chk','가격확인','mk chk'):'')+'</span>';
+    return '<span class="ing hit'+(x.ing.main?' main':' sub')+'" title="'+esc(d.name)+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+' <small><span class="mn">'+esc(d.martName)+' </span>'+esc(p)+up+'</small>'+(d.check?tipBtn('chk','가격확인','mk chk'):'')+'</span>';
   }).join('');
   var miss = s.missing.map(function(x){ return '<span class="ing miss'+(x.ing.main?' main':'')+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+'</span>'; }).join('');
-  var detail = s.matched.map(function(x){ return '<li>'+esc(x.ing.k)+': '+esc(x.deal.name)+' — '+esc(x.deal.martName)+' '+(x.deal.price!=null?(x.deal.orig?'<span class="orig">'+formatWon(x.deal.orig)+'</span> ':'')+'<b>'+formatWon(x.deal.price)+'</b>':'')+' <span class="muted small">'+esc(x.deal.cond||'')+(x.deal.start && x.deal.start>todayStr()?' · '+fmtMD(x.deal.start)+'부터':'')+(x.deal.end?' · ~'+fmtMD(x.deal.end):'')+'</span>'+(x.deal.check?' '+tipBtn('chk','가격확인','tag chk'):'')+'</li>'; }).join('');
+  var detail = s.matched.map(function(x){ return '<li>'+esc(x.ing.k)+': '+esc(x.deal.name)+' <span class="mn">— '+esc(x.deal.martName)+'</span> '+(x.deal.price!=null?(x.deal.orig?'<span class="orig">'+formatWon(x.deal.orig)+'</span> ':'')+'<b>'+formatWon(x.deal.price)+'</b>':'')+' <span class="muted small">'+esc(x.deal.cond||'')+(x.deal.start && x.deal.start>todayStr()?' · '+fmtMD(x.deal.start)+'부터':'')+(x.deal.end?' · ~'+fmtMD(x.deal.end):'')+'</span>'+(x.deal.check?' '+tipBtn('chk','가격확인','tag chk'):'')+'</li>'; }).join('');
   return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div></div>' +
     '<div class="score" role="img" aria-label="할인 재료 비율 '+pct+'%: 주재료 '+s.mainTotal+'개 중 '+s.mainHit+'개 할인 중"><span class="score-k">할인 재료 비율</span><div class="bar"><i style="width:'+pct+'%"></i></div><span class="score-t">주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중</span></div>' +
     saveGauge(s) +
     '<div class="ings">'+hits+miss+'</div>' +
-    recipeBody(r, '<div class="small"><b>할인 상품</b><ul class="deal-ul">'+detail+'</ul></div>') + '</div>';
+    recipeBody(r, '<div class="small"><b>할인 상품</b><ul class="deal-ul">'+detail+'</ul></div>') +
+    '<div class="mn-row"><button type="button" class="mn-toggle" aria-pressed="false" title="가격 옆에 어느 매장 가격인지 보여요">표시 가격 기준</button></div></div>';
 }
 function plainCard(r){
   var keys = r.ings.filter(function(i){ return i.main; }).map(function(i){ return '<span class="ing miss">'+esc(i.k)+'</span>'; }).join('');

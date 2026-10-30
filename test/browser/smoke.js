@@ -134,6 +134,15 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await mt.click(); const tm = await tipState(); const c1 = await p.$eval(`input[data-id="${id}"]`, e => e.checked); console.log('tip(mart):', tm && tm.text, 'checked same:', c0 === c1);
     if (!tm || c0 !== c1) throw new Error('마트 줄 가격확인 태그가 체크를 바꿈'); await p.keyboard.press('Escape'); }
   await p.click('nav button[data-tab="tab-recipes"]');
+  // 칩 가격 옆 매장 이름은 기본 숨김, 카드별 「표시 가격 기준」 밑줄 텍스트로 켜고 끄기 (카드 펼침은 그대로)
+  const mnState = () => p.$eval('#recipeList .recipe', c => ({ chip: c.querySelector('.ing.hit small').innerText, mnVis: [...c.querySelectorAll('.mn')].filter(e => e.offsetParent !== null || getComputedStyle(e).display !== 'none').length, mn: c.querySelectorAll('.mn').length, pressed: c.querySelector('.mn-toggle').getAttribute('aria-pressed'), open: c.querySelector('details') ? c.querySelector('details').open : null, other: c.nextElementSibling && c.nextElementSibling.classList.contains('show-mn') }));
+  let ms = await mnState(); console.log('mn default:', ms);
+  if (ms.mnVis !== 0 || ms.mn < 1 || ms.pressed !== 'false' || /이마트|탑마트|홈플러스|롯데마트/.test(ms.chip)) throw new Error('기본으로 매장 이름이 보여요');
+  await p.$eval('#recipeList .recipe .mn-toggle', e => e.scrollIntoView({ block: 'center' })); await p.click('#recipeList .recipe .mn-toggle');
+  let ms2 = await mnState(); console.log('mn on:', ms2);
+  if (ms2.mnVis !== ms2.mn || ms2.pressed !== 'true' || !/마트/.test(ms2.chip) || ms2.open !== ms.open || ms2.other) throw new Error('표시 가격 기준 켜기 이상');
+  await p.focus('#recipeList .recipe .mn-toggle'); await p.keyboard.press('Enter'); ms2 = await mnState();
+  if (ms2.mnVis !== 0 || ms2.pressed !== 'false') throw new Error('키보드로 끄기 이상');
   await p.click('nav button[data-tab="tab-loc"]');
   await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   await p.click('nav button[data-tab="tab-deals"]');
