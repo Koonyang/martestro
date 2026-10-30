@@ -271,8 +271,22 @@ nav button svg.i{width:24px;height:24px;stroke-width:1.9;transition:transform .2
 nav button.on{color:var(--t)}
 nav button.on svg.i{color:var(--a);transform:translateY(-1px)}
 nav button.on svg.i{--ff:color-mix(in srgb,var(--g) 35%,transparent)}
+/* 선택한 마트가 있을 때 아래에서 올라오는 「할인 식재료 확인」 버튼 */
+.fab{position:fixed;z-index:29;left:50%;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));width:calc(100% - 32px);max-width:488px;min-height:54px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 18px;border-radius:16px;background:var(--a);color:var(--a-on);font-size:16px;font-weight:750;letter-spacing:-.02em;box-shadow:0 10px 28px rgba(15,22,38,.28),0 0 0 1px rgba(201,162,39,.35) inset;transform:translate(-50%,calc(100% + 120px));opacity:0;visibility:hidden;transition:transform .38s var(--ease),opacity .25s var(--ease),visibility 0s linear .38s}
+.fab.show{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .38s var(--ease),opacity .25s var(--ease),visibility 0s}
+.fab svg.i{width:20px;height:20px;color:var(--g)}
+.fab svg.arr{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.fab .sep{font-style:normal;opacity:.6;margin-left:2px}
+.fab b{background:var(--g);color:var(--g-on);font-size:13.5px;font-weight:800;padding:3px 9px;border-radius:99px}
+.fab:hover{filter:brightness(1.08)}
+.fab:active{transform:translate(-50%,0) scale(.98)}
+body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-bottom))}
+@media (prefers-color-scheme:dark){.fab{box-shadow:0 10px 28px rgba(0,0,0,.45)} .fab svg.i{color:var(--a-on)} .fab b{background:var(--a-on);color:var(--a)}}
+@media (prefers-reduced-motion:reduce){.fab,.fab.show{transition:none}}
 @media (min-width:860px){
   body{padding-bottom:120px}
+  .fab{bottom:104px;width:460px}
+  body.has-fab{padding-bottom:200px}
   main{padding-top:10px}
   .hero h1{font-size:32px}
   nav{left:50%;right:auto;bottom:20px;transform:translateX(-50%);width:auto;border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:6px}
@@ -414,6 +428,7 @@ nav button.on svg.i{--ff:color-mix(in srgb,var(--g) 35%,transparent)}
 </section>
 </main>
 
+<button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인 <i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <nav aria-label="메뉴"><div class="nav-in">
   <button data-tab="tab-loc" class="on"><svg class="i"><use href="#i-pin"/></svg>위치·마트</button>
   <button data-tab="tab-deals"><svg class="i"><use href="#i-tag"/></svg>할인 재료</button>
@@ -1837,6 +1852,7 @@ function showTab(id){
   if (id==='tab-deals') renderDeals();
   if (id==='tab-recipes') renderRecipes();
   window.scrollTo(0,0);
+  if (typeof updateFab === 'function') updateFab();
 }
 window.addEventListener('scroll', function(){ $('top').classList.toggle('scrolled', window.scrollY > 4); }, {passive:true});
 
@@ -2047,6 +2063,16 @@ $('martList').addEventListener('change', function(e){
   var id = e.target.getAttribute('data-id'); if (!id) return;
   toggleSel(id, e.target.checked);
 });
+// 「할인 식재료 확인 · N곳」 플로팅 버튼: 위치·마트 탭 + 선택 1곳 이상일 때만
+function updateFab(){
+  var n = selectedMarts().length, tab = document.querySelector('section.tab.on');
+  var show = n > 0 && tab && tab.id === 'tab-loc';
+  $('fabN').textContent = n + '곳';
+  $('fab').classList.toggle('show', !!show); document.body.classList.toggle('has-fab', !!show);
+  $('fab').setAttribute('aria-hidden', show ? 'false' : 'true'); $('fab').tabIndex = show ? 0 : -1;
+  $('fab').setAttribute('aria-label', '할인 식재료 확인 · ' + n + '곳');
+}
+$('fab').addEventListener('click', function(){ showTab('tab-deals'); });
 function toggleSel(id, on){
   var i = state.selected.indexOf(id);
   if (on && i < 0) state.selected.push(id);
@@ -2055,6 +2081,7 @@ function toggleSel(id, on){
 }
 
 function renderBrandChips(){
+  setTimeout(updateFab, 0);
   $('brandChips').innerHTML = DATA_BRANDS.map(function(b){
     var id = 'brand:' + b, on = state.selected.indexOf(id) >= 0;
     return '<button class="chip'+(on?' on':'')+'" data-id="'+id+'" aria-pressed="'+on+'">'+esc(BRANDS[b].label)+' 전단</button>';

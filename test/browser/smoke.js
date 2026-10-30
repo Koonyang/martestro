@@ -80,6 +80,23 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   if (!(await p.$('input[data-id="node/4655465094"]'))) throw new Error('탑마트 호탄점 없음');
   await p.$$eval('#martList input:checked', els => els.forEach(e => { if (e.dataset.id !== 'node/4655465094') e.click(); }));
   if (!(await p.$eval('input[data-id="node/4655465094"]', e => e.checked))) await p.$eval('input[data-id="node/4655465094"]', e => e.click());
+  // 플로팅 「할인 식재료 확인 · N곳」 버튼: 선택 1곳 이상 + 위치·마트 탭일 때만, 누르면 할인 재료 탭 맨 위로
+  await new Promise(r => setTimeout(r, 500));
+  const fab = await p.$eval('#fab', e => ({ show: e.classList.contains('show'), txt: e.innerText.replace(/\s+/g, ' ').trim(), bottom: Math.round(e.getBoundingClientRect().bottom), navTop: Math.round(document.querySelector('nav').getBoundingClientRect().top) }));
+  console.log('fab:', fab);
+  if (!fab.show || !/할인 식재료 확인 · 1곳/.test(fab.txt) || fab.bottom > fab.navTop) throw new Error('플로팅 버튼 표시/위치 이상');
+  await p.screenshot({ path: '/tmp/martestro_fab.png' });
+  // 마지막 마트 줄이 버튼에 가리지 않는지 (맨 아래로 스크롤)
+  await p.evaluate(() => scrollTo(0, document.body.scrollHeight)); await new Promise(r => setTimeout(r, 300));
+  const cover = await p.evaluate(() => { const cs = document.querySelectorAll('#tab-loc .card'), last = cs[cs.length - 1].getBoundingClientRect(), f = document.getElementById('fab').getBoundingClientRect(); return { lastBottom: Math.round(last.bottom), fabTop: Math.round(f.top) }; });
+  console.log('fab vs last row:', cover); if (cover.lastBottom > cover.fabTop) throw new Error('버튼이 마지막 마트를 가려요');
+  await p.click('#fab'); await new Promise(r => setTimeout(r, 400));
+  const after = await p.evaluate(() => ({ tab: document.querySelector('section.tab.on').id, y: scrollY, fab: document.getElementById('fab').classList.contains('show') }));
+  console.log('fab click:', after); if (after.tab !== 'tab-deals' || after.y !== 0 || after.fab) throw new Error('버튼 눌러도 할인 재료 탭으로 안 감');
+  await p.click('nav button[data-tab="tab-loc"]'); await new Promise(r => setTimeout(r, 300));
+  await p.$$eval('#martList input:checked', els => els.forEach(e => e.click())); await new Promise(r => setTimeout(r, 500));
+  if (await p.$eval('#fab', e => e.classList.contains('show'))) throw new Error('0곳인데 버튼이 보여요');
+  await p.$eval('input[data-id="node/4655465094"]', e => e.click()); await new Promise(r => setTimeout(r, 300));
   await p.click('nav button[data-tab="tab-deals"]');
   console.log('deals:', await p.$eval('#dealSummary', e => e.innerText.replace(/\s+/g, ' ')));
   await p.screenshot({ path: '/tmp/martestro_deals.png' });
