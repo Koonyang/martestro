@@ -44,6 +44,9 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   async function useAddr(place) { await p.$eval('#addr', e => { e.value = ''; }); await p.type('#addr', place); await p.click('#btnAddr'); }
   async function useGeo(place) { const [latitude, longitude] = PLACES[place]; await p.setGeolocation({ latitude, longitude }); await p.click('#btnGeo'); }
   if (await p.$('#presets')) throw new Error('빠른 위치 설정 줄이 아직 있어요');
+  // 첫 화면 문구
+  { const hero = await p.evaluate(() => { const h = document.querySelector('.hero'); return { h1: h.querySelector('h1').textContent, em: (h.querySelector('h1 em') || {}).textContent, sub: h.querySelector('.sub').textContent, eyebrow: !!h.querySelector('.eyebrow') || /MAESTRO/.test(h.textContent), title: document.title }; });
+    if (hero.h1 !== '오늘의 요리 지휘자' || hero.em !== '요리 지휘자' || hero.sub !== '동네 마트 재료로 찬거리를 골라드려요.' || hero.eyebrow || /할인 재료를 지휘하는/.test(hero.title)) throw new Error('첫 화면 문구 이상 ' + JSON.stringify(hero)); }
   // 「위치 설정 없이 대형마트 정보 확인」은 위치 없이도 동작해야 해요
   const noLocChips = await p.$$eval('#brandChips button', bs => bs.map(x => x.innerText.trim()));
   if (!noLocChips.some(t => t.includes('이마트'))) throw new Error('위치 설정 없이 대형마트 정보 확인 버튼 없음');

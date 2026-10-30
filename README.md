@@ -1,6 +1,6 @@
 # 🎼 Martestro (마르테스트로)
 
-**Mart + Maestro · 할인 재료를 지휘하는 레시피**
+**Mart + Maestro · 오늘의 요리 지휘자**
 
 우리 동네 마트의 이번 주 전단 할인 재료를 모아서 **"오늘 이 재료로 뭐 해 먹지?"** 에 답해 주는 무료 웹앱이에요.
 설치 없이 링크만 열면 돼요 → **https://koonyang.github.io/martestro/**
