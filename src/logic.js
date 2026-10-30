@@ -356,7 +356,7 @@ function buildDealIndex(deals, today){
 }
 
 function scoreRecipe(recipe, idx){
-  var mainTotal = 0, mainHit = 0, anyHit = 0, savings = 0;
+  var mainTotal = 0, mainHit = 0, anyHit = 0, savings = 0, origSum = 0, saleSum = 0;
   var matched = [], missing = [];
   recipe.ings.forEach(function(ing){
     if (ing.main) mainTotal++;
@@ -365,7 +365,7 @@ function scoreRecipe(recipe, idx){
       var best = list[0];
       if (ing.main) mainHit++;
       anyHit++;
-      if (ing.main && best.price!=null && best.orig!=null && best.orig > best.price) savings += best.orig - best.price;
+      if (ing.main && best.price!=null && best.orig!=null && best.orig > best.price) { savings += best.orig - best.price; origSum += best.orig; saleSum += best.price; }
       matched.push({ing:ing, deal:best, others:list.length-1});
     } else {
       missing.push({ing:ing});
@@ -374,7 +374,7 @@ function scoreRecipe(recipe, idx){
   var ratio = mainTotal ? mainHit/mainTotal : 0;
   // 주재료 적중(최대 3개) + 비율 + 부재료 적중 + 절약액 + 직접 다듬은 기본 레시피 가산점
   var score = ratio*20 + Math.min(mainHit,3)*4 + Math.min(anyHit-mainHit,3)*1 + Math.min(savings/1000, 10)*0.4 + (recipe.src === 'pub' ? 0 : 6);
-  return {recipe:recipe, mainTotal:mainTotal, mainHit:mainHit, anyHit:anyHit, ratio:ratio, savings:savings, matched:matched, missing:missing, score:score};
+  return {recipe:recipe, mainTotal:mainTotal, mainHit:mainHit, anyHit:anyHit, ratio:ratio, savings:savings, origSum:origSum, saleSum:saleSum, savePct:(origSum ? Math.round(savings/origSum*100) : 0), matched:matched, missing:missing, score:score};
 }
 
 function rankRecipes(recipes, deals, today){

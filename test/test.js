@@ -47,6 +47,8 @@ const idx30 = L.buildDealIndex(L.DEALS.homeplus,'2026-10-30'); assert(idx30['돼
 // 김치찌개 계산 검증(이마트만)
 const kimchi = L.scoreRecipe(L.RECIPES[0], L.buildDealIndex(L.DEALS.emart,'2026-10-30'));
 assert.equal(kimchi.mainHit, 3); assert.equal(kimchi.savings, 3100-1860);
+assert.equal(kimchi.origSum, 3100); assert.equal(kimchi.saleSum, 1860); assert.equal(kimchi.savePct, 40); // 절약률 게이지 = 원가 대비 절약
+assert.equal(kimchi.origSum - kimchi.saleSum, kimchi.savings);
 // 수동 입력 아이템
 const custom = [{name:'애호박',price:1000,orig:1500,ing:L.guessIng('애호박'),start:null,end:null}];
 const dj = L.scoreRecipe(L.RECIPES[1], L.buildDealIndex(custom,'2026-10-30')); assert.equal(dj.mainHit,1); assert.equal(dj.savings,500);

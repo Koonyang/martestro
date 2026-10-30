@@ -20,7 +20,7 @@
 :root{
   --bg:#F7F6F2;--card:#fff;--card2:#F1F2F6;--t:#151C2F;--t2:#454D63;--m:#666D80;--line:#E6E9F2;
   --a:#1E2A4A;--a-on:#fff;--a2:#E6E9F2;--a-ink:#1E2A4A;
-  --g:#C9A227;--g-on:#1E2A4A;--g2:#F6EDD0;--g-ink:#7A600F;
+  --pay:#1E2A4A;--g:#C9A227;--g-on:#1E2A4A;--g2:#F6EDD0;--g-ink:#7A600F;
   --sale:var(--g-ink);--sale2:var(--g2);--warn:#B0500C;--warn2:#FFF3E6;--info:#2E5AAC;--info2:#E9EFFA;--me:#6A45C2;--me2:#F0EBFB;--danger:#C8363B;--danger2:#FDECEC;
   --shadow:0 1px 2px rgba(30,42,74,.05),0 6px 20px rgba(30,42,74,.06);
   --r:20px;--r2:14px;--nav-h:64px;
@@ -29,7 +29,7 @@
 @media (prefers-color-scheme:dark){:root{
   --bg:#0F1626;--card:#18223A;--card2:#212C47;--t:#EEF1F8;--t2:#C5CBDA;--m:#949DB3;--line:#2B3653;
   --a:#D4B13F;--a-on:#0F1626;--a2:rgba(212,177,63,.15);--a-ink:#E6CB6E;
-  --g:#D4B13F;--g-on:#0F1626;--g2:rgba(212,177,63,.15);--g-ink:#E6CB6E;
+  --pay:#6F82B3;--g:#D4B13F;--g-on:#0F1626;--g2:rgba(212,177,63,.15);--g-ink:#E6CB6E;
   --warn:#F4A261;--warn2:rgba(244,162,97,.13);--info:#8FB1F5;--info2:rgba(143,177,245,.14);--me:#BBA2FF;--me2:rgba(187,162,255,.14);--danger:#FF7B7E;--danger2:rgba(255,123,126,.13);
   --shadow:0 1px 2px rgba(0,0,0,.35);
 }}
@@ -189,7 +189,18 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .bar{flex:1;height:8px;background:var(--card2);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--a),var(--g))}
 .score-t{font-size:12.5px;font-weight:700;color:var(--t2);white-space:nowrap}
-.save{display:inline-flex;align-items:center;gap:4px;margin-top:10px;font-size:13px;font-weight:700;color:var(--sale);background:var(--sale2);padding:5px 10px;border-radius:10px}
+.score-k,.gauge .g-k{font-size:12px;font-weight:700;color:var(--m);white-space:nowrap}
+.gauge{margin-top:12px;padding:10px 12px 11px;border-radius:12px;background:var(--card2)}
+.gauge .g-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.gauge .g-k em{font-style:normal;font-size:11px;font-weight:700;margin-left:4px;padding:1px 6px;border-radius:6px;color:var(--m);box-shadow:inset 0 0 0 1px var(--line)}
+.gauge .g-p{font-size:15px;font-weight:800;color:var(--g-ink);letter-spacing:-.02em}
+.gbar{display:flex;height:12px;margin-top:7px;border-radius:99px;overflow:hidden;background:var(--line)}
+.gbar .pay{background:var(--pay)}
+.gbar .sv{background:repeating-linear-gradient(135deg,var(--g) 0 6px,color-mix(in srgb,var(--g) 82%,#fff) 6px 9px)}
+.gauge .g-t{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--t2)}
+.gauge .g-t s{color:var(--m)}
+.gauge .g-t b{color:var(--t)}
+.gauge .g-s{font-weight:800;color:var(--g-ink)}
 .ings{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .ing{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:5px 10px;border-radius:10px;font-weight:600}
 .ing.hit{background:var(--a2);color:var(--a-ink)}
@@ -825,6 +836,16 @@ function thumb(r, rank){
 }
 var CHK_TIP = '전단 이미지에서 읽은 가격이라 틀릴 수 있어요. 매장에서 확인해 주세요';
 var LEGEND = '<div class="legend"><span><i class="lg hit"></i>할인 중</span><span><i class="lg miss"></i>따로 필요</span><span><em class="mk">주재료</em>요리의 핵심 재료</span><span><em class="mk chk">가격확인</em>전단 이미지 판독 가격</span></div>';
+// 절약률 게이지: 원가(정가가 알려진 할인 주재료 합) = 전체 막대, 남색 = 내는 돈, 금색 = 아끼는 돈
+function saveGauge(s){
+  if (!(s.origSum > 0 && s.savings > 0)) return '';
+  var pct = s.savePct, payW = Math.max(0, Math.min(100, s.saleSum / s.origSum * 100));
+  var txt = '원가 '+formatWon(s.origSum)+' → '+formatWon(s.saleSum)+' · '+pct+'% 절약';
+  return '<div class="gauge" role="img" aria-label="예상 절약률 '+pct+'%: '+esc(txt)+'">' +
+    '<div class="g-h" aria-hidden="true"><span class="g-k">절약률<em>예상</em></span><span class="g-p">'+pct+'%</span></div>' +
+    '<div class="gbar" aria-hidden="true"><i class="pay" style="width:'+payW.toFixed(1)+'%"></i><i class="sv" style="width:'+(100-payW).toFixed(1)+'%"></i></div>' +
+    '<div class="g-t" aria-hidden="true">원가 <s>'+formatWon(s.origSum)+'</s> → <b>'+formatWon(s.saleSum)+'</b> · <span class="g-s">'+pct+'% 절약</span> <span class="muted">(약 '+formatWon(s.savings)+')</span></div></div>';
+}
 function rankedCard(s, idx){
   var r = s.recipe, pct = Math.round(s.ratio*100);
   var hits = s.matched.map(function(x){
@@ -836,8 +857,8 @@ function rankedCard(s, idx){
   var miss = s.missing.map(function(x){ return '<span class="ing miss'+(x.ing.main?' main':'')+'">'+esc(x.ing.k)+(x.ing.main?'<em class="mk">주재료</em>':'')+'</span>'; }).join('');
   var detail = s.matched.map(function(x){ return '<li>'+esc(x.ing.k)+': '+esc(x.deal.name)+' — '+esc(x.deal.martName)+' '+(x.deal.price!=null?(x.deal.orig?'<span class="orig">'+formatWon(x.deal.orig)+'</span> ':'')+'<b>'+formatWon(x.deal.price)+'</b>':'')+' <span class="muted small">'+esc(x.deal.cond||'')+(x.deal.start && x.deal.start>todayStr()?' · '+fmtMD(x.deal.start)+'부터':'')+(x.deal.end?' · ~'+fmtMD(x.deal.end):'')+'</span>'+(x.deal.check?' <span class="tag chk" title="'+CHK_TIP+'">가격확인</span>':'')+'</li>'; }).join('');
   return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div></div>' +
-    '<div class="score"><div class="bar"><i style="width:'+pct+'%"></i></div><span class="score-t">주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중</span></div>' +
-    (s.savings>0?'<span class="save">약 '+formatWon(s.savings)+' 절약</span>':'') +
+    '<div class="score" role="img" aria-label="할인 재료 비율 '+pct+'%: 주재료 '+s.mainTotal+'개 중 '+s.mainHit+'개 할인 중"><span class="score-k">할인 재료 비율</span><div class="bar"><i style="width:'+pct+'%"></i></div><span class="score-t">주재료 '+s.mainHit+'/'+s.mainTotal+' 할인 중</span></div>' +
+    saveGauge(s) +
     '<div class="ings">'+hits+miss+'</div>' + LEGEND +
     recipeBody(r, '<div class="small"><b>할인 상품</b><ul class="deal-ul">'+detail+'</ul></div>') + '</div>';
 }
