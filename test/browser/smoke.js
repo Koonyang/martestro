@@ -29,6 +29,8 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.goto(base, { waitUntil: 'networkidle0' });
   console.log('title:', await p.title());
   console.log('header:', await p.$eval('header', e => e.innerText.replace(/\s+/g, ' ')));
+  const foot = await p.$eval('.site-foot', e => e.innerText.replace(/\s+/g, ' ').trim()); console.log('footer:', foot);
+  if (/갱신/.test(await p.$eval('header', e => e.innerText)) || !/\d+\/\d+ \d\d:\d\d 전단 갱신/.test(foot) || !/출처·데이터 정보/.test(foot)) throw new Error('갱신 시각/출처 링크는 페이지 맨 아래에 있어야 해요');
   // 마트 검색 속도: 서울시청·진주 호탄동 × 2/3/5km
   async function search(fn) {
     await p.$eval('#locStatus', e => { e.textContent = ''; });
@@ -110,9 +112,13 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.$$eval('#brandChips button', bs => { const e = bs.find(x => x.innerText.includes('이마트')); e && e.click(); });
   await p.click('nav button[data-tab="tab-deals"]');
   if (fake) console.log('fake update shown:', await p.evaluate(() => document.body.innerText.includes('테스트용 국산 애호박')));
-  await p.click('nav button[data-tab="tab-info"]');
+  if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
+  console.log('nav:', await p.$$eval('nav button', bs => bs.map(b => b.innerText.trim()).join(' | ')));
+  await p.click('#btnSrc'); await p.waitForFunction(() => document.getElementById('srcSheet').open, { timeout: 5000 });
   console.log('info:', await p.$eval('#dataInfo', e => e.innerText.replace(/\s+/g, ' ')));
   await p.screenshot({ path: '/tmp/martestro_info.png' });
+  await p.click('#srcClose'); await new Promise(r => setTimeout(r, 200));
+  if (await p.$eval('#srcSheet', d => d.open)) throw new Error('출처 시트가 안 닫혀요');
   console.log('errors:', errs);
   await b.close(); if (srv) srv.close();
   if (errs.filter(e => !/404|Failed to load resource/.test(e)).length) process.exit(1);

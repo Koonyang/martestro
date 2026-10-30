@@ -46,9 +46,11 @@ svg.i{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-
 .brand{display:flex;align-items:center;gap:9px;color:var(--t);text-decoration:none!important}
 .brand svg{width:30px;height:30px;border-radius:9px;flex:0 0 auto}
 .brand .wm{font-family:"Great Vibes","Snell Roundhand","Apple Chancery","Brush Script MT",cursive;font-weight:400;font-size:31px;line-height:1;letter-spacing:0;padding-top:4px;color:var(--a-ink)}
-.stamp{font-size:12px;color:var(--a-ink);background:var(--a2);padding:5px 10px;border-radius:999px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.stamp{font-size:12px;color:var(--m);font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
 .stamp:empty{display:none}
-.stamp::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 0 3px color-mix(in srgb,var(--g) 30%,transparent)}
+.stamp::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--g)}
+.site-foot .dot{color:var(--line)}
+.site-foot .stamp:empty+.dot{display:none}
 main{max-width:680px;margin:0 auto;padding:4px 16px 0}
 /* hero */
 .hero{padding:14px 4px 6px}
@@ -232,6 +234,23 @@ details ol li::before{content:counter(s);position:absolute;left:0;top:7px;width:
 .divider{display:flex;align-items:center;gap:10px;color:var(--m);font-size:12.5px;font-weight:600;margin:22px 0 6px}
 .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
 #btnMore{margin:6px 0 4px}
+.site-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 8px;margin:26px 0 6px}
+.foot-link{display:inline-flex;align-items:center;gap:5px;background:none;min-height:36px;padding:6px 10px;font-size:12.5px;font-weight:600;color:var(--m);border-radius:10px;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--m) 40%,transparent);text-underline-offset:3px}
+.foot-link:hover{color:var(--a-ink);filter:none;text-decoration-color:var(--g)}
+.foot-link svg.i{width:15px;height:15px}
+.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:680px;max-height:88vh;max-height:88dvh;border-radius:24px 24px 0 0;background:var(--bg);color:var(--t);box-shadow:0 -10px 40px rgba(15,22,38,.25);overflow:hidden}
+.sheet[open]{display:flex;animation:sheetUp .34s var(--ease)}
+.sheet::backdrop{background:rgba(15,22,38,.45);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.sheet-in{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:8px 16px calc(20px + env(safe-area-inset-bottom))}
+.sheet-grab{width:40px;height:5px;border-radius:99px;background:var(--line);margin:2px auto 8px}
+.sheet-h{position:sticky;top:-8px;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:6px 4px 8px;background:var(--bg)}
+.sheet-h h1{font-size:20px;font-weight:800;letter-spacing:-.03em;margin:0}
+.sheet-h p{margin:3px 0 0;color:var(--t2);font-size:13.5px}
+.sheet-x{flex:0 0 40px;width:40px;height:40px;min-height:0;padding:0;border-radius:12px;background:var(--card2);color:var(--t2);display:flex;align-items:center;justify-content:center}
+.sheet-x svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+@media (min-width:860px){.sheet{margin:auto;border-radius:24px;max-height:82vh}}
+@media (prefers-reduced-motion:reduce){.sheet[open]{animation:none}}
 .foot{color:var(--m);font-size:12.5px;line-height:1.65;margin:14px 4px}
 /* sources */
 .st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:12px 0 4px}
@@ -323,7 +342,6 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="url(#lgM)"/><path d="M9 23 21.5 10.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="9.6" cy="22.4" r="3.1" fill="#C9A227"/><path d="M20.2 11.8c-.6-3.4 1.6-5.6 5.6-5.6 0 4-2.2 6.2-5.6 5.6z" fill="#E2C55A"/></svg>
       <span class="wm">Martestro</span>
     </a>
-    <span id="dataStamp" class="stamp"></span>
   </div>
 </header>
 
@@ -405,9 +423,15 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
   <p class="foot" id="pantryNote"></p>
 </section>
 
-<!-- ④ 정보 -->
-<section class="tab" id="tab-info">
-  <div class="page-h"><h1>데이터 출처</h1><p>어디서 가져온 정보인지 투명하게 알려 드려요.</p></div>
+<footer class="site-foot"><span id="dataStamp" class="stamp"></span><span class="dot" aria-hidden="true">·</span><button type="button" id="btnSrc" class="foot-link" aria-haspopup="dialog"><svg class="i"><use href="#i-info"/></svg>출처·데이터 정보</button></footer>
+</main>
+
+<!-- 출처·데이터 정보: 메뉴 탭 대신 페이지 맨 아래 작은 링크로 여는 시트 -->
+<dialog id="srcSheet" class="sheet" aria-labelledby="srcTitle">
+ <div class="sheet-in">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <div class="sheet-h"><div><h1 id="srcTitle">출처·데이터 정보</h1><p>어디서 가져온 정보인지 투명하게 알려 드려요.</p></div><button type="button" class="sheet-x" id="srcClose" aria-label="닫기"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <section id="tab-info">
   <div class="card">
     <div class="card-h"><h2><span class="ic-box"><svg class="i"><use href="#i-db"/></svg></span>수집 현황</h2></div>
     <div id="dataInfo" class="muted"></div>
@@ -425,15 +449,15 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <p class="muted small" style="margin:14px 2px;line-height:1.65">마트 위치: © OpenStreetMap 기여자 — 전국 마트 목록을 매주 미리 받아 둔 데이터<span id="martDataDate"></span>를 써요 (없으면 Overpass 실시간 검색). 주소 검색: Nominatim.<br>OpenStreetMap에 등록되지 않은 마트는 목록에 안 나올 수 있어요.</p>
     <button class="ghost block" id="btnReset">저장된 내 데이터 모두 지우기</button>
   </div>
-</section>
-</main>
+  </section>
+ </div>
+</dialog>
 
 <button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인 <i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <nav aria-label="메뉴"><div class="nav-in">
   <button data-tab="tab-loc" class="on"><svg class="i"><use href="#i-pin"/></svg>위치·마트</button>
   <button data-tab="tab-deals"><svg class="i"><use href="#i-tag"/></svg>할인 재료</button>
   <button data-tab="tab-recipes"><svg class="i"><use href="#i-pot"/></svg>레시피 추천</button>
-  <button data-tab="tab-info"><svg class="i"><use href="#i-info"/></svg>출처</button>
 </div></nav>
 
 <script>
@@ -2073,6 +2097,12 @@ function updateFab(){
   $('fab').setAttribute('aria-label', '할인 식재료 확인 · ' + n + '곳');
 }
 $('fab').addEventListener('click', function(){ showTab('tab-deals'); });
+// 출처·데이터 정보 시트 (dialog) — 닫기 버튼·ESC·바깥 누르면 닫힘
+function openSources(){ var d = $('srcSheet'); if (d.showModal) { if (!d.open) d.showModal(); } else d.setAttribute('open',''); $('srcSheet').querySelector('.sheet-in').scrollTop = 0; }
+function closeSources(){ var d = $('srcSheet'); if (d.close) d.close(); else d.removeAttribute('open'); }
+$('btnSrc').addEventListener('click', openSources);
+$('srcClose').addEventListener('click', closeSources);
+$('srcSheet').addEventListener('click', function(e){ if (e.target === $('srcSheet')) closeSources(); });
 function toggleSel(id, on){
   var i = state.selected.indexOf(id);
   if (on && i < 0) state.selected.push(id);
@@ -2128,7 +2158,7 @@ function renderDeals(){
     var nUp = active.filter(function(d){ return isUpcoming(d, today); }).length, nChk = active.filter(function(d){ return d.check; }).length;
     $('dealSummary').innerHTML = '<div class="sel-marts">'+marts.map(function(m){ return '<b>'+esc(m.name)+'</b>'; }).join(' · ')+' <span class="muted small">· '+fmtMD(today)+' 기준</span></div>' +
       '<div class="sum"><div class="stat hl"><b>'+active.length+'</b><span>할인 재료</span></div>' + (nUp ? '<div class="stat"><b>'+(active.length-nUp)+'</b><span>오늘 적용</span></div><div class="stat"><b>'+nUp+'</b><span>곧 시작</span></div>' : '') + '</div>' +
-      (nChk ? '<div class="notice" style="margin-top:12px"><b>가격확인</b> 표시: 탑마트 전단은 이미지라 '+(SOURCES.topmart && SOURCES.topmart.origLabel ? '가격을 눈으로 읽어 옮겼어요(취소선 가격 = '+esc(SOURCES.topmart.origLabel)+'). 틀릴 수 있으니' : '품목 이름만 자동 판독(OCR)했고 가격은 비워 뒀어요. 가격은 출처 탭의 전단 원본이나')+' 매장에서 꼭 확인하세요.</div>' : '');
+      (nChk ? '<div class="notice" style="margin-top:12px"><b>가격확인</b> 표시: 탑마트 전단은 이미지라 '+(SOURCES.topmart && SOURCES.topmart.origLabel ? '가격을 눈으로 읽어 옮겼어요(취소선 가격 = '+esc(SOURCES.topmart.origLabel)+'). 틀릴 수 있으니' : '품목 이름만 자동 판독(OCR)했고 가격은 비워 뒀어요. 가격은 「출처·데이터 정보」의 전단 원본이나')+' 매장에서 꼭 확인하세요.</div>' : '');
     var groups = {};
     active.forEach(function(d){ (groups[d.ing||'기타'] = groups[d.ing||'기타'] || []).push(d); });
     var upc = function(d){ return isUpcoming(d, today) ? 1 : 0; };
@@ -2319,7 +2349,7 @@ var MART_LABEL = {emart:'이마트',homeplus:'홈플러스',lottemart:'롯데마
 function renderSources(){
 var st = (DEALS_META && DEALS_META.status) || {};
 var up = DEALS_META && DEALS_META.updated;
-$('dataStamp').textContent = up ? (+up.slice(5,7)) + '/' + (+up.slice(8,10)) + ' ' + up.slice(11,16) + ' 갱신' : '';
+$('dataStamp').textContent = up ? (+up.slice(5,7)) + '/' + (+up.slice(8,10)) + ' ' + up.slice(11,16) + ' 전단 갱신' : '';
 $('dataStamp').title = '전단 데이터 마지막 변경 (한국시간)';
 $('dataInfo').innerHTML = (up ? '전단 데이터 마지막 변경: <b>' + esc(up.slice(0,16).replace('T',' ')) + '</b> (한국시간)' + (DATA_LIVE ? '' : ' · 앱 내장본') : '') +
   '<div class="st-grid">' + Object.keys(st).map(function(k){ var x = st[k]; return '<div class="st'+(x.ok === false ? ' bad' : x.mode === 'auto' ? ' ok' : '')+'"><b>' + esc(MART_LABEL[k]||k) + '</b><span>' + (x.ok === false ? '최근 수집 실패 · 이전 데이터' : x.mode === 'auto' ? '자동 수집' : x.mode === 'manual' ? '직접 정리' : '유지') + (x.fetched ? ' · ' + esc(x.fetched.slice(5).replace('-','/')) : '') + '</span></div>'; }).join('') + '</div>';
