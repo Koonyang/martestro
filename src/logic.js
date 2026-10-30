@@ -20,26 +20,37 @@ var BRANDS = {
   local:{label:'동네마트',big:false,color:'#4a7c59'}
 };
 
-function detectBrand(tags){
-  tags = tags || {};
-  var s = [tags.name, tags['name:ko'], tags['name:en'], tags.brand, tags['brand:ko'], tags['brand:en'], tags.operator].filter(Boolean).join(' ');
-  var t = s.toLowerCase();
-  if (/탑\s*마트|top\s*mart/.test(t)) return 'topmart'; // 서원유통 탑마트 (경남·부산 지역 체인)
+// 이름(→ 영문명 → 브랜드 태그 → 운영사) 순서로 한 필드씩 판별. '케이마트·하이마트'처럼 '이마트'가 들어간 동네마트를 이마트로 잘못 보지 않게 앞 글자를 확인해요.
+function brandOfText(t){
+  if (/써브웨이|subway|세탁/.test(t)) return 'skip';
+  if (/(이\s*마트|e\s*-?\s*(mart|마트))\s*24|gs\s*25|^cu\b|\bcu\s|씨유|세븐\s*일레븐|7-?eleven|미니스톱|ministop/.test(t)) return 'convenience';
+  if (/서원\s*유통|^\(?주?\)?\s*탑\s*마트|^top\s*mart/.test(t)) return 'topmart';
   if (/코스트코|costco/.test(t)) return 'costco';
   if (/트레이더스|traders/.test(t)) return 'traders';
   if (/노브랜드|no\s*brand/.test(t)) return 'nobrand';
-  if (/이마트\s*24|emart\s*24/.test(t)) return 'convenience';
-  if (/에브리데이|everyday/.test(t)) return 'emart_everyday';
-  if (/이마트|e-?mart/.test(t)) return 'emart';
-  if (/홈플러스\s*익스프레스|homeplus\s*express|익스프레스/.test(t)) return 'homeplus_express';
-  if (/홈플러스|homeplus/.test(t)) return 'homeplus';
+  if (/(이\s*마트|e\s*-?\s*(mart|마트))\s*(에브리|everyday|슈퍼)/.test(t)) return 'emart_everyday';
+  if (/(^|[^가-힣])이\s*마트|(^|[^a-z가-힣])e\s*-?\s*(mart|마트)/.test(t)) return 'emart';
+  if (/홈플러스\s*(익스|슈퍼)|home\s*plus\s*(express|365)|365\s*홈플러스/.test(t)) return 'homeplus_express';
+  if (/홈플러스|home\s*plus/.test(t)) return 'homeplus';
   if (/롯데\s*마트|lotte\s*mart/.test(t)) return 'lottemart';
   if (/롯데\s*슈퍼|lotte\s*super/.test(t)) return 'lottesuper';
   if (/하나로|농협|nonghyup|hanaro/.test(t)) return 'hanaro';
   if (/gs\s*(the\s*)?fresh|gs\s*더\s*프레시|gs\s*프레시|gs\s*슈퍼|gs\s*수퍼/.test(t)) return 'gsfresh';
   if (/킴스\s*클럽|kim'?s\s*club/.test(t)) return 'kims';
-  if (/(롯데|현대|신세계|갤러리아|ak)\s*백화점|식품관|department/.test(t) || tags.shop === 'department_store') return 'dept';
-  if (tags.shop === 'convenience' || /gs25|^cu\b|씨유|세븐일레븐|7-?eleven|미니스톱|ministop/.test(t)) return 'convenience';
+  if (/(롯데|현대|신세계|갤러리아|ak)\s*백화점|식품관|department/.test(t)) return 'dept';
+  return null;
+}
+function detectBrand(tags){
+  tags = tags || {};
+  var fields = [tags.name, tags['name:ko'], tags['name:en'], tags.brand, tags['brand:ko'], tags['brand:en'], tags.operator];
+  for (var i = 0; i < fields.length; i++){
+    if (!fields[i]) continue;
+    var b = brandOfText(String(fields[i]).toLowerCase().trim());
+    if (b === 'skip') return 'local';
+    if (b) return b;
+  }
+  if (tags.shop === 'department_store') return 'dept';
+  if (tags.shop === 'convenience') return 'convenience';
   return 'local';
 }
 
@@ -50,7 +61,7 @@ function haversineKm(lat1, lon1, lat2, lon2){
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-var NON_FOOD_RE = /상가|도매|타운|프라자|플라자|핸드백|네일|샘물|이유식|문구|화장품|약국|의류|가구|전자|철물|공구|꽃|낚시|이불|보일러|건설|자재|plaza|mall/i;
+var NON_FOOD_RE = /써브웨이|세탁|상가|도매|타운|프라자|플라자|핸드백|네일|샘물|이유식|문구|화장품|약국|의류|가구|전자|철물|공구|꽃|낚시|이불|보일러|건설|자재|plaza|mall/i;
 // Overpass 결과 → 마트 목록 (반경 안 전체 + 반경 밖은 대형마트만)
 function parseMarts(json, lat, lon, radiusKm){
   var out = [], seen = {};
@@ -71,6 +82,31 @@ function parseMarts(json, lat, lon, radiusKm){
     if (seen[key]) return; seen[key] = 1;
     out.push({id:id, name:name, brand:brand, lat:la, lon:lo, distKm:d,
       addr:[tags['addr:city'], tags['addr:district'], tags['addr:street'], tags['addr:housenumber']].filter(Boolean).join(' ')});
+  });
+  out.sort(function(a,b){ return a.distKm - b.distKm; });
+  return out;
+}
+
+// ---- 미리 만든 전국 마트 타일 (data/marts/) ----
+var MART_TILE = 0.1; // 도(°) 단위 격자, 약 11km × 9km
+function martTileKeys(lat, lon, km){
+  var dLat = km / 111.32, dLon = km / (111.32 * Math.cos(lat * Math.PI / 180)), out = [];
+  for (var i = Math.floor((lat - dLat) / MART_TILE); i <= Math.floor((lat + dLat) / MART_TILE); i++)
+    for (var j = Math.floor((lon - dLon) / MART_TILE); j <= Math.floor((lon + dLon) / MART_TILE); j++) out.push(i + '_' + j);
+  return out;
+}
+var OSM_TYPE = {n:'node', w:'way', r:'relation'};
+// rows: [[id('n123'), lat, lon, name, brand?], ...] → parseMarts 와 같은 모양의 목록 (대형마트는 7km 안이면 반경 밖이어도 포함)
+function martsFromRows(rows, lat, lon, radiusKm, bigKm){
+  var out = [], seen = {};
+  bigKm = bigKm || 7;
+  rows.forEach(function(r){
+    var id = (OSM_TYPE[r[0][0]] || 'node') + '/' + r[0].slice(1);
+    if (seen[id]) return; seen[id] = 1;
+    var brand = r[4] || 'local', big = BRANDS[brand] && BRANDS[brand].big;
+    var d = haversineKm(lat, lon, r[1], r[2]);
+    if (d > (big ? Math.max(radiusKm, bigKm) : radiusKm)) return;
+    out.push({id:id, name:r[3], brand:brand, lat:r[1], lon:r[2], distKm:d, addr:''});
   });
   out.sort(function(a,b){ return a.distKm - b.distKm; });
   return out;
@@ -350,4 +386,4 @@ function rankRecipes(recipes, deals, today){
 
 function formatWon(n){ return n==null ? '' : Number(n).toLocaleString('ko-KR') + '원'; }
 
-if (typeof module !== 'undefined') module.exports = {isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

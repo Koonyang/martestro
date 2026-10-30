@@ -25,7 +25,13 @@
 | 코스트코 | 마트고(martgo) 집계 일부 | 자동 갱신 없음 (기간 끝나면 사라짐) | 참고용 |
 
 - 레시피: 식품의약품안전처 **식품안전나라 「조리식품의 레시피 DB」(COOKRCP01) Open API** 983건 + 직접 작성한 기본 레시피
-- 마트 위치: © OpenStreetMap 기여자 (Overpass API), 주소 검색: Nominatim
+- 마트 위치: © OpenStreetMap 기여자 (ODbL) — 전국 슈퍼마켓·대형마트·편의점 목록을 **매주** 미리 받아 `data/marts/` 에 격자 타일로 저장. 주소 검색: Nominatim
+
+### 내 주변 마트 찾기 (빠른 검색)
+- 매주 월요일 03:30 KST 에 `scripts/build_marts.js` 가 OpenStreetMap(Overpass, 안 되면 Geofabrik 추출본 + osmium)에서 전국 마트를 받아요.
+- 0.1°(약 11×9km) 격자로 나눠 `data/marts/s/<타일>.json`(마트), `data/marts/c/<타일>.json`(편의점), 전국 대형마트는 `data/marts/big.json` 한 파일로 저장해요. 비식품 가게 거르기는 이때 미리 해요.
+- 앱은 내 위치 주변 타일 몇 개(수 KB)만 받아 거리 계산만 하므로 반경을 5km로 넓혀도 바로 나와요. 받은 타일은 브라우저가 캐시해요.
+- 타일을 못 받으면 예전처럼 Overpass 실시간 검색으로 대신해요.
 
 ### 매일 하는 일 (`.github/workflows/update-deals.yml`)
 1. 매일 05:00 KST(또는 Actions 탭에서 **Run workflow**)에 `scripts/update_deals.js` 실행
@@ -49,12 +55,14 @@
 ```
 index.html              빌드된 앱 (GitHub Pages 가 이 파일을 보여 줌)
 data/deals.json         전단 할인 데이터 (매일 자동 갱신)
+data/marts/             전국 마트 위치 타일 (매주 자동 갱신)
 src/template.html       화면(HTML/CSS/UI 코드)
 src/logic.js            재료 판별·레시피 추천 로직 (브라우저/Node 공용)
 src/pub_data.js         식품안전나라 레시피 (scripts/build_pub.js 로 생성)
 scripts/update_deals.js 전단 갱신 실행기
 scripts/scrapers/       마트별 수집기 (emart, homeplus, lottemart, topmart)
 scripts/build.js        src + data → index.html
+scripts/build_marts.js  OpenStreetMap → data/marts 타일
 test/                   로직 테스트(test.js), 브라우저 확인(browser/smoke.js)
 ```
 

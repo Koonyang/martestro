@@ -102,4 +102,21 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
 { const { extractNames } = require('../scripts/scrapers/topmart');
   const n = extractNames('대추방울토마토 4,980\n채소류 두부/콩나물류\n칼치 (국산)\n@#$ 12,900\n농심)새우깡\n한우냉장양지 100g', L.dealIng);
   assert.deepStrictEqual(n, ['대추방울토마토','갈치','한우냉장양지'], JSON.stringify(n)); }
+
+// 미리 만든 마트 타일 경로: 같은 Overpass 결과로 실시간 검색(parseMarts)과 같은 목록이 나오는지
+{ const { toRows } = require('../scripts/build_marts');
+  for (const [f, lat, lon] of [['op.json',37.5663,126.9779],['op_jinju.json',35.1617518,128.1153464]]) {
+    const js = JSON.parse(require('fs').readFileSync(__dirname+'/fixtures/'+f));
+    const g = toRows(js.elements); const rows = g.big.concat(g.local, g.conv);
+    for (const r of [1,2,3]) {
+      const a = L.parseMarts(js, lat, lon, r).filter(m=>m.brand!=='convenience').map(m=>m.id).sort();
+      const b = L.martsFromRows(g.big.concat(g.local), lat, lon, r).map(m=>m.id).sort();
+      assert.deepStrictEqual(b, a, f+' r='+r);
+    }
+    assert(L.martTileKeys(lat, lon, 5).length <= 6);
+  }
+  const jj = JSON.parse(require('fs').readFileSync(__dirname+'/fixtures/op_jinju.json')); const g = toRows(jj.elements);
+  const near = L.martsFromRows(g.big.concat(g.local), 35.1617518, 128.1153464, 3);
+  assert(near.some(m=>m.brand==='topmart' && m.id==='node/4655465094'), '진주 탑마트 호탄점 (타일 경로)');
+  console.log('마트 타일 경로 = 실시간 검색 결과 일치 (서울시청·진주 호탄동, 1/2/3km)'); }
 console.log('ALL TESTS PASSED');
