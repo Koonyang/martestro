@@ -26,7 +26,7 @@ jobs:
   update:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,7 +45,8 @@ jobs:
         run: |
           sudo apt-get install -y -qq osmium-tool || true
           node scripts/build_marts.js
-      - name: 전단 읽기 → data/deals.json 갱신
+      - name: 전단·편의점 행사 읽기 → data/deals.json 갱신
+        timeout-minutes: 25  # 세븐일레븐 목록 응답이 느려(쪽당 ~10초) 편의점 포함 10분 남짓
         run: node scripts/update_deals.js
       - name: 앱(index.html) 다시 만들기 + 테스트
         run: |

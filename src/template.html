@@ -539,7 +539,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 
   <div class="card">
     <div class="card-h"><h2><span class="ic-box"><svg class="i"><use href="#i-paper"/></svg></span>위치 설정 없이 대형마트 정보 확인</h2></div>
-    <p class="desc">대형마트 전단은 전국 공통 행사라 위치 없이도 고를 수 있어요. (점포별로 다를 수 있어요)</p>
+    <p class="desc">대형마트 전단과 편의점 행사는 전국 공통이라 위치 없이도 고를 수 있어요. (점포별로 다를 수 있어요)</p>
     <div class="chips" id="brandChips"></div>
   </div>
 </section>
@@ -654,7 +654,16 @@ function load(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.pars
 function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
 var OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-var DATA_BRANDS = ['emart','homeplus','lottemart','costco','topmart'];
+// 편의점(CU·세븐일레븐·이마트24)은 행사 데이터가 있을 때만 칩으로 보여요
+var CVS_BRANDS = ['cu','seven','emart24'];
+var DATA_BRANDS = ['emart','homeplus','lottemart','costco','topmart'].concat(CVS_BRANDS);
+function hasDeals(b){ return CVS_BRANDS.indexOf(b) < 0 || !!(DEALS[b] && DEALS[b].length); }
+// 가게 → 행사 데이터 브랜드: 대형마트는 그대로, 근처 편의점은 이름으로 CU·세븐일레븐·이마트24 를 가려요
+function dataBrandOf(m){
+  if (DATA_BRANDS.indexOf(m.brand) >= 0 && hasDeals(m.brand)) return m.brand;
+  if (m.brand === 'convenience'){ var c = cvsBrandOf(m.name); if (c && DATA_BRANDS.indexOf(c) >= 0 && hasDeals(c)) return c; }
+  return null;
+}
 
 var state = {
   loc: load('mr_loc', null),            // {lat, lon, label}
@@ -801,7 +810,7 @@ function applyMarts(list, how){
   var ids = {}; state.marts.forEach(function(m){ ids[m.id]=1; });
   state.selected = state.selected.filter(function(id){ return ids[id] || id.indexOf('brand:')===0 || state.custom[id]; });
   if (!state.selected.length){
-    var bigOne = state.marts.filter(function(m){ return DATA_BRANDS.indexOf(m.brand)>=0; })[0];
+    var bigOne = state.marts.filter(function(m){ return DATA_BRANDS.indexOf(m.brand)>=0 && CVS_BRANDS.indexOf(m.brand)<0; })[0];
     if (bigOne) state.selected.push(bigOne.id);
   }
   persist();
@@ -863,10 +872,11 @@ function findMartsLive(){
 }
 
 function dealSourceOf(m){
-  if (DATA_BRANDS.indexOf(m.brand) >= 0){
-    var s = SOURCES[m.brand] || {};
+  var db = dataBrandOf(m);
+  if (db){
+    var s = SOURCES[db] || {};
     if (s.needsCheck) return tipBtn('chk2','전단 판독 · 가격확인','tag chk');
-    return s.official ? '<span class="tag real">공식 전단</span>' : '<span class="tag real">전단 정리</span>';
+    return s.official ? '<span class="tag real">'+esc(s.tag || '공식 전단')+'</span>' : '<span class="tag real">전단 정리</span>';
   }
   if (m.brand==='traders') return '<span class="tag">전단 없음 · 직접 입력</span>';
   return '<span class="tag">전단 없음 · 직접 입력</span>';
@@ -888,7 +898,7 @@ function renderMarts(){
 var SHOP_SVG = window.SHOP_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.2 3.5h15.6l2 5.6a2.7 2.7 0 0 1-4.9 1.7 2.8 2.8 0 0 1-4.9 0 2.8 2.8 0 0 1-4.9 0A2.7 2.7 0 0 1 2.2 9.1z"/><path d="M4 12.4V20a1 1 0 0 0 1 1h5v-5.2h4V21h5a1 1 0 0 0 1-1v-7.6a4.4 4.4 0 0 1-3.1.4 4.2 4.2 0 0 1-1.9-1 4.3 4.3 0 0 1-5.9 0 4.2 4.2 0 0 1-1.9 1 4.4 4.4 0 0 1-3.2-.4z"/></svg>';
 // brand key -> [logo file, full-bleed app icon?]
 var LOGOS = {emart:['emart'], emart_everyday:['emart'], homeplus:['homeplus'], homeplus_express:['homeplus'],
-  lottemart:['lotte'], lottesuper:['lotte'], costco:['costco'], topmart:['topmart'], hanaro:['hanaro',1], kims:['kims',1], gsfresh:['gs']};
+  lottemart:['lotte'], lottesuper:['lotte'], costco:['costco'], topmart:['topmart'], cu:['cu'], seven:['seven'], emart24:['emart24'], gs25:['gs25'], hanaro:['hanaro',1], kims:['kims',1], gsfresh:['gs']};
 function logoOf(m){
   if (m.brand === 'convenience') {
     var t = (m.name||'').toLowerCase();
@@ -962,7 +972,7 @@ function toggleSel(id, on){
 
 function renderBrandChips(){
   setTimeout(updateFab, 0);
-  $('brandChips').innerHTML = DATA_BRANDS.map(function(b){
+  $('brandChips').innerHTML = DATA_BRANDS.filter(hasDeals).map(function(b){
     var id = 'brand:' + b, on = state.selected.indexOf(id) >= 0;
     return '<button class="chip'+(on?' on':'')+'" data-id="'+id+'" aria-pressed="'+on+'">'+esc(BRANDS[b].label)+'</button>';
   }).join('');
@@ -985,9 +995,10 @@ function selectedMarts(){ return state.selected.map(martById).filter(Boolean); }
 function collectDeals(){
   var marts = selectedMarts(), out = [], usedBrand = {};
   marts.forEach(function(m){
-    if (DEALS[m.brand] && !usedBrand[m.brand]){
-      usedBrand[m.brand] = 1;
-      DEALS[m.brand].forEach(function(d){ out.push(Object.assign({}, d, {martName: BRANDS[m.brand].label})); });
+    var db = dataBrandOf(m) || m.brand; // 근처 CU 가게를 고르면 CU 행사를 보여 줘요
+    if (DEALS[db] && !usedBrand[db]){
+      usedBrand[db] = 1;
+      DEALS[db].forEach(function(d){ out.push(Object.assign({}, d, {martName: BRANDS[db].label})); });
     }
     var c = state.custom[m.id];
     if (c) c.items.forEach(function(it, i){
@@ -1131,20 +1142,23 @@ function dealThumb(d){
 function dealRow(d){
   var today = todayStr();
   var S = SOURCES[d.src] || {};
-  var tag = d.mine ? '<span class="tag me">내가 입력</span>' : d.check ? tipBtn('chk','가격확인','tag chk') : (S.official ? '<span class="tag real">공식 전단</span>' : '<span class="tag real">전단 정리</span>');
+  var tag = d.mine ? '<span class="tag me">내가 입력</span>' : d.check ? tipBtn('chk','가격확인','tag chk') : (S.official ? '<span class="tag real">'+esc(S.tag || '공식 전단')+'</span>' : '<span class="tag real">전단 정리</span>');
   var up = d.start && d.start > today;
   var when = d.end ? (up ? '<span class="tag soon">'+fmtMD(d.start)+' 시작</span>' : '') + (d.end===today ? '<span class="tag today">오늘까지</span>' : '<span>'+(d.start && d.start === d.end ? fmtMD(d.end)+' 단 하루' : '~' + fmtMD(d.end))+'</span>') : '';
   var off = (d.price != null && d.orig > d.price) ? Math.round((1 - d.price / d.orig) * 100) : 0;
+  var np = nPlusOne(d.cond); // 편의점 1+1·2+1: 배지는 「1+1」, 가격은 개당
   var priceHtml = d.price != null
-    ? (d.orig ? '<span class="was">'+(off ? '<span class="off">−'+off+'%</span>' : '')+(S.origLabel ? '<span>'+esc(S.origLabel)+'</span>' : '')+'<span class="orig">'+formatWon(d.orig)+'</span></span>' : '') + '<span class="now">'+formatWon(d.price)+'</span>'
+    ? (d.orig ? '<span class="was">'+(np ? '<span class="off np">'+np+'</span>' : off ? '<span class="off">−'+off+'%</span>' : '')+(S.origLabel ? '<span>'+esc(S.origLabel)+'</span>' : '')+'<span class="orig">'+formatWon(d.orig)+'</span></span>' : '') + '<span class="now">'+formatWon(d.price)+'</span>'
     : '<span class="cond">'+esc(d.cond)+'</span>';
   if (d.kind) tag = '<span class="tag conv">'+esc(d.kind)+'</span>' + tag;
   if (d.ing){ // 레시피 재료로 쓰이는 품목만 고를 수 있어요
     var sk = selKey(d), on = !!selDeals[sk];
-    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기">'+dealThumb(d)+'<span class="pk-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span></button><div style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기">'+dealThumb(d)+'<span class="pk-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span></button><div style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(np ? nPlusOneNote(d.cond) : d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
   }
-  return '<div class="deal">'+dealThumb(d)+'<div style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+  return '<div class="deal">'+dealThumb(d)+'<div style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(np ? nPlusOneNote(d.cond) : d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
 }
+function nPlusOne(c){ var m = /^(\d)\+(\d)$/.exec(c || ''); return m ? m[1]+'+'+m[2] : ''; }
+function nPlusOneNote(c){ var m = /^(\d)\+(\d)$/.exec(c); return (+m[1] + +m[2]) + '개 사면 개당'; }
 function fmtMD(s){ var p = s.split('-'); return (+p[1])+'/'+(+p[2]); }
 
 // ---------- 직접 입력 ----------
@@ -1472,7 +1486,7 @@ function renderRecipes(append){
 }
 
 // ---------- 출처 ----------
-var MART_LABEL = {emart:'이마트',homeplus:'홈플러스',lottemart:'롯데마트',topmart:'탑마트',costco:'코스트코'};
+var MART_LABEL = {emart:'이마트',homeplus:'홈플러스',lottemart:'롯데마트',topmart:'탑마트',costco:'코스트코',cu:'CU',seven:'세븐일레븐',emart24:'이마트24'};
 // 직접 쓴 레시피 사진: 실제 사진은 위키미디어 공용(자유 이용 허락) 출처를 모두 적고, 나머지는 AI 생성 이미지라고 밝혀요
 function photoCredits(){
   var real = RECIPES.filter(function(r){ return r.imgCredit; }), ai = RECIPES.filter(function(r){ return r.img && r.imgAi; });
@@ -1491,7 +1505,7 @@ $('srcList').innerHTML = Object.keys(SOURCES).map(function(k){
   var s = SOURCES[k];
   return '<div class="src-item"><span class="tag '+(s.needsCheck?'chk':'real')+'">'+(s.official?'공식':s.needsCheck?'전단 이미지 판독':'2차 정리')+'</span><div class="t">'+esc(s.label)+'</div><span class="muted small">행사기간: '+esc(s.period)+' · 확인일: '+esc(s.checked)+'</span><br><a class="small" href="'+esc(s.url)+'" target="_blank" rel="noopener">'+esc(s.url)+'</a>'+(s.pages && s.pages.length ? '<br><span class="small">전단 원본 이미지: '+s.pages.map(function(u,i){ return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+(i+1)+'면</a>'; }).join(' · ')+'</span>' : '')+(s.note?'<br><span class="muted small">'+esc(s.note)+'</span>':'')+'</div>';
 }).join('') + (PUB_INFO ? '<div class="src-item"><span class="tag real">공공데이터</span><div class="t">레시피: '+esc(PUB_INFO.source)+'</div><span class="muted small">제공: 식품의약품안전처 · 이용허락범위: 제한 없음(공공데이터포털 표기) · 수집일: '+esc(PUB_INFO.fetched)+'<br>전체 '+PUB_INFO.total+'건(공개 샘플 호출로 받을 수 있는 최대치) 중 중복·재료 파싱 불가를 빼고 '+PUB_INFO.kept+'건 수록. 주재료 표시는 재료 목록으로 자동 추정했어요. 사진은 식품안전나라 서버에서 화면에 보일 때 불러와요.</span><br><a class="small" href="https://www.foodsafetykorea.go.kr/api/openApiInfo.do?menu_grp=MENU_GRP31&menu_no=661&show_cnt=10&start_idx=1&svc_no=COOKRCP01" target="_blank" rel="noopener">식품안전나라 Open API 안내</a> · <a class="small" href="https://www.data.go.kr/data/15060073/openapi.do" target="_blank" rel="noopener">공공데이터포털</a></div>' : '') +
-  '<div class="src-item"><span class="tag real">직접 작성</span><div class="t">기본 레시피 '+RECIPES.length+'개</div><span class="muted small">흔한 집밥 레시피를 앱용으로 짧게 정리했어요. 분량·만드는 법은 직접 썼어요.</span></div>' + photoCredits() + '<div class="muted small" style="margin-top:12px">코스트코는 공개 전단이 없어 마트고 집계 일부만 넣었고 자동 갱신되지 않아요. 트레이더스·노브랜드·하나로마트·GS더프레시·동네마트는 전단 데이터가 없어서 「할인 재료 직접 추가」로 입력해 주세요.</div>';
+  '<div class="src-item"><span class="tag real">직접 작성</span><div class="t">기본 레시피 '+RECIPES.length+'개</div><span class="muted small">흔한 집밥 레시피를 앱용으로 짧게 정리했어요. 분량·만드는 법은 직접 썼어요.</span></div>' + photoCredits() + '<div class="muted small" style="margin-top:12px">코스트코는 공개 전단이 없어 마트고 집계 일부만 넣었고 자동 갱신되지 않아요. GS25는 행사 상품을 앱에서만 공개해 빠져 있어요. 트레이더스·노브랜드·하나로마트·GS더프레시·동네마트는 전단 데이터가 없어서 「할인 재료 직접 추가」로 입력해 주세요.</div>';
 }
 var DATA_LIVE = false;
 renderSources();

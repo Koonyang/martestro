@@ -17,6 +17,11 @@ var BRANDS = {
   kims:{label:'킴스클럽',big:false,color:'#7a3fb0'},
   dept:{label:'백화점 식품관',big:false,color:'#5b5b9a'},
   convenience:{label:'편의점',big:false,color:'#888'},
+  // 편의점 행사(1+1·2+1·할인)는 전국 공통 — 가게 목록의 편의점은 'convenience' 그대로 두고 이름으로 브랜드를 가려요(cvsBrandOf)
+  cu:{label:'CU',big:false,color:'#652f8d',cvs:true},
+  gs25:{label:'GS25',big:false,color:'#00a3e0',cvs:true},
+  seven:{label:'세븐일레븐',big:false,color:'#008061',cvs:true},
+  emart24:{label:'이마트24',big:false,color:'#ffb81c',cvs:true},
   local:{label:'동네마트',big:false,color:'#4a7c59'}
 };
 
@@ -38,6 +43,15 @@ function brandOfText(t){
   if (/gs\s*(the\s*)?fresh|gs\s*더\s*프레시|gs\s*프레시|gs\s*슈퍼|gs\s*수퍼/.test(t)) return 'gsfresh';
   if (/킴스\s*클럽|kim'?s\s*club/.test(t)) return 'kims';
   if (/(롯데|현대|신세계|갤러리아|ak)\s*백화점|식품관|department/.test(t)) return 'dept';
+  return null;
+}
+// 편의점 이름 → 행사 데이터 브랜드 (없으면 null)
+function cvsBrandOf(name){
+  var t = String(name||'').toLowerCase();
+  if (/gs\s*25/.test(t)) return 'gs25';
+  if (/(이\s*마트|e\s*-?\s*(mart|마트))\s*24/.test(t)) return 'emart24';
+  if (/세븐\s*일레븐|7-?eleven|7\s*일레븐/.test(t)) return 'seven';
+  if (/^cu(\b|[가-힣\s])|[\s(]cu(\b|[가-힣\s])|씨유/.test(t)) return 'cu';
   return null;
 }
 function detectBrand(tags){
@@ -215,26 +229,32 @@ function dealIng(name){
 var CONV_SKIP = /참치액|육수|스톡|시즈닝|코인|한우|한돈|삼겹|새우살|수산|망고|곰거리|갈비|보신탕/;
 var CONV_RULES = [
   ['밀키트', null, /밀키트|부대찌개|플래터|짜장밥|쟁반/],
-  ['즉석밥', '즉석밥', /햇반|즉석\s*밥|컵밥|냉동\s*밥|햇쌀밥|오뚜기\s*밥/],
+  ['즉석밥', '즉석밥', /햇반|즉석\s*밥|컵밥|컵반|솥반|냉동\s*밥|햇쌀밥|오뚜기\s*밥/],
+  ['도시락·김밥', null, /도시락|삼각\s*김밥|김밥(?!\s*(햄|용|애|김))|주먹밥|샌드위치|햄버거|브리또|부리또|유부초밥/],
   ['냉동식품', null, /피자|돈[까가]스|너겟|핫도그|꿔바로우|탕수육|볶음밥|떡갈비|동그랑땡|소바바|냉동\s*(밀키트|면|피자)/],
-  ['라면', '라면', /라면|짜파게티|짜왕|비빔면|즉석\s*면|사발면|컵누들/],
+  ['라면', '라면', /라면(?!\S*(후랑크|프랑크))|짜파게티|짜왕|비빔면|즉석\s*면|사발면|큰사발|컵누들|짜슐랭|(소|큰)\s*컵(?!\S*떡)/],
   ['면', '우동면', /우동|칼국수|수제비/],
+  ['면', null, /냉면|막국수|밀면|콩국수|쌀국수|파스타(?!\s*소스)|스파게티(?!\s*소스)|납작당면/],
   ['만두', '만두', /만두|교자|딤섬|하가우|창펀/],
   ['즉석국·죽', null, /곰탕|즉석\s*국|미역국|육개장|죽\s*\d|죽$|죽\s*\(/],
   ['카레·짜장', '카레', /카레|짜장|덮밥\s*소스/],
-  ['햄', '햄', /스팸|햄(?!버)|베이컨/],
+  ['햄', '햄', /스팸|리챔|햄(?!버)|베이컨/],
   ['소시지', '소시지', /비엔나|소시지|소세지/],
   ['참치캔', '참치', /참치/],
   ['어묵', '어묵', /어묵/],
-  ['맛살', '맛살', /맛살/],
+  ['맛살', '맛살', /맛살|크래미|크랩킹/],
   ['떡', '떡', /떡볶이|냉동\s*떡|떡국\s*떡/],
-  ['통조림', null, /통조림/]
+  ['통조림', null, /통조림/],
+  // 편의점 즉석식(데우거나 바로 먹는 것) — 생고기와 헷갈리지 않게 가공 표시가 있는 이름만
+  ['즉석식', null, /후랑크|프랑크|핫바|꼬치바|닭꼬치|닭강정|순살\s*치킨|후라이드\s*치킨|양념\s*치킨|로스트\s*치킨|닭가슴살\s*(바|스테이크|통살|소시지|큐브|볼)|(직화|훈제|그릴)\s*닭가슴살|함박|미트볼|짜글이|장조림(?!용)/]
 ];
+// 이름에 이런 말이 있으면 고기 이름(한우·갈비…)이 있어도 조리된 간편식품으로 봐요
+var CONV_COOKED = /곰탕|국밥|육개장|미역국|해장국|설렁탕|후랑크|프랑크|핫바|도시락|김밥|덮밥|컵반|짜글이/;
 function convOf(name){
   var n = String(name||'');
   if (!n) return null;
   if (CONV_RULES[0][2].test(n)) return {kind:CONV_RULES[0][0], ing:null}; // 밀키트는 '한우사골 부대찌개'처럼 고기 이름이 있어도 간편식품
-  if (CONV_SKIP.test(n)) return null;
+  if (CONV_SKIP.test(n) && !CONV_COOKED.test(n)) return null;
   for (var i=1;i<CONV_RULES.length;i++) if (CONV_RULES[i][2].test(n)) return {kind:CONV_RULES[i][0], ing:CONV_RULES[i][1]};
   return null;
 }
@@ -246,7 +266,8 @@ function buildDeals(){
     out[brand] = RAW_DEALS[brand].map(function(r, i){
       // r[9] = '간편식품' (선택 칸, 예전 데이터엔 없음 → 이름으로 다시 판정)
       // r[10] = 상품 사진 주소 (선택 칸, 공식 상품 이미지가 있는 마트만 — 지금은 홈플러스)
-      var cv = convOf(r[0]); if (!cv && r[9] === CONV_CAT) cv = {kind:CONV_CAT, ing:null};
+      // r[9] 이 종류 이름(예: '즉석식')이면 그 이름을, '간편식품'이면 묶음 이름을 표시
+      var cv = convOf(r[0]); if (!cv && typeof r[9] === 'string' && r[9]) cv = {kind:r[9], ing:r[6] && r[6] !== '-' ? r[6] : null};
       return {id: brand+'-'+i, brand: brand, name:r[0], price:r[1], orig:r[2], cond:r[3], start:r[4], end:r[5],
         ing: cv ? cv.ing : (r[6] === '-' ? null : (r[6] || dealIng(r[0]))), cat: cv ? CONV_CAT : null, kind: cv ? cv.kind : null, src: r[7] || brand, page: r[8] || null, img: safeImg(r[10]), real:true,
         check: !!(SOURCES[r[7] || brand] && SOURCES[r[7] || brand].needsCheck)};
@@ -701,4 +722,4 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, cvsBrandOf:cvsBrandOf, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

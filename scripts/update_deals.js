@@ -8,18 +8,21 @@ const L = require('../src/logic.js');
 const { todayKST } = require('./lib');
 
 const FILE = process.env.DEALS_FILE || path.join(__dirname, '..', 'data', 'deals.json');
-const SCRAPERS = { emart: require('./scrapers/emart'), homeplus: require('./scrapers/homeplus'), lottemart: require('./scrapers/lottemart'), topmart: require('./scrapers/topmart') };
-const MIN = { emart: 10, homeplus: 5, lottemart: 10, topmart: 5 }; // 이보다 적게 읽히면 '구조가 바뀌어 실패'로 보고 이전 데이터 유지
+const SCRAPERS = { emart: require('./scrapers/emart'), homeplus: require('./scrapers/homeplus'), lottemart: require('./scrapers/lottemart'), topmart: require('./scrapers/topmart'),
+  // 편의점 행사(전국 공통·한 달 단위). GS25 는 공개 행사 목록이 없어(우리동네GS 앱 전용) 빠져 있어요.
+  cu: require('./scrapers/cu'), seven: require('./scrapers/seven'), emart24: require('./scrapers/emart24') };
+const MIN = { emart: 10, homeplus: 5, lottemart: 10, topmart: 5, cu: 50, seven: 50, emart24: 30 }; // 이보다 적게 읽히면 '구조가 바뀌어 실패'로 보고 이전 데이터 유지
 const only = (process.env.ONLY || '').split(',').filter(Boolean);
 
 // 간편식품(즉석밥·라면·만두·냉동식품·밀키트·햄/소시지/참치캔·즉석국/카레·떡 등) 품목은 10번째 칸에 '간편식품' 표시.
 // 앞 9칸은 그대로라 예전 앱/데이터와 호환돼요(없는 칸은 null 로 채움).
 // 11번째 칸(r[10])은 선택: 상품 사진 주소(공식 상품 이미지가 있는 마트만). 없으면 칸 자체를 안 붙여요.
 function tagConv(r) {
-  const cv = L.convOf(r[0]), img = typeof r[10] === 'string' && r[10] ? r[10] : null;
-  if (!cv && !img) return r.length > 9 ? r.slice(0, 9) : r;
+  // 편의점 품목은 이름으로 못 가르는 종류(예: '즉석식')를 r[9] 에 직접 적어 와요 → 그대로 둬요
+  const cv = L.convOf(r[0]), kind = typeof r[9] === 'string' && r[9] ? r[9] : null, img = typeof r[10] === 'string' && r[10] ? r[10] : null;
+  if (!cv && !kind && !img) return r.length > 9 ? r.slice(0, 9) : r;
   const out = r.slice(0, 9); while (out.length < 9) out.push(null);
-  out.push(cv ? L.CONV_CAT : null);
+  out.push(cv ? L.CONV_CAT : kind);
   if (img) out.push(img);
   return out;
 }
@@ -43,7 +46,7 @@ function tagConv(r) {
       const same = JSON.stringify(items) === JSON.stringify(next.deals[mart]);
       next.deals[mart] = items;
       if (!same) next.sources[mart] = r.source;
-      next.status[mart] = { mode: 'auto', ok: true, fetched: same ? (st.fetched || today) : today, lastTry: today, count: items.length,
+      next.status[mart] = { mode: 'auto', ok: true, fetched: same ? (st.fetched || today) : today, lastTry: today, count: items.length, ...(r.total ? { total: r.total, dropped: r.dropped } : {}),
         ...(r.flyerId ? { flyerId: r.flyerId } : {}), ...(r.flyerTitle ? { flyerTitle: r.flyerTitle } : {}), msg: same ? '변화 없음' : '갱신됨' };
       log.push(`${mart}: ${same ? '변화 없음' : '갱신'} ${items.length}개`);
     } catch (e) {
@@ -55,7 +58,7 @@ function tagConv(r) {
   const strip = o => JSON.stringify({ s: o.sources, d: o.deals, st: Object.fromEntries(Object.entries(o.status).map(([k, v]) => [k, { ...v, lastTry: undefined, msg: undefined }])) });
   console.log(log.join('\n'));
   console.log('사진:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[10]).length + '/' + v.length).join(', '));
-  console.log('간편식품:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[9] === L.CONV_CAT).length).join(', '));
+  console.log('간편식품:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[9]).length).join(', '));
   if (strip(prev) === strip(next)) { console.log('변경 없음 — 저장 안 함'); return; }
   next.updated = new Date(Date.now() + 9 * 3600e3).toISOString().replace('Z', '+09:00').slice(0, 19) + '+09:00';
   // 데이터가 앱에서 정상적으로 읽히는지 마지막 확인

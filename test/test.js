@@ -347,4 +347,60 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   assert(html.includes("r.img && r.imgAi ? '<span class=\"ai-lbl\">AI 생성 이미지</span>'"), '썸네일 AI 표시');
   assert(html.includes('function photoCredits()') && html.includes('photoCredits() +'), '사진 출처');
 }
+{ // 편의점 행사(CU·세븐일레븐·이마트24): 분류·개당 가격·파서·브랜드
+  const fs = require('fs');
+  const C = require('../scripts/scrapers/cvs_common');
+  const k = n => { const c = C.classify(n); return c.keep ? (c.kind || 'ING:' + c.ing) : 'X'; };
+  // 간편식품은 남기고 종류 표시
+  assert.strictEqual(k('CJ)햇반210g'), '즉석밥'); assert.strictEqual(k('농심)신라면툼바큰사발'), '라면');
+  assert.strictEqual(k('CJ)비비고왕교자315g'), '만두'); assert.strictEqual(k('CJ)맥스봉숯불맛핫바90g'), '즉석식');
+  assert.strictEqual(k('하림)닭가슴살갈릭100g'), '즉석식'); assert.strictEqual(k('오뚜기)저당브리또바질치킨125g'), '도시락·김밥');
+  assert.strictEqual(k('CJ)비비고갈비탕400g'), '즉석식'); assert.strictEqual(k('오뚜기)우노불고기피자180g'), '냉동식품');
+  assert.strictEqual(k('삼양)맵탱청양대파소컵'), '라면'); assert.strictEqual(k('오뚜기)열라면맛치즈후랑크70g'), '즉석식');
+  // 확실한 식재료만 재료로
+  assert.strictEqual(k('CJ)국산콩두부찌개용380g'), 'ING:두부'); assert.strictEqual(k('종가집)맛김치300g'), 'ING:김치');
+  assert.strictEqual(k('풀무원)튜브다진마늘80g'), 'ING:마늘'); assert.strictEqual(k('신선)한돈삼겹살200g'), 'ING:돼지고기');
+  // 과자·음료·반려동물·생활용품·양념은 빼요
+  for (const n of ['농심)멘토스레인보우', '한성)일품실오징어30g', '농심)치타라24g', '청정원)고구마츄60G', 'CJ)햇반레드빈호박차500', '코카)스프라이트P500ml', '매크로)레이즈트러플감자',
+    '마즈)위스카스파우치_H', '동원)뉴트리스틱(참치닭가슴살)_', '피죤)핑크로즈스프레이120ml', '샘표)한국풍마파두부190g', '오리엔탈드레싱245ml'])
+    assert.strictEqual(k(n), 'X', n);
+  // 개당 가격 · 이번 달
+  assert.strictEqual(C.unitPrice(2200, '1+1'), 1100); assert.strictEqual(C.unitPrice(1500, '2+1'), 1000); assert.strictEqual(C.unitPrice(1000, '할인'), 1000);
+  assert.deepStrictEqual(C.monthRange('2026-10-30'), ['2026-10-01', '2026-10-31']); assert.deepStrictEqual(C.monthRange('2028-02-03'), ['2028-02-01', '2028-02-29']);
+  const R = ['2026-10-01', '2026-10-31'];
+  assert.deepStrictEqual(C.toRow({ name: 'CJ)햇반210g', price: 2200, label: '1+1', img: 'https://x.example/a.jpg' }, 'cu', R).row, ['CJ)햇반210g', 1100, 2200, '1+1', R[0], R[1], '즉석밥', 'cu', null, '간편식품', 'https://x.example/a.jpg']);
+  assert.deepStrictEqual(C.toRow({ name: 'CJ)맥스봉숯불맛핫바90g', price: 3000, orig: 3600, label: '할인' }, 'seven', R).row.slice(1, 10), [3000, 3600, '할인', R[0], R[1], '-', 'seven', null, '간편식품']);
+  assert.strictEqual(C.toRow({ name: 'CJ)비비고갈비탕400g', price: 5980, label: '2+1' }, 'seven', R).row[9], '즉석식');
+  assert.strictEqual(C.toRow({ name: '농심)멘토스레인보우', price: 900, label: '1+1' }, 'cu', R).row, null);
+  // 공식 목록 조각 파서 (구조가 바뀌면 여기서 걸려요)
+  const cu = require('../scripts/scrapers/cu').parse('<li class="prod_list"><a><img src="//img.example/p/1.jpg"><div class="name" onClick="view(1);"><p>CJ)햇반210g</p></div><div class="price"><strong>2,200</strong><span class="won">원</span></div><div class="badge"> <span class="plus1">1+1</span></div></a></li>');
+  assert.deepStrictEqual(cu, [{ name: 'CJ)햇반210g', price: 2200, label: '1+1', img: 'https://img.example/p/1.jpg' }]);
+  const sv = require('../scripts/scrapers/seven').parse("<li> <ul class=\"tag_list_01\"><li class='ico_tag_06'>2+1</li></ul><img src=\"/upload/product/1/2.jpg\"><div class='name'>CJ)비비고왕교자315g</div><div class='price'><span>8,980</span></div><a href=\"javascript:fncGoView('061235');\">", 2);
+  assert.deepStrictEqual(sv.map(x => [x.name, x.price, x.label, x.img]), [['CJ)비비고왕교자315g', 8980, '2+1', 'https://www.7-eleven.co.kr/upload/product/1/2.jpg']]);
+  const e24 = require('../scripts/scrapers/emart24').parse('<div class="itemWrap"><img src="https://img.example/e.JPG"><span class="sale floatR">SALE</span><div class="itemtitle"> <p> <a href="#">CJ)국산콩두부부침용380G</a></p></div><p class="price">2,980 원</p><p class="priceOff">3,980 원</p></div>');
+  assert.deepStrictEqual(e24, [{ name: 'CJ)국산콩두부부침용380G', price: 2980, orig: 3980, label: '할인', img: 'https://img.example/e.JPG' }]);
+  // 편의점 이름 → 브랜드
+  assert.strictEqual(L.cvsBrandOf('CU 진주호탄점'), 'cu'); assert.strictEqual(L.cvsBrandOf('씨유 신안점'), 'cu'); assert.strictEqual(L.cvsBrandOf('GS25 진주점'), 'gs25');
+  assert.strictEqual(L.cvsBrandOf('세븐일레븐 진주역점'), 'seven'); assert.strictEqual(L.cvsBrandOf('이마트24 R진주점'), 'emart24'); assert.strictEqual(L.cvsBrandOf('emart24 진주점'), 'emart24');
+  assert.strictEqual(L.cvsBrandOf('미니스톱 진주점'), null); assert.strictEqual(L.cvsBrandOf('스쿠터 대리점'), null);
+  // 앱: 1+1 은 개당 50%, r[9] 의 종류 이름(즉석식)은 간편식품 묶음 + 종류 태그
+  L.setDealsData({ deals: { cu: [['CJ)햇반210g', 1100, 2200, '1+1', '2026-10-01', '2026-10-31', '즉석밥', 'cu', null, '간편식품', 'https://x.example/a.jpg'], ['CJ)비비고갈비탕400g', 3990, 5980, '2+1', '2026-10-01', '2026-10-31', '-', 'cu', null, '즉석식'], ['CJ)국산콩두부찌개용380g', 1500, 3000, '1+1', '2026-10-01', '2026-10-31', '두부', 'cu', null]] }, sources: {} });
+  const D = L.DEALS.cu;
+  assert.deepStrictEqual(D.map(d => [d.kind, d.cat, d.ing, Math.round(L.dealOffPct(d))]), [['즉석밥', '간편식품', '즉석밥', 50], ['즉석식', '간편식품', null, 33], [null, null, '두부', 50]]);
+  assert.deepStrictEqual(L.sortDeals(D, { k: 'off' }).map(d => d.ing || d.kind)[2], '즉석식');
+  assert(L.dealMatchesKw(D[0], ['햇반']) && L.dealMatchesKw(D[2], ['두부']));
+  assert(L.BRANDS.cu.label === 'CU' && L.BRANDS.seven.label === '세븐일레븐' && L.BRANDS.emart24.label === '이마트24' && !L.BRANDS.cu.big);
+  // 화면: 칩·근처 편의점 → 브랜드 행사, 1+1 배지
+  const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
+  assert(html.includes("var CVS_BRANDS = ['cu','seven','emart24'];") && html.includes('DATA_BRANDS.filter(hasDeals)'), '편의점 칩');
+  assert(html.includes('var db = dataBrandOf(m) || m.brand;'), '근처 편의점 → 행사');
+  assert(html.includes("np ? '<span class=\"off np\">'+np+'</span>'"), '1+1 배지');
+  // 실제 데이터: 편의점 품목은 모두 먹거리이고 이번 달 기간·개당 가격
+  const real = JSON.parse(fs.readFileSync(__dirname + '/../data/deals.json', 'utf8'));
+  for (const b of ['cu', 'seven', 'emart24']) (real.deals[b] || []).forEach(r => {
+    assert(C.classify(r[0]).keep, '먹거리 ' + r[0]); assert(r[1] > 0 && r[4] && r[5], '가격·기간 ' + r[0]);
+    if (/^\d\+\d$/.test(r[3])) assert(r[2] > r[1], '정가 > 개당 ' + r[0]);
+  });
+  console.log('편의점 행사:', ['cu', 'seven', 'emart24'].map(b => b + ' ' + (real.deals[b] || []).length).join(', '));
+}
 console.log('ALL TESTS PASSED');

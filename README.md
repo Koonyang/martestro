@@ -23,8 +23,15 @@
 | 롯데마트 | 롯데마트GO 웹전단 「[메가통큰] 하이퍼」 (일반 매장 기준) | 전단 이미지의 **대체 텍스트**를 읽음 | 높음 — 제타플렉스·맥스 등은 전단이 달라요 |
 | 탑마트(서원유통) | martmap.co.kr 이 모아 둔 탑마트 전단 이미지 (진주 호탄점 기준, 전단은 전 점포 공통) | 새 전단이 올라오면 이미지를 받아 **무료 OCR(tesseract)** 로 품목 **이름만** 읽음 | 낮음 — ⚠️ 표시. 가격은 비워 두고 전단 원본 링크를 함께 보여 줘요 |
 | 코스트코 | 마트고(martgo) 집계 일부 | 자동 갱신 없음 (기간 끝나면 사라짐) | 참고용 |
+| CU | 공식 「행사 상품」 (cu.bgfretail.com/event/plus.do) | 화면이 부르는 목록 조각(plusAjax.do)을 1초 간격으로 읽음 · 1+1·2+1 | 높음 — 기간 표시가 없어 이번 달(1일~말일)로 봐요 |
+| 세븐일레븐 | 공식 「행사 상품」 (7-eleven.co.kr/product/presentList.asp) | 목록 조각(listMoreAjax.asp) · 1+1·2+1·덤증정·할인 | 높음 — 사진(`/upload/`)은 robots.txt 가 수집을 막아 서버에서 받지 않고 주소만 연결 |
+| 이마트24 | 공식 「행사 상품」 (emart24.co.kr/goods/event) 의 **간편식사** 분류 | 목록 페이지 HTML · 1+1·2+1·3+1·할인 | 높음 |
+| GS25 | — | **수집 안 함** — 행사 상품을 우리동네GS 앱에서만 공개(웹 행사 페이지는 브랜드 소개로 넘어가고, gsretail.com 의 `/api/` 는 robots.txt 가 막음) | — |
 
 - 레시피: 식품의약품안전처 **식품안전나라 「조리식품의 레시피 DB」(COOKRCP01) Open API** 983건 + 직접 작성한 기본 레시피 95개 (`src/logic.js` 43개 + `src/hand_recipes.js` 52개)
+- 편의점 행사는 전국 공통이라 대형마트 전단처럼 [CU] [세븐일레븐] [이마트24] 칩으로 위치 없이 고를 수 있고, 근처 편의점(OSM) 중 그 브랜드 가게를 체크해도 같은 행사가 보여요.
+  - 품목은 **간편식품**(도시락·김밥·라면·즉석밥·만두·냉동식품·즉석국/죽·즉석식(후랑크·핫바·치킨·찌개 파우치 등)) 위주로 남기고, 과자·음료·술·생활용품·반려동물 용품·양념은 빼요. 두부·콩나물·김치·계란·다진마늘·생고기처럼 확실한 식재료만 레시피 재료로 써요 (`scripts/scrapers/cvs_common.js`).
+  - 가격은 행사대로 샀을 때의 **개당 가격**(1+1 = 정가의 ½, 2+1 = ⅔, 10원 단위)이고 정가를 함께 보여 줘요. 할인율 대신 「1+1」「2+1」 배지를 붙이고, 정렬·필터는 개당 할인율(50%·33%)로 해요.
 - 마트 위치: © OpenStreetMap 기여자 (ODbL) — 전국 슈퍼마켓·대형마트·편의점 목록을 **매주** 미리 받아 `data/marts/` 에 격자 타일로 저장. 주소 검색: Nominatim
 
 ### 내 주변 마트 찾기 (빠른 검색)
@@ -98,7 +105,7 @@ src/pub_data.js         식품안전나라 레시피 (scripts/build_pub.js 로 �
 src/hand_recipes.js     직접 쓴 추가 집밥 레시피 52개 + 사진 출처
 assets/recipes/         추가 레시피 사진 (640×480 WebP)
 scripts/update_deals.js 전단 갱신 실행기
-scripts/scrapers/       마트별 수집기 (emart, homeplus, lottemart, topmart)
+scripts/scrapers/       마트별 수집기 (emart, homeplus, lottemart, topmart, cu, seven, emart24 + cvs_common)
 scripts/build.js        src + data → index.html
 scripts/build_marts.js  OpenStreetMap → data/marts 타일
 test/                   로직 테스트(test.js), 브라우저 확인(browser/smoke.js)
