@@ -103,6 +103,34 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   console.log('deals:', await p.$eval('#dealSummary', e => e.innerText.replace(/\s+/g, ' ')));
   if (await p.$('#tab-deals .notice') || /가격확인 표시|눈으로 읽어 옮겼어요/.test(await p.$eval('#tab-deals', e => e.innerText))) throw new Error('할인 재료 탭에 가격확인 안내 상자가 남아 있어요');
   if (await p.$('.legend')) throw new Error('범례가 남아 있어요');
+  // 할인 품목 줄의 가격확인 말풍선도 같은 문구, 줄 선택은 안 바뀜
+  if (await p.$('#dealList button.tipb[data-tip="chk"]')) {
+    await p.$eval('#dealList button.tipb[data-tip="chk"]', e => e.scrollIntoView({ block: 'center' }));
+    const before = await p.$$eval('#dealList .deal.picked', x => x.length);
+    await p.click('#dealList button.tipb[data-tip="chk"]');
+    const tt = await p.evaluate(() => { const t = document.getElementById('tipPop'); const r = t.getBoundingClientRect(); return !t.hidden && { text: t.innerText, w: r.width, l: r.left, r: r.right, vw: innerWidth }; });
+    console.log('deal tip:', tt);
+    if (!tt || !tt.text.includes('가게 전단 이미지를 AI 인식 기능으로 읽어들인 정보에요. 정확하지 않을 수 있으니 가게에서 직접 확인이 필요해요.') || tt.l < 0 || tt.r > tt.vw) throw new Error('할인 품목 가격확인 말풍선 문구 이상');
+    if (await p.$$eval('#dealList .deal.picked', x => x.length) !== before) throw new Error('말풍선 태그가 줄 선택을 바꿈');
+    await p.keyboard.press('Escape');
+  }
+  // 요약 타일 = 필터 버튼 (할인 재료=전체 / 오늘 적용·곧 시작 합집합)
+  const dfState = () => p.evaluate(() => ({ pr: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', b.getAttribute('aria-pressed')])), n: Object.fromEntries([...document.querySelectorAll('#dealSummary button.stat')].map(b => [b.dataset.df || 'all', +b.querySelector('b').textContent])), rows: document.querySelectorAll('#dealList .deal').length, up: document.querySelectorAll('#dealList .deal .tag.soon').length }));
+  const dfClick = async k => { await p.click(`#dealSummary button.stat[data-df="${k}"]`); await new Promise(r => setTimeout(r, 150)); return dfState(); };
+  let df = await dfState(); console.log('deal filter default:', df);
+  if (df.pr.all !== 'true' || df.rows !== df.n.all) throw new Error('할인 재료 타일 기본 상태 이상');
+  if (df.n.soon) {
+    let d1 = await dfClick('today'); if (d1.pr.all !== 'false' || d1.pr.today !== 'true' || d1.rows !== df.n.today || d1.up !== 0) throw new Error('오늘 적용 필터 이상 ' + JSON.stringify(d1));
+    d1 = await dfClick('soon'); if (d1.pr.today !== 'true' || d1.pr.soon !== 'true' || d1.rows !== df.n.all) throw new Error('오늘+곧 합집합 이상');
+    d1 = await dfClick('today'); if (d1.pr.soon !== 'true' || d1.rows !== df.n.soon || d1.up !== df.n.soon) throw new Error('곧 시작 필터 이상');
+    d1 = await dfClick('soon'); if (d1.pr.all !== 'true' || d1.rows !== df.n.all) throw new Error('마지막 필터 끄면 전체로 안 돌아감');
+    await dfClick('soon'); d1 = await dfClick(''); if (d1.pr.all !== 'true' || d1.pr.soon !== 'false' || d1.rows !== df.n.all) throw new Error('전체 누르면 초기화 안 됨');
+    await p.focus('#dealSummary button.stat[data-df="today"]'); await p.keyboard.press('Enter'); await new Promise(r => setTimeout(r, 150));
+    d1 = await dfState(); if (d1.pr.today !== 'true') throw new Error('키보드로 필터 켜기 이상'); await dfClick('');
+  }
+  // 품목 작은 사진: 모든 줄에 48px 자리(사진 또는 이모지)
+  const th = await p.$$eval('#dealList .deal', ds => ({ rows: ds.length, thumbs: ds.filter(d => d.querySelector('.dthumb')).length, imgs: ds.filter(d => d.querySelector('.dthumb img')).length, w: ds[0] && ds[0].querySelector('.dthumb').getBoundingClientRect().width }));
+  console.log('thumbs:', th); if (th.thumbs !== th.rows || Math.round(th.w) !== 48) throw new Error('품목 사진 자리 이상');
   // 품목 이름: 큰 글씨에 원산지·규격 괄호/「수입)」 없이, 작은 회색 줄로 따로
   const dn = await p.$$eval('#tab-deals .deal .dn', es => es.map(e => e.textContent)); const nSpec = await p.$$eval('#tab-deals .deal .dspec', es => es.length);
   console.log('deal names:', dn.length, 'spec lines:', nSpec, dn.slice(0, 3));
@@ -116,12 +144,12 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
   // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
   if (await p.$('.legend')) throw new Error('레시피 카드 범례가 아직 있어요');
-  const tipState = () => p.evaluate(() => { const t = document.getElementById('tipPop'); if (!t || t.hidden) return null; const r = t.getBoundingClientRect(); return { text: t.innerText, left: Math.round(r.left), right: Math.round(r.right), vw: document.documentElement.clientWidth, open: document.querySelectorAll('button.tipb[aria-expanded=true]').length }; });
+  const tipState = () => p.evaluate(() => { const t = document.getElementById('tipPop'); if (!t || t.hidden) return null; const r = t.getBoundingClientRect(); return { fs: getComputedStyle(t).fontSize, text: t.innerText, left: Math.round(r.left), right: Math.round(r.right), vw: document.documentElement.clientWidth, open: document.querySelectorAll('button.tipb[aria-expanded=true]').length }; });
   const chkSel = '.recipe button.tipb[data-tip="chk"]', mainSel = '.recipe button.tipb[data-tip="main"]';
   await p.$eval(chkSel, e => e.scrollIntoView({ block: 'center' })); await new Promise(r => setTimeout(r, 200));
   const before = await p.$eval(chkSel, e => e.closest('.recipe').querySelector('details') ? e.closest('.recipe').querySelector('details').open : null);
   await p.click(chkSel); let tp = await tipState(); console.log('tip(chk):', tp);
-  if (!tp || !/매장에서 한 번 확인/.test(tp.text) || tp.left < 0 || tp.right > tp.vw || tp.open !== 1) throw new Error('가격확인 말풍선 이상');
+  if (!tp || !tp.text.includes('가게 전단 이미지를 AI 인식 기능으로 읽어들인 정보에요. 정확하지 않을 수 있으니 가게에서 직접 확인이 필요해요.') || tp.fs !== '12px' || tp.left < 0 || tp.right > tp.vw || tp.open !== 1) throw new Error('가격확인 말풍선 이상');
   if (await p.$eval(chkSel, e => e.getAttribute('aria-describedby')) !== 'tipPop' || await p.$eval('#tipPop', e => e.getAttribute('role')) !== 'tooltip') throw new Error('말풍선 접근성 속성 이상');
   const afterD = await p.$eval(chkSel, e => e.closest('.recipe').querySelector('details') ? e.closest('.recipe').querySelector('details').open : null);
   if (before !== afterD) throw new Error('태그 눌렀는데 카드가 펼쳐짐');

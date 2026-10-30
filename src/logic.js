@@ -239,14 +239,16 @@ function convOf(name){
   return null;
 }
 var CONV_CAT = '간편식품';
+function safeImg(u){ return typeof u === 'string' && /^https:\/\/[\w.-]+\/[^\s"'<>]*$/.test(u) ? u : null; }
 function buildDeals(){
   var out = {};
   Object.keys(RAW_DEALS).forEach(function(brand){
     out[brand] = RAW_DEALS[brand].map(function(r, i){
       // r[9] = '간편식품' (선택 칸, 예전 데이터엔 없음 → 이름으로 다시 판정)
+      // r[10] = 상품 사진 주소 (선택 칸, 공식 상품 이미지가 있는 마트만 — 지금은 홈플러스)
       var cv = convOf(r[0]); if (!cv && r[9] === CONV_CAT) cv = {kind:CONV_CAT, ing:null};
       return {id: brand+'-'+i, brand: brand, name:r[0], price:r[1], orig:r[2], cond:r[3], start:r[4], end:r[5],
-        ing: cv ? cv.ing : (r[6] === '-' ? null : (r[6] || dealIng(r[0]))), cat: cv ? CONV_CAT : null, kind: cv ? cv.kind : null, src: r[7] || brand, page: r[8] || null, real:true,
+        ing: cv ? cv.ing : (r[6] === '-' ? null : (r[6] || dealIng(r[0]))), cat: cv ? CONV_CAT : null, kind: cv ? cv.kind : null, src: r[7] || brand, page: r[8] || null, img: safeImg(r[10]), real:true,
         check: !!(SOURCES[r[7] || brand] && SOURCES[r[7] || brand].needsCheck)};
     });
   });

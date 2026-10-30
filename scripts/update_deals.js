@@ -14,11 +14,14 @@ const only = (process.env.ONLY || '').split(',').filter(Boolean);
 
 // 간편식품(즉석밥·라면·만두·냉동식품·밀키트·햄/소시지/참치캔·즉석국/카레·떡 등) 품목은 10번째 칸에 '간편식품' 표시.
 // 앞 9칸은 그대로라 예전 앱/데이터와 호환돼요(없는 칸은 null 로 채움).
+// 11번째 칸(r[10])은 선택: 상품 사진 주소(공식 상품 이미지가 있는 마트만). 없으면 칸 자체를 안 붙여요.
 function tagConv(r) {
-  const cv = L.convOf(r[0]);
-  if (!cv) return r.length > 9 ? r.slice(0, 9) : r;
+  const cv = L.convOf(r[0]), img = typeof r[10] === 'string' && r[10] ? r[10] : null;
+  if (!cv && !img) return r.length > 9 ? r.slice(0, 9) : r;
   const out = r.slice(0, 9); while (out.length < 9) out.push(null);
-  out.push(L.CONV_CAT); return out;
+  out.push(cv ? L.CONV_CAT : null);
+  if (img) out.push(img);
+  return out;
 }
 (async () => {
   const today = process.env.TODAY || todayKST();
@@ -51,6 +54,7 @@ function tagConv(r) {
   // 3) 바뀐 게 있을 때만 저장 (lastTry 같은 시도 기록만 바뀐 건 무시)
   const strip = o => JSON.stringify({ s: o.sources, d: o.deals, st: Object.fromEntries(Object.entries(o.status).map(([k, v]) => [k, { ...v, lastTry: undefined, msg: undefined }])) });
   console.log(log.join('\n'));
+  console.log('사진:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[10]).length + '/' + v.length).join(', '));
   console.log('간편식품:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[9] === L.CONV_CAT).length).join(', '));
   if (strip(prev) === strip(next)) { console.log('변경 없음 — 저장 안 함'); return; }
   next.updated = new Date(Date.now() + 9 * 3600e3).toISOString().replace('Z', '+09:00').slice(0, 19) + '+09:00';
