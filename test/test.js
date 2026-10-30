@@ -301,4 +301,14 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 적용', tmNow.len
   console.log('한 끼 가격 최댓값:', maxPack, '원'); assert(maxPack < 15000);
   console.log('한 끼 가격 OK');
 }
+{ // 행간 10% 늘림: 모든 line-height는 예전 값×1.1 (워드마크 line-height:1만 예외)
+  const T = require('fs').readFileSync(__dirname + '/../src/template.html', 'utf8');
+  const lhs = [...T.matchAll(/([^{}\n]*)\{[^{}]*?line-height:\s*([0-9.]+)(px)?/g)].map(m => ({ sel: m[1].trim(), v: +m[2] }));
+  const inl = [...T.matchAll(/style="[^"]*line-height:\s*([0-9.]+)/g)].map(m => +m[1]);
+  const OK = new Set([1.705, 1.43, 1.76, 1.485, 1.1, 1.32, 17.6, 1.65, 1.815]);
+  lhs.forEach(x => { if (/\.brand \.wm/.test(x.sel)) assert.equal(x.v, 1); else assert(OK.has(x.v), x.sel + ' line-height ' + x.v); });
+  inl.forEach(v => assert(OK.has(v), 'inline line-height ' + v));
+  assert(/body\{[^}]*line-height:1\.705/.test(T));
+  console.log('line-height ×1.1 OK (' + lhs.length + '+' + inl.length + ')');
+}
 console.log('ALL TESTS PASSED');
