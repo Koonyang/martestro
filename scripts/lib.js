@@ -10,7 +10,7 @@ async function http(url, opt = {}, tries = 3) {
       clearTimeout(t);
       if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + url);
       return res;
-    } catch (e) { last = e; await new Promise(r => setTimeout(r, 1500 * (i + 1))); }
+    } catch (e) { if (e.cause && !/\(/.test(e.message)) e.message += ' (' + (e.cause.code || e.cause.message) + ' ' + url.slice(0, 60) + ')'; last = e; await new Promise(r => setTimeout(r, 1500 * (i + 1))); }
   }
   throw last;
 }

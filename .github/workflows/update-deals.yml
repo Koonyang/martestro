@@ -54,6 +54,14 @@ jobs:
           node test/test.js
       - name: 바뀐 경우에만 커밋
         run: |
+          # 도는 사이에 main 이 바뀌었으면(코드 push 등) 새 main 위에 이번 데이터만 얹고 앱을 다시 만들어요.
+          git fetch -q origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+            rm -rf /tmp/newdata && cp -r data /tmp/newdata
+            git reset -q --hard origin/main
+            cp /tmp/newdata/deals.json data/deals.json && rm -rf data/marts && cp -r /tmp/newdata/marts data/marts
+            node scripts/build.js
+          fi
           git add data/deals.json data/marts index.html
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git config user.name "github-actions[bot]"
