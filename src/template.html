@@ -161,12 +161,16 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .dsticky .search-row{margin-top:0}
 /* 할인 재료 검색: 확인 버튼 대신 칸 오른쪽 안쪽 돋보기 버튼 (누르면 확인과 같음) */
 .field.has-sbtn>input{padding-left:16px;padding-right:54px}
-.search-row button.sbtn{position:absolute;right:4px;top:50%;margin-top:-22px;width:44px;height:44px;min-height:0;padding:0;border-radius:12px;background:transparent;color:var(--t2)}
-.search-row button.sbtn:hover{filter:none;background:color-mix(in srgb,var(--a2) 70%,transparent)}
-.search-row button.sbtn:focus-visible{outline:2px solid var(--g);outline-offset:-2px}
-.search-row button.sbtn svg{width:20px;height:20px}
+.field button.sbtn{position:absolute;right:4px;top:50%;margin-top:-22px;width:44px;height:44px;min-height:0;padding:0;border-radius:12px;background:transparent;color:var(--t2)}
+.field button.sbtn:hover{filter:none;background:color-mix(in srgb,var(--a2) 70%,transparent)}
+.field button.sbtn:focus-visible{outline:2px solid var(--g);outline-offset:-2px}
+.field button.sbtn svg{width:20px;height:20px}
 .dsticky .kw-chips{margin:8px 0 0}
 #tab-recipes>.tools:first-child{margin-top:7px}
+/* 레시피 검색: 왼쪽 = 분류 아이콘(팝오버), 오른쪽 = 돋보기 검색 버튼 */
+.field.has-fbtn.rfield>input{padding-left:50px;padding-right:54px}
+.field.rfield button.fbtn{right:auto;left:6px}
+.field.rfield .catpop{right:auto;left:0}
 body.deals-on .top.scrolled{border-bottom-color:transparent}
 .dhead{display:flex;align-items:center;gap:10px;padding:28.5px 4px 0}
 .dhead .page-h{flex:1;min-width:0;padding:0}
@@ -591,7 +595,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 <section class="tab" id="tab-recipes">
   <!-- 검색줄: 맨 위 (할인 재료와 같은 자리). 스크롤하면 따라오지 않아요 -->
   <div class="tools">
-    <div class="field has-fbtn"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색">
+    <div class="field has-fbtn has-sbtn rfield"><input id="rSearch" type="search" enterkeyhint="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"><button type="button" id="rSearchBtn" class="sbtn" aria-label="검색"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
       <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="레시피 분류: 전체"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i class="fdot" aria-hidden="true"></i></button>
       <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
     </div>
@@ -1249,6 +1253,10 @@ document.querySelector('.kind-row').addEventListener('click', function(e){
   syncKindChips(); rLimit = PAGE; renderRecipes();
 });
 $('rSearch').addEventListener('input', function(){ var v = this.value; clearTimeout(rTimer); rTimer = setTimeout(function(){ rQuery = v.trim(); rLimit = PAGE; renderRecipes(); }, 200); });
+// 오른쪽 돋보기 버튼·Enter: 바로 검색하고 키보드 닫기
+function runRSearch(){ clearTimeout(rTimer); var q = $('rSearch').value.trim(); if (q !== rQuery){ rQuery = q; rLimit = PAGE; renderRecipes(); } $('rSearch').blur(); }
+$('rSearchBtn').addEventListener('click', runRSearch);
+$('rSearch').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); runRSearch(); } });
 // ---- 레시피 분류 팝오버 (검색창 안 아이콘) ----
 function renderCatUI(){
   var on = !!rCat, btn = $('rCatBtn');

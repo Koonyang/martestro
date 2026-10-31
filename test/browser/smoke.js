@@ -427,6 +427,16 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     // 레시피 검색창: 맨 위 (할인 재료 검색과 같은 자리·높이·글자), 따라오지 않음
     { await p.evaluate(() => scrollTo(0, 0)); await W(150); const rs = await p.evaluate(() => { const e = document.getElementById('rSearch'), st = e.closest('.tools'), d = document.getElementById('dSearch'), r = e.getBoundingClientRect(); return { top: r.top, h: r.height, fs: getComputedStyle(e).fontSize, dfs: getComputedStyle(d).fontSize, pos: getComputedStyle(st).position, first: st.parentElement.firstElementChild === st }; });
       console.log('recipe search top:', rs); if (rs.pos === 'sticky' || rs.pos === 'fixed' || !rs.first || Math.abs(rs.top - 76) > 1.5 || Math.abs(rs.h - 53.27) > 1 || rs.fs !== '16px' || rs.dfs !== rs.fs) throw new Error('레시피 검색창 맨 위 sticky 아님 ' + JSON.stringify(rs)); }
+    // 레시피 검색: 오른쪽 돋보기 = 검색 버튼(44×44, '검색'), 왼쪽 = 분류 아이콘
+    { const ic = await p.evaluate(() => { const i = document.getElementById('rSearch').getBoundingClientRect(), s = document.getElementById('rSearchBtn'), sr = s.getBoundingClientRect(), c = document.getElementById('rCatBtn').getBoundingClientRect(), cs = getComputedStyle(document.getElementById('rSearch'));
+        return { lbl: s.getAttribute('aria-label'), sw: sr.width, sh: sr.height, sRight: sr.left > i.left + i.width / 2 && sr.right <= i.right, cLeft: c.right < i.left + i.width / 2 && c.left >= i.left, svm: Math.abs((sr.top + sr.bottom) - (i.top + i.bottom)) / 2, cvm: Math.abs((c.top + c.bottom) - (i.top + i.bottom)) / 2, pl: parseFloat(cs.paddingLeft), pr: parseFloat(cs.paddingRight), cGap: c.right - i.left, sGap: i.right - sr.left, leftSvg: !!document.querySelector('#tab-recipes .tools .field > svg') }; });
+      console.log('recipe search icons:', ic);
+      if (ic.lbl !== '검색' || ic.sw < 44 || ic.sh < 44 || !ic.sRight || !ic.cLeft || ic.svm > 0.6 || ic.cvm > 0.6 || ic.pl < ic.cGap || ic.pr < ic.sGap || ic.leftSvg) throw new Error('레시피 검색 아이콘 배치 이상 ' + JSON.stringify(ic));
+      await p.focus('#rSearch'); await p.keyboard.type('zzzz없는요리'); await p.click('#rSearchBtn'); await W(50);
+      const r1 = await p.evaluate(() => ({ n: document.querySelectorAll('#recipeList .recipe').length, foc: document.activeElement && document.activeElement.id }));
+      await p.$eval('#rSearch', e => { e.value = ''; }); await p.click('#rSearchBtn'); await W(50);
+      const r2 = await p.evaluate(() => document.querySelectorAll('#recipeList .recipe').length);
+      console.log('recipe search btn:', r1, r2); if (r1.n !== 0 || r1.foc === 'rSearch' || r2 === 0) throw new Error('레시피 돋보기 검색 버튼 동작 이상'); }
     // 분류: 큰 select 대신 검색창 안 아이콘 → 팝오버 (하나만), 고르면 금색 점 + 칩(✕)
     const cs = () => p.evaluate(() => { const b = document.getElementById('rCatBtn'), pop = document.getElementById('rCatPop'), f = document.querySelector('#tab-recipes .tools .field'), t = document.querySelector('#tab-recipes .tools'), ch = document.querySelector('.kind-row .catchip');
       return { sel: !!document.getElementById('rCat') || !!document.querySelector('#tab-recipes .tools select'), fw: Math.round(f.getBoundingClientRect().width), tw: Math.round(t.getBoundingClientRect().width), hp: b.getAttribute('aria-haspopup'), ex: b.getAttribute('aria-expanded'), al: b.getAttribute('aria-label'), open: !pop.hidden && pop.getBoundingClientRect().height > 0,
