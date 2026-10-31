@@ -473,4 +473,13 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/\.rmeta \.rcat::after\{content:"";position:absolute;left:50%;top:50%;width:max\(100%,44px\);height:max\(100%,44px\)/.test(T), '카드 분류 44px');
   assert(/function catFromCard\(el, kb\)/.test(T) && /closest\('\.rcat'\)/.test(T), '카드 분류 누르기');
   console.log('분류 버튼·카드 분류 연결 ok'); }
+// 레시피 정렬: 칩 줄 대신 종류 칩 줄 오른쪽 끝 글자 드롭다운 (할인 탭 정렬은 그대로)
+{ const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
+  assert(!/id="rSortBar"/.test(T) && /id="dSortBar"/.test(T), '레시피 정렬 칩 줄 없음, 할인 정렬 칩은 그대로');
+  assert(/<div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"><\/button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden><\/div><\/div>\n  <\/div>/.test(T), '정렬 트리거는 종류 칩 줄 안 마지막');
+  assert(/button\.sortdd\{[^}]*background:none;[^}]*box-shadow:none;[^}]*color:var\(--m\)/.test(T), '상자 없는 흐린 글자');
+  assert(/role="menuitemradio"/.test(T) && /aria-checked/.test(T) && /function openRSort\(\)/.test(T) && /function closeRSort\(/.test(T) && /closeRSort\(false\)/.test(T.slice(T.indexOf('function openCat'), T.indexOf('function openCat') + 300)), '메뉴·체크·서로 닫기');
+  assert(/'Escape'/.test(T.slice(T.indexOf('function openRSort'))) && /renderRSort\(\)/.test(T), 'Escape / 다시 그리기');
+  assert(/insertBefore\(chip, row\.querySelector\('\.rsort'\)\)/.test(T), '분류 칩은 정렬 앞에');
+  console.log('레시피 정렬 드롭다운 ok'); }
 console.log('ALL TESTS PASSED');

@@ -53,7 +53,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   { const hero = await p.evaluate(() => { const h = document.querySelector('.hero'); return { h1: h.querySelector('h1').textContent, em: (h.querySelector('h1 em') || {}).textContent, sub: h.querySelector('.sub').textContent, eyebrow: !!h.querySelector('.eyebrow') || /MAESTRO/.test(h.textContent), title: document.title }; });
     if (hero.h1 !== '오늘의 요리 지휘자' || hero.em !== '요리 지휘자' || hero.sub !== '동네 마트 재료로 찬거리를 골라드려요.' || hero.eyebrow || /할인 재료를 지휘하는/.test(hero.title)) throw new Error('첫 화면 문구 이상 ' + JSON.stringify(hero)); }
   // 「위치 설정 없이 대형마트 정보 확인」은 위치 없이도 동작해야 해요
-  const noLocChips = await p.$$eval('#brandChips button', bs => bs.map(x => x.innerText.trim()));
+  const noLocChips = await p.$$eval('#brandChips button', bs => bs.map(x => x.innerText.replace(/\n/g, '').trim()));
   if (!noLocChips.some(t => t.includes('이마트'))) throw new Error('위치 설정 없이 대형마트 정보 확인 버튼 없음');
   if (noLocChips.some(t => /전단/.test(t)) || !noLocChips.includes('이마트')) throw new Error('마트 버튼은 마트 이름만: ' + noLocChips.join(','));
   const noLocTitle = await p.$eval('#brandChips', e => e.closest('.card').querySelector('h2').innerText.trim());
@@ -448,26 +448,62 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     // 레시피
     await p.click('nav button[data-tab="tab-recipes"]'); await W(400);
     const rRows = () => p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe')].map(c => { const g = c.querySelector('.sring .sr-p'), m = [...c.querySelectorAll('.rmeta span')].map(e => e.textContent).find(t => /kcal$/.test(t)), mm = [...c.querySelectorAll('.rmeta span')].some(e => /\d+분$/.test(e.textContent)); return { save: g ? +g.textContent.replace(/[^\d]/g, '') : null, kcal: m ? +m.replace(/[^\d]/g, '') : null, mins: mm, rank: !!c.querySelector('.rank, .rk, .num') }; }));
-    b = await sb('#rSortBar'); if (b.pills.map(x => x.k).join() !== 'rec,save,cost,kcal' || on(b) !== '추천순') throw new Error('레시피 정렬 기본 이상');
-    await p.click('#rSortBar [data-sort="save"]'); await W(300); b = await sb('#rSortBar'); let rr = await rRows();
-    if (on(b) !== '절약률 높은순↑' || !ordered(rr.map(x => x.save), true)) throw new Error('절약률 높은순 이상');
+    // 레시피 정렬: 칩 줄 없이 글자만 있는 「추천순 ▾」 → 메뉴에서 고르기 (rcur = 이름+화살표)
+    const rcur = () => p.evaluate(() => { const b = document.getElementById('rSortBtn'), a = b.querySelector('.sd-ar'); return b.textContent.replace(a ? a.textContent : '', '') + (a ? a.textContent : ''); });
+    const rpick = async (k, rev) => { await p.click('#rSortBtn'); await W(150); await p.click('#rSortPop [data-sort="' + k + '"][data-rev="' + rev + '"]'); await W(300); };
+    if (await p.evaluate(() => !!document.getElementById('rSort' + 'Bar') || !!document.querySelector('#tab-recipes button.sp'))) throw new Error('레시피 정렬 칩 줄이 남아 있어요');
+    if (await rcur() !== '추천순') throw new Error('레시피 정렬 기본 이상 ' + await rcur());
+    await rpick('save', false); let rr = await rRows();
+    if (await rcur() !== '절약률 높은순↑' || !ordered(rr.map(x => x.save), true)) throw new Error('절약률 높은순 이상');
     if (await p.$('#btnMore') && await p.evaluate(() => getComputedStyle(document.getElementById('btnMore')).display !== 'none')) { await p.click('#btnMore'); await W(400); const r2 = await rRows(); if (r2.length <= rr.length || !ordered(r2.map(x => x.save), true)) throw new Error('더 보기 뒤 정렬 이상'); }
-    await p.click('#rSortBar [data-sort="save"]'); await W(300); b = await sb('#rSortBar'); rr = await rRows();
-    if (on(b) !== '절약률 낮은순↓' || !ordered(rr.map(x => x.save), false)) throw new Error('절약률 낮은순 이상');
-    await p.click('#rSortBar [data-sort="cost"]'); await W(300); b = await sb('#rSortBar'); if (on(b) !== '비용 낮은순↓') throw new Error('비용 낮은순 이상');
-    await p.click('#rSortBar [data-sort="cost"]'); await W(300); b = await sb('#rSortBar'); if (on(b) !== '비용 높은순↑') throw new Error('비용 높은순 이상');
+    await rpick('save', true); rr = await rRows();
+    if (await rcur() !== '절약률 낮은순↓' || !ordered(rr.map(x => x.save), false)) throw new Error('절약률 낮은순 이상');
+    await rpick('cost', false); if (await rcur() !== '비용 낮은순↓') throw new Error('비용 낮은순 이상');
+    await rpick('cost', true); if (await rcur() !== '비용 높은순↑') throw new Error('비용 높은순 이상');
     if (rr.some(x => x.mins)) throw new Error('카드에 조리시간이 남아 있어요');
-    await p.click('#rSortBar [data-sort="kcal"]'); await W(300); b = await sb('#rSortBar'); rr = await rRows();
-    if (on(b) !== '칼로리 낮은순↓' || !ordered(rr.map(x => x.kcal), false)) throw new Error('칼로리 낮은순 이상');
+    await rpick('kcal', false); rr = await rRows();
+    if (await rcur() !== '칼로리 낮은순↓' || !ordered(rr.map(x => x.kcal), false)) throw new Error('칼로리 낮은순 이상');
     console.log('recipe sort kcal asc:', rr.slice(0, 5).map(x => x.kcal));
-    await p.click('#rSortBar [data-sort="kcal"]'); await W(300); b = await sb('#rSortBar'); rr = await rRows();
-    if (on(b) !== '칼로리 높은순↑' || !ordered(rr.map(x => x.kcal), true)) throw new Error('칼로리 높은순 이상');
+    await rpick('kcal', true); rr = await rRows();
+    if (await rcur() !== '칼로리 높은순↑' || !ordered(rr.map(x => x.kcal), true)) throw new Error('칼로리 높은순 이상');
     if (await p.evaluate(() => localStorage.getItem('mr_rsort')) !== '{"k":"kcal","rev":true}') throw new Error('레시피 정렬 저장 이상');
     console.log('recipe sort kcal desc:', rr.slice(0, 5).map(x => x.kcal), 'no-kcal', rr.filter(x => x.kcal == null).length);
     // 예전에 저장한 조리시간 정렬 → 추천순
     await p.evaluate(() => localStorage.setItem('mr_rsort', '{"k":"time","rev":true}')); await p.reload({ waitUntil: 'networkidle0' }); await W(600);
-    await p.click('nav button[data-tab="tab-recipes"]'); await W(400); b = await sb('#rSortBar'); if (on(b) !== '추천순') throw new Error('저장된 조리시간 정렬이 추천순으로 안 바뀜 ' + on(b));
-    await p.click('#rSortBar [data-sort="rec"]'); await W(300);
+    await p.click('nav button[data-tab="tab-recipes"]'); await W(400); if (await rcur() !== '추천순') throw new Error('저장된 조리시간 정렬이 추천순으로 안 바뀜 ' + await rcur());
+    await rpick('kcal', false); await rpick('rec', false); if (await rcur() !== '추천순') throw new Error('추천순 복귀 이상');
+    { // 정렬 메뉴: aria · 키보드 · Escape · 바깥 탭 · 체크 · 44px · 부제목 한 줄 · 큰 글자/320
+      const st = () => p.evaluate(() => { const b = document.getElementById('rSortBtn'), m = document.getElementById('rSortPop'), it = [...m.querySelectorAll('[role="menuitemradio"]')];
+        return { hp: b.getAttribute('aria-haspopup'), ex: b.getAttribute('aria-expanded'), ctl: b.getAttribute('aria-controls'), open: !m.hidden, role: m.getAttribute('role'), n: it.length,
+          checked: it.filter(x => x.getAttribute('aria-checked') === 'true').map(x => x.innerText.replace(/\n/g, '').trim()), ckVis: it.filter(x => { const c = x.querySelector('svg'); return c && getComputedStyle(c).visibility !== 'hidden' && getComputedStyle(c).opacity !== '0'; }).length,
+          foc: document.activeElement === b ? 'btn' : (document.activeElement.closest && document.activeElement.closest('#rSortPop') ? document.activeElement.innerText.replace(/\n/g, '').trim() : 'other') }; });
+      let s0 = await st(); if (s0.hp !== 'menu' || s0.ex !== 'false' || s0.ctl !== 'rSortPop' || s0.open) throw new Error('정렬 버튼 aria 이상 ' + JSON.stringify(s0));
+      await p.focus('#rSortBtn'); await p.keyboard.press('Enter'); await W(150); s0 = await st();
+      if (s0.ex !== 'true' || !s0.open || s0.role !== 'menu' || s0.n !== 7 || s0.checked.join() !== '추천순' || s0.ckVis !== 1 || s0.foc !== '추천순') throw new Error('정렬 메뉴 열림 이상 ' + JSON.stringify(s0));
+      await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown'); s0 = await st(); if (s0.foc !== '↓비용 낮은순') throw new Error('정렬 메뉴 화살표 키 이상 ' + s0.foc);
+      await p.keyboard.press('Escape'); await W(100); s0 = await st(); if (s0.open || s0.ex !== 'false' || s0.foc !== 'btn' || await rcur() !== '추천순') throw new Error('정렬 메뉴 Escape 이상 ' + JSON.stringify(s0));
+      await p.click('#rSortBtn'); await W(150); await p.mouse.click(30, 700); await W(150); s0 = await st(); if (s0.open || s0.ex !== 'false') throw new Error('정렬 메뉴 바깥 탭 이상');
+      await p.click('#rSortBtn'); await W(150); await p.keyboard.press('End'); await p.keyboard.press('Enter'); await W(300); s0 = await st();
+      if (s0.open || await rcur() !== '칼로리 높은순↑' || s0.foc !== 'btn' || s0.checked.join() !== '↑칼로리 높은순') throw new Error('정렬 메뉴 Enter 선택 이상 ' + JSON.stringify(s0) + await rcur());
+      if (await p.evaluate(() => document.getElementById('rSortBtn').getAttribute('aria-label')) !== '정렬: 칼로리 높은순') throw new Error('정렬 버튼 aria-label 이상');
+      await rpick('rec', false);
+      const vp0 = p.viewport(); const bad = [];
+      for (const vw of [390, 320]) for (const ts of [1, 1.5, 2]) {
+        await p.setViewport({ ...vp0, width: vw }); await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); window.__applyTextSize(); window.scrollTo(0, 0); }, ts); await W(350); await p.evaluate(() => document.getElementById('rSortBtn').scrollIntoView({ block: 'center' })); await W(150);
+        await p.click('#rSortBtn'); await W(250);
+        const m = await p.evaluate(() => { const b = document.getElementById('rSortBtn'), r = b.getBoundingClientRect(), lh = parseFloat(getComputedStyle(b).fontSize) * 2.2, pop = document.getElementById('rSortPop').getBoundingClientRect(),
+          sum = document.getElementById('recipeSummary'), kr = document.querySelector('.kind-row').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          const hit = [[cx, cy - 21], [cx, cy + 21], [r.right - 22 < r.left ? cx : r.right - 21, cy]].every(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.closest('#rSortBtn, #rSortPop'); });
+          const items = [...document.querySelectorAll('#rSortPop button')].map(x => x.getBoundingClientRect().height);
+          return { h: Math.round(r.height), oneLine: r.height < lh, inX: r.left >= 0 && r.right <= innerWidth, popX: pop.left >= 0 && pop.right <= innerWidth, popH: Math.max(...items), itemFs: parseFloat(getComputedStyle(document.querySelector('#rSortPop button')).fontSize), hit, inRow: r.bottom <= kr.bottom + 1, docW: document.documentElement.scrollWidth <= innerWidth,
+            sumLines: sum ? Math.round(sum.getBoundingClientRect().height / parseFloat(getComputedStyle(sum).lineHeight)) : -1 }; });
+        await p.keyboard.press('Escape'); await W(100);
+        if (!m.oneLine || !m.inX || !m.popX || !m.inRow || !m.docW || (vw === 390 && ts === 1 && (m.sumLines !== 1 || !m.hit)) || m.popH > m.itemFs * 3) bad.push(vw + '/' + ts + ' ' + JSON.stringify(m));
+        console.log('recipe sort dd', vw, ts, JSON.stringify(m));
+      }
+      await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); window.scrollTo(0, 0); }); await p.setViewport(vp0); await W(300);
+      if (bad.length) throw new Error('정렬 메뉴 크기별 이상 ' + bad.join(' | '));
+    }
     // 레시피 검색창: 맨 위 (할인 재료 검색과 같은 자리·높이·글자), 따라오지 않음
     { await p.evaluate(() => scrollTo(0, 0)); await W(150); const rs = await p.evaluate(() => { const e = document.getElementById('rSearch'), st = e.closest('.tools'), d = document.getElementById('dSearch'), r = e.getBoundingClientRect(); return { top: r.top, h: r.height, fs: getComputedStyle(e).fontSize, dfs: getComputedStyle(d).fontSize, pos: getComputedStyle(st).position, first: st.parentElement.firstElementChild === st }; });
       console.log('recipe search top:', rs); if (rs.pos === 'sticky' || rs.pos === 'fixed' || !rs.first || Math.abs(rs.top - 76) > 1.5 || Math.abs(rs.h - 53.27) > 1 || rs.fs !== '16px' || rs.dfs !== rs.fs) throw new Error('레시피 검색창 맨 위 sticky 아님 ' + JSON.stringify(rs)); }
@@ -514,7 +550,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       const sel = tab === 'deals' ? '#dealList .deal .dn' : '#recipeList .recipe h3';
       [...document.querySelectorAll(sel)].filter(vis).slice(0, 8).forEach(e => { const fs = parseFloat(getComputedStyle(e).fontSize), w = e.getBoundingClientRect().width; if (w < fs * 3) out.thin.push(e.textContent.slice(0, 10) + ' ' + Math.round(w) + 'px'); });
       out.nThin = document.querySelectorAll(sel).length;
-      const targets = tab === 'deals' ? ['a.brand', 'button.hdr-btn', '#dSortBar button.sp', '#dealList button.tipb'] : ['a.brand', '#rCatBtn', '.kind-row button.kchip', '#rSortBar button.sp', '#recipeList button.tipb', '#recipeList button.mn-toggle'];
+      const targets = tab === 'deals' ? ['a.brand', 'button.hdr-btn', '#dSortBar button.sp', '#dealList button.tipb'] : ['a.brand', '#rCatBtn', '.kind-row button.kchip', '#rSortBtn', '#recipeList button.tipb', '#recipeList button.mn-toggle'];
       targets.forEach(q => { const e = [...document.querySelectorAll(q)].find(vis); if (!e) { out.small.push(q + ' 없음'); return; }
         if (!e.closest('#top')) e.scrollIntoView({ block: 'center', inline: 'nearest' });
         const r = e.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, h = 21.5;
@@ -646,7 +682,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     console.log('filter link OK'); }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
-    const gap = await p.evaluate(() => { const t = (document.querySelector('#rSortBar .sp') || document.getElementById('rSortBar')).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
+    const gap = await p.evaluate(() => { const t = document.querySelector('.kind-row').getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
     console.log('recipes tools gap:', gap); if (gap.sw || gap.gap < 10 || gap.gap > 32) throw new Error('레시피 탭 스위치/간격 이상 ' + JSON.stringify(gap));
     await p.click('nav button[data-tab="tab-deals"]'); }
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
