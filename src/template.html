@@ -333,6 +333,16 @@ button.fbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-widt
 button.fbtn.on{color:var(--a-ink)}
 button.fbtn .fdot{display:none;position:absolute;top:7px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 0 2px var(--card)}
 button.fbtn.on .fdot{display:block}
+/* 분류 버튼 아이콘: 지금 분류 아이콘으로 바뀌고, 바뀔 때 아래→위로 살짝 올라오는 티커 (버튼 안에서만 보이게 잘라요) */
+button.fbtn .fic{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+button.fbtn .fic>svg{position:absolute;left:calc(50% - 10px);top:calc(50% - 10px)}
+button.fbtn.on{background:color-mix(in srgb,var(--g) 15%,transparent)}
+button.fbtn.on:hover,button.fbtn.on[aria-expanded=true]{background:color-mix(in srgb,var(--g) 24%,var(--card2))}
+/* 카드의 분류(아이콘+이름)를 누르면 그 분류만 — 보이는 모양은 그대로, 누르는 자리만 44px */
+.rmeta .rcat{position:relative;cursor:pointer;border-radius:6px;-webkit-tap-highlight-color:transparent}
+.rmeta .rcat::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+.rmeta .rcat:hover{color:var(--t2)}
+.rmeta .rcat:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 .catpop{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:150px;background:var(--card);border-radius:14px;padding:6px;box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(15,22,38,.18);display:flex;flex-direction:column;gap:2px;animation:up .18s var(--ease) both}
 .catpop[hidden]{display:none}
 .catpop button{justify-content:flex-start;gap:8px;min-height:38px;padding:7px 10px;border-radius:10px;background:transparent;color:var(--t2);font-size:.875rem;font-weight:650;text-align:left}
@@ -697,7 +707,7 @@ html:is([data-ts="1.5"],[data-ts="2"]) :is(.meta span,.ingtxt){word-break:keep-a
   <!-- 검색줄: 맨 위 (할인 재료와 같은 자리). 스크롤하면 따라오지 않아요 -->
   <div class="tools">
     <div class="field has-fbtn has-sbtn rfield"><input id="rSearch" type="search" enterkeyhint="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"><button type="button" id="rSearchBtn" class="sbtn" aria-label="검색"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
-      <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="레시피 분류: 전체"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i class="fdot" aria-hidden="true"></i></button>
+      <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="분류: 전체"><span class="fic" data-ic="" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span><i class="fdot" aria-hidden="true"></i></button>
       <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
     </div>
   </div>
@@ -805,7 +815,7 @@ function showTab(id){
   document.body.classList.toggle('deals-on', id==='tab-deals');
   if (id==='tab-deals') renderDeals();
   if (id==='tab-deals') syncBars();
-  if (id==='tab-recipes') renderRecipes();
+  if (id==='tab-recipes'){ renderRecipes(); if (typeof maybeCatHint === 'function') maybeCatHint(); }
   window.scrollTo(0,0);
   if (typeof updateFab === 'function') updateFab();
 }
@@ -1396,6 +1406,22 @@ $('recipeList').addEventListener('click', function(e){
   e.preventDefault(); e.stopPropagation();
   t.setAttribute('aria-pressed', String(t.getAttribute('aria-pressed') !== 'true'));
 });
+// 카드의 분류(아이콘+이름)를 누르면 그 분류만 보기 → 목록 맨 위(검색줄)로
+function catFromCard(el, kb){
+  var c = el.getAttribute('data-cat'); if (!c) return;
+  setCat(c);
+  // 검색줄(바뀐 분류 버튼)이 보이게 탭 맨 위로 — 헤더가 위에 붙어 있어서 0으로 가요
+  if (window.scrollY > 0) window.scrollTo({top: 0, behavior: reduceMo() ? 'auto' : 'smooth'});
+  if (kb) $('rCatBtn').focus({preventScroll: true});
+}
+$('recipeList').addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('.rcat'); if (!b) return;
+  e.preventDefault(); e.stopPropagation(); catFromCard(b, false);
+});
+$('recipeList').addEventListener('keydown', function(e){
+  var b = e.target.closest && e.target.closest('.rcat'); if (!b || (e.key !== 'Enter' && e.key !== ' ')) return;
+  e.preventDefault(); catFromCard(b, true);
+});
 $('recipeList').addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('.mn-toggle'); if (!b) return;
   e.preventDefault(); e.stopPropagation();
@@ -1417,7 +1443,8 @@ $('rSearch').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !
 function renderCatUI(){
   var on = !!rCat, btn = $('rCatBtn');
   btn.classList.toggle('on', on);
-  btn.setAttribute('aria-label', '레시피 분류: ' + (rCat || '전체'));
+  btn.setAttribute('aria-label', '분류: ' + (rCat || '전체'));
+  catHintTok++; tickCat(rCat, 140);
   $('rCatPop').innerHTML = [''].concat(RECIPE_CATS).map(function(c){
     var ck = rCat === c;
     return '<button type="button" role="menuitemradio" data-cat="'+esc(c)+'" aria-checked="'+ck+'" tabindex="-1"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>'+ic(catIcon(c), 'cat-ic')+esc(c || '전체')+'</button>';
@@ -1427,6 +1454,42 @@ function renderCatUI(){
   if (!chip){ chip = document.createElement('button'); chip.type = 'button'; chip.className = 'catchip'; row.appendChild(chip); }
   chip.setAttribute('aria-label', '분류 「' + rCat + '」 필터 해제');
   chip.innerHTML = '<small aria-hidden="true">분류</small>' + esc(rCat) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+}
+// ---- 분류 버튼 아이콘 티커: 이전 아이콘은 위로 올라가며 사라지고(ease-in), 그 사이 새 아이콘이 아래에서 올라오며 나타나요(ease-out) ----
+var catHintTok = 0;
+function reduceMo(){ return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
+function catBtnSvg(c){ return c ? '<svg class="i" viewBox="0 0 24 24"><use href="#i-'+catIcon(c)+'"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>'; }
+function tickCat(c, dur){
+  var box = document.querySelector('#rCatBtn .fic'); if (!box) return Promise.resolve();
+  if (box.getAttribute('data-ic') === c) return Promise.resolve();
+  box.setAttribute('data-ic', c);
+  var old = [].slice.call(box.children), t = document.createElement('span'); t.innerHTML = catBtnSvg(c); var nu = t.firstChild;
+  if (reduceMo() || !nu.animate){ box.innerHTML = ''; box.appendChild(nu); return Promise.resolve(); }
+  box.appendChild(nu);
+  var d = dur || 180, Y = 7;
+  old.forEach(function(o){
+    var cur = getComputedStyle(o), m = new DOMMatrixReadOnly(cur.transform === 'none' ? undefined : cur.transform), y0 = m.m42, o0 = +cur.opacity;
+    o.getAnimations().forEach(function(a){ a.onfinish = a.oncancel = null; a.cancel(); });
+    var a = o.animate([{transform:'translateY('+y0+'px)', opacity:o0}, {transform:'translateY(-'+Y+'px)', opacity:0}], {duration:d, easing:'cubic-bezier(0.7,0,0.84,0)', fill:'forwards'});
+    a.onfinish = a.oncancel = function(){ if (o.parentNode) o.remove(); };
+  });
+  var e = nu.animate([{transform:'translateY('+Y+'px)', opacity:0}, {transform:'translateY(0)', opacity:1}], {duration:d, delay:old.length ? Math.round(d*0.55) : 0, easing:'cubic-bezier(0.16,1,0.3,1)', fill:'backwards'});
+  return e.finished.catch(function(){});
+}
+// 레시피 탭을 처음 열 때 한 번만: 반찬 → 국&찌개 → 일품 → 기본 아이콘 (분류가 버튼과 이어져 있다는 힌트)
+function maybeCatHint(){
+  try { if (localStorage.getItem('mr_cat_hint')) return; } catch(e){ return; }
+  if (rCat || reduceMo() || !Element.prototype.animate) return;
+  try { localStorage.setItem('mr_cat_hint', '1'); } catch(e){}
+  var tok = ++catHintTok, seq = ['반찬', '국&찌개', '일품', ''], i = 0;
+  var box = document.querySelector('#rCatBtn .fic');
+  function hold(){ return box.animate([{opacity:1}, {opacity:1}], {duration:350}).finished.catch(function(){}); }
+  function step(){
+    if (tok !== catHintTok || rCat || !$('tab-recipes').classList.contains('on')){ if (tok === catHintTok) tickCat(rCat, 140); return; }
+    var c = seq[i++];
+    tickCat(c, 180).then(function(){ if (i < seq.length) hold().then(step); });
+  }
+  setTimeout(step, 450);
 }
 function setCat(c){ if (rCat === c) return; rCat = c; rLimit = PAGE; renderCatUI(); renderRecipes(); }
 function catOpen(){ return !$('rCatPop').hidden; }
@@ -1515,7 +1578,7 @@ function catIcon(c){ return c ? ({'반찬':'c-side','국&찌개':'c-soup','일�
 function recipeMeta(r){
   var bits = [];
   if (r.kcal) bits.push(r.kcalEst ? '<span title="재료 분량으로 어림한 1인분 열량">'+ic('flame')+'약 '+r.kcal+'kcal</span>' : '<span>'+ic('flame')+r.kcal+'kcal</span>');
-  bits.push('<span class="rcat" data-cat="'+esc(r.cat)+'">'+ic(catIcon(r.cat))+esc(r.cat)+'</span>');
+  bits.push('<span class="rcat" data-cat="'+esc(r.cat)+'" role="button" tabindex="0" aria-label="'+esc(r.cat)+'만 보기">'+ic(catIcon(r.cat))+esc(r.cat)+'</span>');
   return '<div class="rmeta">'+bits.join('')+'</div>';
 }
 // 품목 이름: 큰 글씨는 깔끔한 이름, 원산지·용량은 작은 회색 줄 (원문은 title로)

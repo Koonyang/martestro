@@ -461,4 +461,15 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/html\.ts-cq #tab-deals \.card,html\.ts-cq \.recipe,html\.ts-cq #tab-recipes \.page-h\{container-type:normal!important\}/.test(T) && /d\.classList\.add\('ts-cq'\)/.test(T), '@container 다시 계산');
   assert(/html:is\(\[data-ts="1\.5"\],\[data-ts="2"\]\) \.mart \.dist\{flex:1 0 100%/.test(T), '마트 줄 쌓기');
   console.log('큰 글자 플로팅 버튼·줄바꿈 ok'); }
+{ const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
+  assert(/id="rCatBtn"[^>]*aria-label="분류: 전체"><span class="fic" data-ic="" aria-hidden="true">/.test(T), '분류 버튼 아이콘 상자');
+  assert(/button\.fbtn \.fic\{position:absolute;inset:0;overflow:hidden/.test(T), '티커는 버튼 안에서 잘림');
+  assert(/btn\.setAttribute\('aria-label', '분류: ' \+ \(rCat \|\| '전체'\)\)/.test(T) && /tickCat\(rCat, 140\)/.test(T), '분류 상태 아이콘 + 짧은 전환');
+  assert(T.includes("cubic-bezier(0.16,1,0.3,1)") && T.includes("cubic-bezier(0.7,0,0.84,0)") && /translateY\('\+Y\+'px\)/.test(T) && /Y = 7/.test(T), '티커 easing/거리');
+  assert(/function maybeCatHint\(\)/.test(T) && /mr_cat_hint/.test(T) && /\['반찬', '국&찌개', '일품', ''\]/.test(T) && /duration:350/.test(T) && /if \(rCat \|\| reduceMo\(\)/.test(T), '처음 한 번 힌트');
+  assert(/maybeCatHint\(\)/.test(T.slice(T.indexOf('function showTab'), T.indexOf('function showTab') + 1500)), '레시피 탭 열 때 힌트');
+  assert(/class="rcat" data-cat="'\+esc\(r\.cat\)\+'" role="button" tabindex="0" aria-label="'\+esc\(r\.cat\)\+'만 보기"/.test(T), '카드 분류 버튼 의미');
+  assert(/\.rmeta \.rcat::after\{content:"";position:absolute;left:50%;top:50%;width:max\(100%,44px\);height:max\(100%,44px\)/.test(T), '카드 분류 44px');
+  assert(/function catFromCard\(el, kb\)/.test(T) && /closest\('\.rcat'\)/.test(T), '카드 분류 누르기');
+  console.log('분류 버튼·카드 분류 연결 ok'); }
 console.log('ALL TESTS PASSED');

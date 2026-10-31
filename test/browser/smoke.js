@@ -590,6 +590,45 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       if (ts > 1 && orphans.length) throw new Error(`한 글자만 남은 줄 ${vw}/${ts}x: ` + orphans.join(', '));
     }
     await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.setViewport(vp0); await p.reload({ waitUntil: 'networkidle0' }); await W(500); }
+  // 분류 버튼 ↔ 카드 분류 아이콘: 지금 분류 아이콘으로 바뀌고, 처음 한 번만 티커 힌트, 카드 분류를 누르면 그 분류만
+  { const W = ms => new Promise(r => setTimeout(r, ms)); const vp0 = p.viewport();
+    const st = () => p.evaluate(() => { const b = document.getElementById('rCatBtn'), bx = b.querySelector('.fic'), u = bx.lastElementChild && bx.lastElementChild.querySelector('use');
+      return { ic: bx.getAttribute('data-ic'), kids: bx.children.length, href: u ? u.getAttribute('href') : 'def', al: b.getAttribute('aria-label'), on: b.classList.contains('on'), ov: getComputedStyle(bx).overflow, anim: bx.getAnimations({ subtree: true }).length, flag: localStorage.getItem('mr_cat_hint'), sy: scrollY,
+        cats: [...new Set([...document.querySelectorAll('#recipeList .rcat')].map(x => x.dataset.cat))] }; });
+    const pickCat = async c => { await p.click('#rCatBtn'); await W(120); await p.evaluate(c => [...document.querySelectorAll('#rCatPop [role=menuitemradio]')].find(x => x.dataset.cat === c).click(), c); await W(60); };
+    await p.evaluate(() => localStorage.removeItem('mr_cat_hint')); await p.reload({ waitUntil: 'networkidle0' }); await W(500);
+    let s0 = await st(); if (s0.ic !== '' || s0.href !== 'def' || s0.al !== '분류: 전체' || s0.on || s0.ov !== 'hidden') throw new Error('분류 버튼 기본 상태 이상 ' + JSON.stringify(s0));
+    await p.click('nav button[data-tab="tab-recipes"]'); const seen = []; let mid = 0;
+    for (let i = 0; i < 60; i++) { const s = await st(); if (!seen.length || seen[seen.length - 1] !== s.ic) seen.push(s.ic); if (s.kids > 1) mid++; if (i > 10 && s.ic === '' && s.kids === 1 && !s.anim) break; await W(50); }
+    s0 = await st(); console.log('cat hint:', seen.join('>'), 'mid frames', mid, s0.flag);
+    if (seen.join('>') !== '>반찬>국&찌개>일품>' || !mid || s0.flag !== '1' || s0.href !== 'def' || s0.kids !== 1) throw new Error('분류 힌트 순서 이상 ' + seen.join('>') + ' ' + JSON.stringify(s0));
+    await p.click('nav button[data-tab="tab-deals"]'); await W(200); await p.click('nav button[data-tab="tab-recipes"]'); await W(900); s0 = await st();
+    if (s0.ic !== '' || s0.anim) throw new Error('분류 힌트가 두 번 나와요');
+    // 줄인 움직임: 힌트 없음, 바꿀 때도 애니메이션 없음
+    await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+    await p.evaluate(() => localStorage.removeItem('mr_cat_hint')); await p.reload({ waitUntil: 'networkidle0' }); await W(400);
+    await p.click('nav button[data-tab="tab-recipes"]'); let rm = 0; for (let i = 0; i < 12; i++) { const s = await st(); if (s.ic !== '' || s.anim) rm++; await W(150); }
+    await pickCat('국&찌개'); s0 = await st(); const rmSwap = s0.anim + ':' + s0.kids + ':' + s0.ic; await pickCat('');
+    if (rm || (await st()).flag || rmSwap !== '0:1:국&찌개') throw new Error('줄인 움직임에서 분류 힌트/전환 이상 ' + rm + ' ' + rmSwap);
+    await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
+    await p.evaluate(() => localStorage.setItem('mr_cat_hint', '1'));
+    for (const ts of [1, 1.5, 2]) {
+      await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); }, ts); await p.reload({ waitUntil: 'networkidle0' }); await W(400);
+      await p.click('nav button[data-tab="tab-recipes"]'); await W(500);
+      const tgt = await p.evaluate(() => { const els = [...document.querySelectorAll('#recipeList .rcat')]; const el = els.slice(1).find(x => x.dataset.cat !== els[0].dataset.cat) || els[2]; el.scrollIntoView({ block: 'center' }); return el.dataset.cat; }); await W(300);
+      const g = await p.evaluate(c => { const el = [...document.querySelectorAll('#recipeList .rcat')].find(x => x.dataset.cat === c && Math.abs(x.getBoundingClientRect().top - innerHeight / 2) < 80); const r = el.getBoundingClientRect(), a = getComputedStyle(el, '::after');
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, aw: parseFloat(a.width), ah: parseFloat(a.height), role: el.getAttribute('role'), tab: el.tabIndex, al: el.getAttribute('aria-label'), lh: el.getBoundingClientRect().height }; }, tgt);
+      if (g.role !== 'button' || g.tab !== 0 || g.al !== tgt + '만 보기' || g.aw < 44 || g.ah < 44) throw new Error('카드 분류 버튼 속성 이상 ' + JSON.stringify(g));
+      await p.mouse.click(g.x, g.y + Math.min(18, g.h / 2 + 8)); await W(900); s0 = await st();
+      console.log('card cat tap ts', ts, tgt, JSON.stringify({ al: s0.al, href: s0.href, on: s0.on, sy: s0.sy, cats: s0.cats }));
+      if (s0.al !== '분류: ' + tgt || s0.ic !== tgt || !s0.on || s0.kids !== 1 || s0.href === 'def' || s0.cats.join() !== tgt || s0.sy > 2) throw new Error('카드 분류 누르기 이상 ' + JSON.stringify(s0));
+      const want = await p.evaluate(c => document.querySelector('#recipeList .rcat[data-cat="' + c + '"] use').getAttribute('href'), tgt); if (s0.href !== want) throw new Error('분류 버튼 아이콘이 카드 분류와 달라요 ' + s0.href + ' ' + want);
+      if (ts === 1) { await p.click('.kind-row .catchip'); await W(300); await p.evaluate(() => { const e = document.querySelector('#recipeList .rcat'); e.focus(); }); const kc = await p.evaluate(() => document.activeElement.dataset.cat);
+        await p.keyboard.press('Enter'); await W(500); s0 = await st(); if (s0.ic !== kc || (await p.evaluate(() => document.activeElement.id)) !== 'rCatBtn') throw new Error('카드 분류 키보드 이상 ' + JSON.stringify(s0)); }
+      await p.click('.kind-row .catchip'); await W(400); s0 = await st(); if (s0.ic !== '' || s0.href !== 'def' || s0.on || s0.al !== '분류: 전체') throw new Error('분류 해제 뒤 버튼 아이콘 이상 ' + JSON.stringify(s0));
+    }
+    await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.setViewport(vp0); await p.reload({ waitUntil: 'networkidle0' }); await W(500);
+    console.log('filter link OK'); }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
     const gap = await p.evaluate(() => { const t = (document.querySelector('#rSortBar .sp') || document.getElementById('rSortBar')).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
