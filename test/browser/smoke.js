@@ -547,10 +547,48 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     // 레시피 검색창: 맨 위 (할인 재료 검색과 같은 자리·높이·글자), 따라오지 않음
     { await p.evaluate(() => scrollTo(0, 0)); await W(150); const rs = await p.evaluate(() => { const e = document.getElementById('rSearch'), st = e.closest('.tools'), d = document.getElementById('dSearch'), r = e.getBoundingClientRect(); return { top: r.top, h: r.height, fs: getComputedStyle(e).fontSize, dfs: getComputedStyle(d).fontSize, pos: getComputedStyle(st).position, first: st.parentElement.firstElementChild === st }; });
       console.log('recipe search top:', rs); if (rs.pos === 'sticky' || rs.pos === 'fixed' || !rs.first || Math.abs(rs.top - 76) > 1.5 || Math.abs(rs.h - 53.27) > 1 || rs.fs !== '16px' || rs.dfs !== rs.fs) throw new Error('레시피 검색창 맨 위 sticky 아님 ' + JSON.stringify(rs)); }
-    // 레시피 머리말 여백: 할인 재료 머리말처럼 위아래 37.5px (검색창 아래 ↔ 제목 위, 칩(또는 고른 재료 줄) 아래 ↔ 첫 카드), 390/1x
-    { await p.evaluate(() => scrollTo(0, 0)); await W(150); const g = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), sb = r('#rSearch'), h1 = r('#tab-recipes .page-h h1'), kr = r('#tab-recipes .kind-row'), si = document.getElementById('selInd'), last = si.hidden ? kr : si.getBoundingClientRect(), c = document.querySelector('#recipeList > *');
+    // 레시피 머리말 여백: 할인 재료 머리말처럼 위아래 37.5px (검색창 밑 서랍 손잡이 아래 ↔ 제목 위, 칩(또는 고른 재료 줄) 아래 ↔ 첫 카드), 390/1x
+    { await p.evaluate(() => scrollTo(0, 0)); await W(150); const g = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), sb = r('#rDrawerBtn'), h1 = r('#tab-recipes .page-h h1'), kr = r('#tab-recipes .kind-row'), si = document.getElementById('selInd'), last = si.hidden ? kr : si.getBoundingClientRect(), c = document.querySelector('#recipeList > *');
         return { vw: innerWidth, ts: document.documentElement.getAttribute('data-ts'), above: +(h1.top - sb.bottom).toFixed(2), below: c ? +(c.getBoundingClientRect().top - last.bottom).toFixed(2) : -1, chipsIn: kr.top - r('#tab-recipes .page-h').bottom, pos: getComputedStyle(document.querySelector('#tab-recipes .tools')).position }; });
       console.log('recipe header gaps:', g); if (g.vw !== 390 || Math.abs(g.above - 37.5) > 0.6 || Math.abs(g.below - 37.5) > 0.6 || Math.abs(g.above - g.below) > 1 || g.chipsIn !== 12 || g.pos === 'sticky' || g.pos === 'fixed') throw new Error('레시피 머리말 위아래 여백 이상 ' + JSON.stringify(g)); }
+    // 없는 가전제품 서랍: 검색창 뒤에 숨은 손잡이 → 눌러서 펼침(200ms), 토글 3개(aria-pressed, 숨길 개수), 개수 연동, 저장, 1.5x/2x/320 넘침 없음
+    { const ds = () => p.evaluate(() => { const r = s => { const e = document.querySelector(s); if (!e) return null; const x = e.getBoundingClientRect(); return { l: x.left, t: x.top, r: x.right, b: x.bottom, w: x.width, h: x.height }; }, btn = document.getElementById('rDrawerBtn'), body = document.getElementById('rDrawerBody');
+        const lip = r('#rDrawerBtn'), sb = r('#rSearch'), cx = lip.l + lip.w / 2, cy = (lip.t + lip.b) / 2, top = document.elementFromPoint(cx, sb.b - 4);
+        return { vw: innerWidth, docW: document.documentElement.scrollWidth, ex: btn.getAttribute('aria-expanded'), ac: btn.getAttribute('aria-controls'), bodyId: body.id, lab: btn.innerText.replace(/\s+/g, ' ').trim(), on: btn.classList.contains('on'),
+          narrower: lip.l > sb.l && lip.r < sb.r, behind: !!(top && top.closest('#tab-recipes .tools')), lipHit: [[cx, cy - 21], [cx, cy + 21]].map(([x, y]) => document.elementFromPoint(x, y)).filter(e => e && e.closest('#rDrawerBtn, #tab-recipes .tools')).length === 2,
+          bodyH: r('#rDrawerBody').h, vis: getComputedStyle(body).visibility, gap: +(r('#tab-recipes .page-h h1').t - lip.b).toFixed(2), pos: getComputedStyle(document.getElementById('rDrawer')).position,
+          togs: [...document.querySelectorAll('#apGroup .fdtog')].map(b => { const x = b.getBoundingClientRect(), a = getComputedStyle(b, '::after'); return { k: b.dataset.ap, t: b.childNodes[1].textContent.trim(), n: +b.querySelector('small').textContent.replace(/,/g, ''), pr: b.getAttribute('aria-pressed'), r: x.right, l: x.left, hit: Math.max(x.height, parseFloat(a.height) || 0) }; }),
+          hint: !document.getElementById('apHint').hidden, hintTxt: document.getElementById('apHint').textContent, chip0: +document.querySelector('.kind-row .kchip .kc').innerText.replace(/,/g, ''), sum: document.getElementById('recipeSummary').innerText, tot: document.getElementById('recipeTotal').innerText.replace(/\s+/g, ' ') }; });
+      const tg = async k => { await p.click(`#apGroup .fdtog[data-ap="${k}"]`); await W(150); return ds(); };
+      await p.evaluate(() => { localStorage.removeItem('mr_ap'); scrollTo(0, 0); }); await W(100);
+      let a = await ds(); console.log('drawer closed:', JSON.stringify({ ex: a.ex, lab: a.lab, narrower: a.narrower, behind: a.behind, bodyH: a.bodyH, vis: a.vis, gap: a.gap }));
+      if (a.ex !== 'false' || a.ac !== a.bodyId || a.lab !== '없는 가전제품 필터링' || a.on || !a.narrower || !a.behind || !a.lipHit || a.bodyH > 0.5 || a.vis !== 'hidden' || Math.abs(a.gap - 37.5) > 0.6 || a.pos === 'sticky') throw new Error('서랍 닫힌 상태 이상 ' + JSON.stringify(a));
+      const base = a.chip0; await p.click('#rDrawerBtn'); await W(60); const mid = (await ds()).bodyH; await W(300); a = await ds();
+      const tr = await p.$eval('#rDrawerBody', e => getComputedStyle(e).transition);
+      console.log('drawer open:', JSON.stringify({ ex: a.ex, mid, bodyH: a.bodyH, togs: a.togs, gap: a.gap, tr }));
+      if (a.ex !== 'true' || a.bodyH < 44 || a.vis !== 'visible' || !(mid > 0 && mid < a.bodyH) || !/0\.2s/.test(tr) || Math.abs(a.gap - 37.5) > 0.6 || a.togs.map(t => t.t).join('|') !== '오븐 없음|찜기 없음|에어프라이어 없음' || a.togs.some(t => t.pr !== 'false' || t.hit < 44) || a.togs[2].n !== 0 || !(a.togs[0].n > 0 && a.togs[1].n > 0)) throw new Error('서랍 열기 이상 ' + JSON.stringify(a));
+      const nOven = a.togs[0].n; a = await tg('oven');
+      console.log('oven on:', a.chip0, base, nOven, a.togs.map(t => t.n), a.lab, a.tot);
+      if (a.togs[0].pr !== 'true' || a.chip0 !== base - nOven || a.togs[0].n !== nOven || !(a.togs[2].n >= 0) || !/· 1$/.test(a.lab) || !a.on || !/[\d,]+개/.test(a.sum)) throw new Error('오븐 없음 이상 ' + JSON.stringify(a));
+      const fr = a.togs[2].n; a = await tg('airfryer'); if (a.chip0 !== base - nOven - fr || a.hint || !/· 2$/.test(a.lab)) throw new Error('오븐+에어프라이어 이상 ' + JSON.stringify(a));
+      a = await tg('oven'); if (a.chip0 !== base || !a.hint || a.hintTxt !== '오븐으로 대신할 수 있는 레시피는 남겨둬요' || a.togs[2].n !== 0 || a.togs[2].pr !== 'true') throw new Error('에어프라이어만 이상 ' + JSON.stringify(a));
+      a = await tg('airfryer'); a = await tg('steamer'); if (a.chip0 !== base - a.togs[1].n || a.togs[1].pr !== 'true') throw new Error('찜기 없음 이상 ' + JSON.stringify(a));
+      const saved = await p.evaluate(() => localStorage.getItem('mr_ap')); if (!/"steamer":true/.test(saved) || /"oven":true/.test(saved)) throw new Error('mr_ap 저장 이상 ' + saved);
+      await p.click('#rDrawerBtn'); await W(300); a = await ds(); if (a.ex !== 'false' || a.bodyH > 0.5 || !a.on || !/· 1$/.test(a.lab) || Math.abs(a.gap - 37.5) > 0.6) throw new Error('닫힌 채 필터 켜짐 이상 ' + JSON.stringify(a));
+      const lipCol = await p.$eval('#apN', e => getComputedStyle(e).color), labCol = await p.$eval('#rDrawerBtn .fd-lab', e => getComputedStyle(e).color); if (lipCol === labCol) throw new Error('손잡이 활성 표시(금색) 없음');
+      await p.reload({ waitUntil: 'networkidle0' }); await p.click('nav button[data-tab="tab-recipes"]'); await W(400); a = await ds();
+      if (a.ex !== 'false' || !a.on || a.togs[1].pr !== 'true' || a.chip0 !== base - a.togs[1].n) throw new Error('새로고침 후 유지 이상 ' + JSON.stringify(a));
+      await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]); await p.click('#rDrawerBtn'); await W(30); const rm = (await ds()).bodyH; await p.click('#rDrawerBtn'); await W(30); await p.emulateMediaFeatures([]);
+      if (rm < 44) throw new Error('동작 줄이기: 바로 펼쳐져야 함 ' + rm);
+      await p.click('#rDrawerBtn'); await W(300); await tg('steamer'); await p.click('#rDrawerBtn'); await W(300); a = await ds();
+      if (a.on || a.lab !== '없는 가전제품 필터링' || a.chip0 !== base || await p.evaluate(() => localStorage.getItem('mr_ap')) !== '{"oven":false,"steamer":false,"airfryer":false}') throw new Error('끄기 저장 이상 ' + JSON.stringify(a));
+      const vp0 = p.viewport(), bad = [];
+      for (const vw of [390, 320]) for (const ts of [1, 1.5, 2]) { await p.setViewport({ ...vp0, width: vw }); await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); window.__applyTextSize(); scrollTo(0, 0); }, ts); await W(250);
+        await p.click('#rDrawerBtn'); await W(300); await p.evaluate(() => { const b = document.querySelector('#apGroup .fdtog[data-ap="oven"]'); b.click(); }); await W(150); a = await ds(); await p.evaluate(() => document.querySelector('#apGroup .fdtog[data-ap="oven"]').click()); await W(100); await p.click('#rDrawerBtn'); await W(300); const c = await ds();
+        const ok = a.docW <= vw && a.togs.every(t => t.l >= 0 && t.r <= vw) && Math.abs(a.gap - 37.5) < 0.6 && Math.abs(c.gap - 37.5) < 0.6 && c.narrower && c.behind && a.lab.endsWith('· 1') && a.togs.every(t => t.hit >= 44);
+        console.log('drawer size', vw, ts, ok, a.docW, a.bodyH.toFixed(1), a.togs.map(t => Math.round(t.l) + '-' + Math.round(t.r)).join(','), a.gap, c.gap); if (!ok) bad.push([vw, ts, a, c]); }
+      await p.setViewport(vp0); await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); scrollTo(0, 0); }); await W(250);
+      if (bad.length) throw new Error('서랍 크기별 이상 ' + JSON.stringify(bad)); }
     // 두 검색창은 같은 모양(레시피 칸 기준): 안 붙어 있을 때 배경·테두리·그림자·안내 글자색이 같아야 해요
     { const sc = await p.evaluate(() => { const st = id => { const e = document.getElementById(id), c = getComputedStyle(e); return { bg: c.backgroundColor, bd: c.border, bs: c.boxShadow, ph: getComputedStyle(e, '::placeholder').color }; };
         return { stuck: document.getElementById('dSticky').classList.contains('stuck'), d: st('dSearch'), r: st('rSearch') }; });

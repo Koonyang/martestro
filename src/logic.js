@@ -411,17 +411,46 @@ function kindMatch(r, kinds){
 }
 
 // 검색·분류 필터 (q: 검색어, cat: ''=전체)
-function filterRecipes(list, q, cat, getR, kinds){
+function filterRecipes(list, q, cat, getR, kinds, ap){
   getR = getR || function(x){ return x; };
   var words = String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
   return list.filter(function(x){
     var r = getR(x);
     if (cat && r.cat !== cat) return false;
     if (!kindMatch(r, kinds)) return false;
+    if (ap && applianceHidden(r, ap)) return false;
     for (var i=0;i<words.length;i++) if (r.q.indexOf(words[i]) < 0) return false;
     return true;
   });
 }
+
+// ---- 없는 가전제품 필터: 레시피 이름·만드는 법을 문장(줄바꿈·마침표)마다 보고, 대안 없이 가전제품을 쓰는 문장이 하나라도 있으면 「필요」 ----
+var APPLIANCES = [
+  {k:'oven', l:'오븐 없음', re:/오븐/},
+  {k:'steamer', l:'찜기 없음', re:/찜기|찜통/},
+  {k:'airfryer', l:'에어프라이어 없음', re:/에어\s*프라이어|에어프라이기/}
+];
+// 같은 문장에 대안(또는·없으면·대신·찌거나 …)이 있으면 꼭 필요한 건 아니에요
+var APPLIANCE_ALT = /또는|혹은|없으면|없다면|없을\s*경우|대신|대체|(찌|삶|굽|볶|끓이|데우|익히)거나|거나\s*(찜|전자|오븐|팬|끓)/;
+function recipeAppliances(r){
+  var ss = (r.name + '\n' + [].concat(r.steps || []).join('\n')).split(/[\n.]/), out = {};
+  APPLIANCES.forEach(function(a){ out[a.k] = ss.some(function(x){ return a.re.test(x) && !APPLIANCE_ALT.test(x); }); });
+  return out;
+}
+function normAp(v){ var o = {}; APPLIANCES.forEach(function(a){ o[a.k] = !!(v && v[a.k] === true); }); return o; }
+function apNeeds(r){ return r.needs || (r.needs = recipeAppliances(r)); }
+// 에어프라이어 레시피는 오븐으로 대신할 수 있어요 → 「오븐 없음」도 켜야 숨겨요
+function apRuleHides(k, n, ap){ return k === 'airfryer' ? !!(ap.airfryer && ap.oven && n.airfryer) : !!(ap[k] && n[k]); }
+function applianceHidden(r, ap){ if (!ap) return false; var n = apNeeds(r); for (var i = 0; i < APPLIANCES.length; i++) if (apRuleHides(APPLIANCES[i].k, n, ap)) return true; return false; }
+// 버튼마다 실제로 숨기는(켰을 때 숨길) 개수 — 에어프라이어는 「오븐 없음」이 켜져 있을 때만 숨기므로 그때만 셈
+function applianceCounts(list, ap, getR){
+  getR = getR || function(x){ return x; }; ap = normAp(ap); var c = {};
+  APPLIANCES.forEach(function(a){ var on = {}; on[a.k] = true; if (a.k === 'airfryer') on.oven = ap.oven; c[a.k] = 0;
+    list.forEach(function(x){ if (apRuleHides(a.k, apNeeds(getR(x)), on)) c[a.k]++; }); });
+  return c;
+}
+function apActiveCount(ap){ ap = normAp(ap); return APPLIANCES.filter(function(a){ return ap[a.k]; }).length; }
+function apFryerHint(ap){ ap = normAp(ap); return ap.airfryer && !ap.oven; }
 
 var PANTRY_NOTE = '간장·소금·설탕·고춧가루·식용유·후추·깨 같은 기본양념은 집에 있다고 가정했어요.';
 
@@ -730,4 +759,4 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, arrowOfLabel:arrowOfLabel, recipeSubtitle:recipeSubtitle, recipeTotalLabel:recipeTotalLabel, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, cvsBrandOf:cvsBrandOf, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, arrowOfLabel:arrowOfLabel, recipeSubtitle:recipeSubtitle, recipeTotalLabel:recipeTotalLabel, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, cvsBrandOf:cvsBrandOf, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, APPLIANCES:APPLIANCES, APPLIANCE_ALT:APPLIANCE_ALT, recipeAppliances:recipeAppliances, normAp:normAp, applianceHidden:applianceHidden, applianceCounts:applianceCounts, apActiveCount:apActiveCount, apFryerHint:apFryerHint, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};

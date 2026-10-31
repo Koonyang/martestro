@@ -487,4 +487,32 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/\.rsort \.catpop button\[aria-checked=false\] \.sd-dir\{visibility:hidden\}/.test(T), '고른 줄만 방향 표시(폭 고정)');
   assert(/button\.kchip\{min-height:calc\(36em \/ 13\.5\);padding:calc\(6em \/ 13\.5\) calc\(14em \/ 13\.5\);/.test(T) && /\.kind-row\{display:flex;flex-wrap:wrap;gap:9px 7px;/.test(T) && !/button\.kchip\{padding-left:calc\(9em/.test(T) && !/column-gap:6px/.test(T) && /button\.sortdd\{[^}]*padding:0 2px;margin:0 -2px 0 0;/.test(T), '칩 좌우 14px·칩 사이 7px·정렬 좌우 2px (원래대로)');
   console.log('레시피 정렬 드롭다운 ok'); }
+// 없는 가전제품 필터: 이름·조리법 문장 중 대체 표현이 없는 문장에만 나오면 "꼭 필요"
+{ const A = L.ALL_RECIPES, need = k => A.filter(r => L.recipeAppliances(r)[k]).length;
+  assert.equal(A.length, 1078); assert.equal(need('oven'), 67, 'oven'); assert.equal(need('steamer'), 92, 'steamer'); assert.equal(need('airfryer'), 3, 'airfryer');
+  const by = n => A.find(r => r.name.replace(/\s/g,'') === n);
+  assert(by('단호박찜') && !L.recipeAppliances(by('단호박찜')).steamer, '단호박찜: 전자레인지 또는 찜기 → 필수 아님');
+  assert(by('파인애플떡갈비') && !L.recipeAppliances(by('파인애플떡갈비')).oven, '파인애플떡갈비: 팬 또는 오븐 → 필수 아님');
+  const R = (name, steps) => L.recipeAppliances({name, steps});
+  assert(R('x', ['오븐에 20분 굽는다.']).oven && !R('x', ['오븐이 없으면 팬에 굽는다.']).oven && !R('x', ['찜기에 찌거나 삶는다']).steamer);
+  assert(R('x', ['찜통에 찐다']).steamer && R('x', ['에어 프라이어에 10분']).airfryer && R('x', ['에어프라이기 180도']).airfryer && !R('x', ['에어프라이어 대신 오븐']).airfryer);
+  assert(R('x', ['팬에 볶는다. 오븐에 굽는다']).oven, '문장 단위로 나눠 봄');
+  const ap = (o, s, f) => L.normAp({oven:!!o, steamer:!!s, airfryer:!!f});
+  assert.deepEqual(L.normAp(null), {oven:false, steamer:false, airfryer:false}); assert.deepEqual(L.normAp({oven:true, steamer:'1', x:1}), {oven:true, steamer:false, airfryer:false});
+  const fr = A.find(r => L.recipeAppliances(r).airfryer), ov = A.find(r => L.recipeAppliances(r).oven), st = A.find(r => L.recipeAppliances(r).steamer);
+  assert(!L.applianceHidden(fr, ap(0,0,1)), '에어프라이어만 끄면 숨기지 않음'); assert(L.applianceHidden(fr, ap(1,0,1)) && !L.applianceHidden(fr, ap(1,0,0)));
+  assert(L.applianceHidden(ov, ap(1,0,0)) && !L.applianceHidden(ov, ap(0,1,1)) && L.applianceHidden(st, ap(0,1,0)));
+  assert.deepEqual(L.applianceCounts(A, ap(0,0,0)), {oven:67, steamer:92, airfryer:0});
+  assert.deepEqual(L.applianceCounts(A, ap(1,0,0)), {oven:67, steamer:92, airfryer:3});
+  assert.equal(L.filterRecipes(A, '', '', null, null, ap(0,0,1)).length, 1078);
+  assert.equal(L.filterRecipes(A, '', '', null, null, ap(1,0,0)).length, 1078-67);
+  const all3 = L.filterRecipes(A, '', '', null, null, ap(1,1,1)); assert.equal(all3.length, A.filter(r => { const n = L.recipeAppliances(r); return !(n.oven||n.steamer||n.airfryer); }).length);
+  assert(all3.every(r => !L.applianceHidden(r, ap(1,1,1))));
+  assert(L.filterRecipes(A, '', '후식', null, null, ap(1,0,0)).every(r => r.cat==='후식' && !L.recipeAppliances(r).oven), '분류와 함께');
+  assert.equal(L.apActiveCount(ap(1,0,1)), 2); assert(L.apFryerHint(ap(0,0,1)) && !L.apFryerHint(ap(1,0,1)) && !L.apFryerHint(ap(0,0,0)));
+  const T = require('fs').readFileSync(__dirname+'/../src/template.html','utf8');
+  assert(/<button type="button" class="fd-lip" id="rDrawerBtn" aria-expanded="false" aria-controls="rDrawerBody">/.test(T) && /id="rDrawerBody" role="region"/.test(T), '서랍 버튼 aria');
+  assert(/aria-pressed="false"/.test(T) && /load\('mr_ap', null\)/.test(T) && /save\('mr_ap', rAp\)/.test(T), '토글 aria-pressed + 저장');
+  assert(/transition:grid-template-rows \.2s cubic-bezier\(\.16,1,\.3,1\)/.test(T), '200ms ease-out');
+  console.log('없는 가전제품 필터 ok', all3.length); }
 console.log('ALL TESTS PASSED');
