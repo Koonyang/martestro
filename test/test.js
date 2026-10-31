@@ -473,17 +473,18 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/\.rmeta \.rcat::after\{content:"";position:absolute;left:50%;top:50%;width:max\(100%,44px\);height:max\(100%,44px\)/.test(T), '카드 분류 44px');
   assert(/function catFromCard\(el, kb\)/.test(T) && /closest\('\.rcat'\)/.test(T), '카드 분류 누르기');
   console.log('분류 버튼·카드 분류 연결 ok'); }
-// 레시피 정렬: 칩 줄 대신 종류 칩 줄 오른쪽 끝 글자 드롭다운 (할인 탭 정렬은 그대로)
+// 레시피 정렬: 칩 줄 대신 제목 줄 오른쪽 끝 글자 드롭다운 (할인 탭 정렬은 그대로)
 { const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
   assert(!/id="rSortBar"/.test(T) && /id="dSortBar"/.test(T), '레시피 정렬 칩 줄 없음, 할인 정렬 칩은 그대로');
-  assert(/<div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"><\/button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden><\/div><\/div>\n  <\/div>/.test(T), '정렬 트리거는 종류 칩 줄 안 마지막');
+  assert(/<div class="rtitle"><h1>추천 레시피<small id="recipeTotal" class="h-tot"><\/small><\/h1><div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"><\/button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden><\/div><\/div><\/div>/.test(T), '정렬 트리거는 제목 줄 오른쪽 끝');
+  assert(!/class="kind-row"[^]*?class="rsort"[^]*?<div id="selInd"/.test(T) && /\.rtitle\{display:flex;flex-wrap:wrap;align-items:baseline;/.test(T) && /\.rsort\{[^}]*margin-left:auto/.test(T), '칩 줄엔 칩만, 제목 줄 기준선 맞춤·넘치면 정렬만 다음 줄 오른쪽');
   assert(/button\.sortdd\{[^}]*background:none;[^}]*box-shadow:none;[^}]*color:var\(--m\)/.test(T), '상자 없는 흐린 글자');
   assert(/role="menuitemradio"/.test(T) && /aria-checked/.test(T) && /function openRSort\(\)/.test(T) && /function closeRSort\(/.test(T) && /closeRSort\(false\)/.test(T.slice(T.indexOf('function openCat'), T.indexOf('function openCat') + 300)), '메뉴·체크·서로 닫기');
   assert(/'Escape'/.test(T.slice(T.indexOf('function openRSort'))) && /renderRSort\(\)/.test(T), 'Escape / 다시 그리기');
-  assert(/insertBefore\(chip, row\.querySelector\('\.rsort'\)\)/.test(T), '분류 칩은 정렬 앞에');
+  assert(/row\.appendChild\(chip\)/.test(T), '분류 칩은 종류 칩 뒤에');
   assert(/rSort = nextSort\(RECIPE_SORTS, rSort, k\)/.test(T) && /if \(!d\.dir\) closeRSort\(true\)/.test(T) && !/RS_OPTS/.test(T), '4줄 메뉴: 같은 기준은 방향만 뒤집고 열린 채, 추천순만 닫힘');
   assert(/'으로 정렬'/.test(T) && /function spinAr\(el\)\{ if \(!el \|\| !el\.animate \|\| reduceMo\(\)\) return;/.test(T) && /duration:150/.test(T), '알림 문구 + 150ms 화살표 회전(동작 줄이기 존중)');
   assert(/\.rsort \.catpop button\[aria-checked=false\] \.sd-dir\{visibility:hidden\}/.test(T), '고른 줄만 방향 표시(폭 고정)');
-  assert(/html:not\(\[data-ts="1\.5"\]\):not\(\[data-ts="2"\]\) button\.kchip\{padding-left:calc\(9em \/ 13\.5\);padding-right:calc\(9em \/ 13\.5\)\}/.test(T) && /html:not\(\[data-ts="1\.5"\]\):not\(\[data-ts="2"\]\) \.kind-row\{column-gap:6px\}/.test(T) && /button\.kchip\{min-height:calc\(36em \/ 13\.5\);padding:calc\(6em \/ 13\.5\) calc\(14em \/ 13\.5\);[^}]*font-size:\.84375rem/.test(T), '보통 글자만 칩 좌우 9px(글자 크기 그대로)');
+  assert(/button\.kchip\{min-height:calc\(36em \/ 13\.5\);padding:calc\(6em \/ 13\.5\) calc\(14em \/ 13\.5\);/.test(T) && /\.kind-row\{display:flex;flex-wrap:wrap;gap:9px 7px;/.test(T) && !/button\.kchip\{padding-left:calc\(9em/.test(T) && !/column-gap:6px/.test(T) && /button\.sortdd\{[^}]*padding:0 2px;margin:0 -2px 0 0;/.test(T), '칩 좌우 14px·칩 사이 7px·정렬 좌우 2px (원래대로)');
   console.log('레시피 정렬 드롭다운 ok'); }
 console.log('ALL TESTS PASSED');

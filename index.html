@@ -102,7 +102,7 @@ main{max-width:680px;margin:0 auto;padding:4px 16px 0}
 .page-h{padding:14px 4px 2px}
 .page-h h1{font-size:1.4375rem;letter-spacing:-.035em;margin:0;font-weight:800}
 .page-h p{margin:4px 0 0;color:var(--t2);font-size:.875rem}
-.page-h h1 .h-tot{margin-left:8px;font-size:.8125rem;font-weight:600;letter-spacing:-.01em;color:var(--m)}
+.page-h h1 .h-tot{margin-left:8px;white-space:nowrap;font-size:.8125rem;font-weight:600;letter-spacing:-.01em;color:var(--m)}
 #recipeSummary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tab-recipes .page-h{container:rhead/inline-size}
 @container rhead (max-width:20em){#recipeSummary{white-space:normal;overflow:visible}}
@@ -305,10 +305,6 @@ button.mn-toggle:focus-visible{outline:2px solid var(--g);outline-offset:1px}
 /* 레시피 종류 필터 칩 (전체 / 자취생 / 간편식품 — 자취생·간편식품은 함께 고를 수 있음) */
 .kind-row{display:flex;flex-wrap:wrap;gap:9px 7px;margin-top:12px}
 button.kchip{min-height:calc(36em / 13.5);padding:calc(6em / 13.5) calc(14em / 13.5);border-radius:999px;font-size:.84375rem;font-weight:700;gap:5px;background:var(--card);color:var(--t2);box-shadow:inset 0 0 0 1px var(--line);letter-spacing:-.02em}
-/* 보통 글자: 종류 칩 3개 + 정렬(가장 긴 「↑ 절약률 높은순 ▾」)이 390px 한 줄에 — 칩 좌우 여백 14→9px, 칩 사이 7→6px, 정렬 버튼 좌우 여백 2→0 (크게·아주 크게 줄바꿈은 그대로) */
-html:not([data-ts="1.5"]):not([data-ts="2"]) .kind-row{column-gap:6px}
-html:not([data-ts="1.5"]):not([data-ts="2"]) button.kchip{padding-left:calc(9em / 13.5);padding-right:calc(9em / 13.5)}
-html:not([data-ts="1.5"]):not([data-ts="2"]) button.sortdd{padding:0;margin:0}
 button.kchip small{font-size:.71875rem;font-weight:650;color:var(--m);font-variant-numeric:tabular-nums}
 button.kchip small:empty{display:none}
 button.kchip[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g)}
@@ -317,8 +313,11 @@ button.kchip[aria-pressed=true] small{color:var(--g)}
 .sortbar{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;margin:7px -4px -5px;padding:8px 4px}
 .sortbar::-webkit-scrollbar{display:none}
 .sortbar[hidden]{display:none}
-/* 레시피 정렬: 칩 줄 대신 종류 칩 줄(마지막 줄) 오른쪽 끝의 글자만 있는 작은 「추천순 ▾」 → 분류 메뉴와 같은 모양의 메뉴 */
-.rsort{position:relative;flex:none;margin-left:auto;display:flex;align-items:center;min-height:calc(36em / 13.5);font-size:.84375rem}
+/* 레시피 정렬: 제목 줄(「추천 레시피  전체 N개」) 오른쪽 끝의 글자만 있는 작은 「추천순 ▾」 → 분류 메뉴와 같은 모양의 메뉴.
+   글자 기준선은 「전체 N개」와 맞춤. 한 줄에 다 안 들어가면(큰 글자/320) 정렬만 제목 바로 아래 줄 오른쪽 끝으로 */
+.rtitle{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px}
+.rtitle h1{min-width:0}
+.rsort{position:relative;flex:none;margin-left:auto;display:flex;align-items:baseline;font-size:.84375rem}
 button.sortdd{position:relative;min-height:0;padding:0 2px;margin:0 -2px 0 0;background:none;box-shadow:none;border-radius:6px;color:var(--m);font-size:.75rem;font-weight:600;gap:3px;letter-spacing:-.02em;white-space:nowrap}
 button.sortdd::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
 button.sortdd:hover,button.sortdd[aria-expanded=true]{filter:none;color:var(--t)}
@@ -735,12 +734,11 @@ html:is([data-ts="1.5"],[data-ts="2"]) :is(.meta span,.ingtxt){word-break:keep-a
       <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
     </div>
   </div>
-  <div class="page-h"><h1>추천 레시피<small id="recipeTotal" class="h-tot"></small></h1><p id="recipeSummary"></p></div>
+  <div class="page-h"><div class="rtitle"><h1>추천 레시피<small id="recipeTotal" class="h-tot"></small></h1><div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"></button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden></div></div></div><p id="recipeSummary"></p></div>
   <div class="kind-row" role="group" aria-label="레시피 종류 (여러 개 고를 수 있어요)">
     <button type="button" class="kchip" data-kind="" aria-pressed="true">전체 <small class="kc"></small></button>
     <button type="button" class="kchip" data-kind="jachi" aria-pressed="false" title="재료 적고 저렴한 한 끼">자취생 <small class="kc"></small></button>
     <button type="button" class="kchip" data-kind="quick" aria-pressed="false" title="라면·만두·햄·참치·즉석밥 같은 간편식품으로">간편식품 <small class="kc"></small></button>
-    <div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"></button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden></div></div>
   </div>
   <div id="selInd" class="sel-ind" role="status" hidden></div>
   <div id="sortStatus" class="vh" role="status" aria-live="polite"></div>
@@ -3312,7 +3310,7 @@ function renderCatUI(){
   }).join('');
   var row = document.querySelector('.kind-row'), chip = row.querySelector('.catchip');
   if (!on){ if (chip) chip.remove(); return; }
-  if (!chip){ chip = document.createElement('button'); chip.type = 'button'; chip.className = 'catchip'; row.insertBefore(chip, row.querySelector('.rsort')); }
+  if (!chip){ chip = document.createElement('button'); chip.type = 'button'; chip.className = 'catchip'; row.appendChild(chip); }
   chip.setAttribute('aria-label', '분류 「' + rCat + '」 필터 해제');
   chip.innerHTML = '<small aria-hidden="true">분류</small>' + esc(rCat) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 }

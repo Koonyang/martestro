@@ -519,24 +519,30 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
           sum = document.getElementById('recipeSummary'), kr = document.querySelector('.kind-row').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
           const hit = [[cx, cy - 21], [cx, cy + 21], [r.right - 22 < r.left ? cx : r.right - 21, cy]].every(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.closest('#rSortBtn, #rSortPop'); });
           const items = [...document.querySelectorAll('#rSortPop button')].map(x => x.getBoundingClientRect().height);
-          return { h: Math.round(r.height), oneLine: r.height < lh, inX: r.left >= 0 && r.right <= innerWidth, popX: pop.left >= 0 && pop.right <= innerWidth, popH: Math.max(...items), itemFs: parseFloat(getComputedStyle(document.querySelector('#rSortPop button')).fontSize), hit, inRow: r.bottom <= kr.bottom + 1, docW: document.documentElement.scrollWidth <= innerWidth,
+          const h1 = document.querySelector('#tab-recipes .page-h h1'), tr = document.querySelector('#tab-recipes .rtitle').getBoundingClientRect(), tn = h1.firstChild, words = [];
+          { let o = 0; for (const w of tn.textContent.split(' ')) { if (w) { const rg = document.createRange(); rg.setStart(tn, o); rg.setEnd(tn, o + w.length); words.push(rg.getClientRects().length); } o += w.length + 1; } }
+          return { h: Math.round(r.height), oneLine: r.height < lh, inX: r.left >= 0 && r.right <= innerWidth, popX: pop.left >= 0 && pop.right <= innerWidth, popH: Math.max(...items), itemFs: parseFloat(getComputedStyle(document.querySelector('#rSortPop button')).fontSize), hit, inRow: r.bottom <= kr.top, right: Math.abs(r.right - tr.right - 2) < 1.5, below: pop.top >= r.bottom, onScr: pop.bottom <= innerHeight, word: words.every(n => n === 1), docW: document.documentElement.scrollWidth <= innerWidth,
             sumLines: sum ? Math.round(sum.getBoundingClientRect().height / parseFloat(getComputedStyle(sum).lineHeight)) : -1 }; });
         await p.keyboard.press('Escape'); await W(100);
-        if (!m.oneLine || !m.inX || !m.popX || !m.inRow || !m.docW || (vw === 390 && ts === 1 && (m.sumLines !== 1 || !m.hit)) || m.popH > m.itemFs * 3) bad.push(vw + '/' + ts + ' ' + JSON.stringify(m));
+        if (!m.oneLine || !m.inX || !m.popX || !m.inRow || !m.right || !m.below || !m.onScr || !m.word || !m.docW || (vw === 390 && ts === 1 && (m.sumLines !== 1 || !m.hit)) || m.popH > m.itemFs * 3) bad.push(vw + '/' + ts + ' ' + JSON.stringify(m));
         console.log('recipe sort dd', vw, ts, JSON.stringify(m));
       }
       await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); window.scrollTo(0, 0); }); await p.setViewport(vp0); await W(300);
       if (bad.length) throw new Error('정렬 메뉴 크기별 이상 ' + bad.join(' | '));
-      // 390/1x: 가장 넓은 개수(1,999·999·999)여도 모든 정렬에서 칩 3개와 같은 줄
+      // 390/1x: 모든 정렬에서 트리거는 제목(「추천 레시피  전체 N개」) 줄 오른쪽 끝 — 「전체 N개」가 가장 넓어도(9,999)·숨겨져도. 칩 줄엔 칩만(좌우 14px·사이 7px)
       { const off = [];
-        for (const [k, rev] of [['rec', false], ['save', false], ['save', true], ['cost', false], ['cost', true], ['kcal', false], ['kcal', true]]) {
+        for (const [k, rev] of [['rec', false], ['save', false], ['save', true], ['cost', false], ['cost', true], ['kcal', false], ['kcal', true]]) for (const tot of ['전체 9,999개', '']) {
           await rpick(k, rev); await p.evaluate(() => window.scrollTo(0, 0));
-          const m = await p.evaluate(() => { const ch = [...document.querySelectorAll('.kind-row .kchip')]; ['1,999', '999', '999'].forEach((t, i) => { const s = ch[i] && ch[i].querySelector('.kc'); if (s) s.textContent = t; });
-            const c0 = ch[0].getBoundingClientRect(), t = document.getElementById('rSortBtn').getBoundingClientRect(), row = document.querySelector('.kind-row').getBoundingClientRect();
-            return { same: ch.every(c => Math.abs(c.getBoundingClientRect().top - c0.top) < 1) && t.top >= c0.top - 1 && t.bottom <= c0.bottom + 1, inX: t.right <= row.right + 2.5 && document.documentElement.scrollWidth <= innerWidth, lab: document.getElementById('rSortBtn').textContent, padL: getComputedStyle(ch[0]).paddingLeft }; });
-          if (!m.same || !m.inX || m.padL !== '9px') off.push(JSON.stringify(m)); }
-        console.log('recipe chips one line 390/1x:', off.length ? off : 'ok');
-        if (off.length) throw new Error('390/1x 정렬이 칩 줄에서 밀려남 ' + off.join(' | ')); await rpick('rec', false); }
+          const m = await p.evaluate(tot => { const t = document.getElementById('recipeTotal'), t0 = [t.textContent, t.hidden]; t.textContent = tot; t.hidden = !tot;
+            const h1 = document.querySelector('#tab-recipes .page-h h1'), hr = h1.getBoundingClientRect(), lh = parseFloat(getComputedStyle(h1).lineHeight), b = document.getElementById('rSortBtn'), r = b.getBoundingClientRect(), tr = document.querySelector('#tab-recipes .rtitle').getBoundingClientRect(),
+              ch = [...document.querySelectorAll('.kind-row .kchip')], row = document.querySelector('.kind-row'), sum = document.getElementById('recipeSummary'), tb = t.hidden ? null : t.getBoundingClientRect();
+            const res = { lab: b.textContent, tot, oneTitle: hr.height < lh * 1.5, line: r.top >= hr.top && r.bottom <= hr.top + lh, base: !tb || Math.abs((tb.top + tb.bottom) / 2 - (r.top + r.bottom) / 2) < 3, right: Math.abs(r.right - tr.right - 2) < 1.5, apart: !tb || r.left >= tb.right + 8,
+              onlyChips: !row.querySelector('#rSortBtn, .rsort'), padL: getComputedStyle(ch[0]).paddingLeft, padR: getComputedStyle(ch[0]).paddingRight, gap: getComputedStyle(row).columnGap, bPad: getComputedStyle(b).paddingLeft,
+              sum1: Math.round(sum.getBoundingClientRect().height / parseFloat(getComputedStyle(sum).lineHeight)) === 1, docW: document.documentElement.scrollWidth <= innerWidth };
+            t.textContent = t0[0]; t.hidden = t0[1]; return res; }, tot);
+          if (!m.oneTitle || !m.line || !m.base || !m.right || !m.apart || !m.onlyChips || m.padL !== '14px' || m.padR !== '14px' || m.gap !== '7px' || m.bPad !== '2px' || !m.sum1 || !m.docW) off.push(JSON.stringify(m)); }
+        console.log('recipe sort on title line 390/1x:', off.length ? off : 'ok');
+        if (off.length) throw new Error('390/1x 정렬이 제목 줄에서 밀려남 ' + off.join(' | ')); await rpick('rec', false); }
     }
     // 레시피 검색창: 맨 위 (할인 재료 검색과 같은 자리·높이·글자), 따라오지 않음
     { await p.evaluate(() => scrollTo(0, 0)); await W(150); const rs = await p.evaluate(() => { const e = document.getElementById('rSearch'), st = e.closest('.tools'), d = document.getElementById('dSearch'), r = e.getBoundingClientRect(); return { top: r.top, h: r.height, fs: getComputedStyle(e).fontSize, dfs: getComputedStyle(d).fontSize, pos: getComputedStyle(st).position, first: st.parentElement.firstElementChild === st }; });
