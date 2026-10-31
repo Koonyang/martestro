@@ -459,34 +459,31 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/\.fab \.fl-short\{display:none\}/.test(T) && /\.fab\.short \.fl-long\{display:none\}/.test(T) && /function fitFab\(btn\)/.test(T) && /fitFabs\(\);\n\}/.test(T), 'fitFab');
   assert(!/\.fab \.(lg|st)\b/.test(T), '.lg/.st 이름 충돌 금지');
   assert(/function fixOrphans\(\)/.test(T) && /\.deal \.dn\.brk,\.deal \.dspec\.brk\{word-break:break-all;text-wrap:balance\}/.test(T), '한 글자 꼬리');
-  assert(/html\.ts-cq #tab-deals \.card,html\.ts-cq \.recipe,html\.ts-cq #tab-recipes \.page-h\{container-type:normal!important\}/.test(T) && /d\.classList\.add\('ts-cq'\)/.test(T), '@container 다시 계산');
+  assert(/html\.ts-cq #tab-deals \.card,html\.ts-cq \.recipe,html\.ts-cq #tab-recipes \.page-h,html\.ts-cq \.fd-pad\{container-type:normal!important\}/.test(T) && /d\.classList\.add\('ts-cq'\)/.test(T), '@container 다시 계산');
   assert(/html:is\(\[data-ts="1\.5"\],\[data-ts="2"\]\) \.mart \.dist\{flex:1 0 100%/.test(T), '마트 줄 쌓기');
   console.log('큰 글자 플로팅 버튼·줄바꿈 ok'); }
+// 레시피 탭 대공사: 종류 칩·분류 아이콘·없는 가전제품은 검색창 밑 필터 서랍 안, 검색창 왼쪽 아이콘(모양 그대로)은 정렬 버튼
 { const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
-  assert(/id="rCatBtn"[^>]*aria-label="분류: 전체"><span class="fic" data-ic="" aria-hidden="true">/.test(T), '분류 버튼 아이콘 상자');
-  assert(/button\.fbtn \.fic\{position:absolute;inset:0;overflow:hidden/.test(T), '티커는 버튼 안에서 잘림');
-  assert(/btn\.setAttribute\('aria-label', '분류: ' \+ \(rCat \|\| '전체'\)\)/.test(T) && /tickCat\(rCat, 140\)/.test(T), '분류 상태 아이콘 + 짧은 전환');
-  assert(T.includes("cubic-bezier(0.16,1,0.3,1)") && T.includes("cubic-bezier(0.7,0,0.84,0)") && /translateY\('\+Y\+'px\)/.test(T) && /Y = 7/.test(T), '티커 easing/거리');
-  assert(/function maybeCatHint\(\)/.test(T) && /mr_cat_hint/.test(T) && /\['반찬', '국&찌개', '일품', ''\]/.test(T) && /duration:350/.test(T) && /if \(rCat \|\| reduceMo\(\)/.test(T), '처음 한 번 힌트');
-  assert(/maybeCatHint\(\)/.test(T.slice(T.indexOf('function showTab'), T.indexOf('function showTab') + 1500)), '레시피 탭 열 때 힌트');
-  assert(/class="rcat" data-cat="'\+esc\(r\.cat\)\+'" role="button" tabindex="0" aria-label="'\+esc\(r\.cat\)\+'만 보기"/.test(T), '카드 분류 버튼 의미');
-  assert(/\.rmeta \.rcat::after\{content:"";position:absolute;left:50%;top:50%;width:max\(100%,44px\);height:max\(100%,44px\)/.test(T), '카드 분류 44px');
-  assert(/function catFromCard\(el, kb\)/.test(T) && /closest\('\.rcat'\)/.test(T), '카드 분류 누르기');
-  console.log('분류 버튼·카드 분류 연결 ok'); }
-// 레시피 정렬: 칩 줄 대신 제목 줄 오른쪽 끝 글자 드롭다운 (할인 탭 정렬은 그대로)
-{ const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
-  assert(!/id="rSortBar"/.test(T) && /id="dSortBar"/.test(T), '레시피 정렬 칩 줄 없음, 할인 정렬 칩은 그대로');
-  assert(/<div class="rtitle"><h1>추천 레시피<small id="recipeTotal" class="h-tot"><\/small><\/h1><div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"><\/button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden><\/div><\/div><\/div>/.test(T), '정렬 트리거는 제목 줄 오른쪽 끝');
-  assert(!/class="kind-row"[^]*?class="rsort"[^]*?<div id="selInd"/.test(T) && /\.rtitle\{display:flex;flex-wrap:wrap;align-items:baseline;/.test(T) && /\.rsort\{[^}]*margin-left:auto/.test(T), '칩 줄엔 칩만, 제목 줄 기준선 맞춤·넘치면 정렬만 다음 줄 오른쪽');
-  assert(/button\.sortdd\{[^}]*background:none;[^}]*box-shadow:none;[^}]*color:var\(--m\)/.test(T), '상자 없는 흐린 글자');
-  assert(/role="menuitemradio"/.test(T) && /aria-checked/.test(T) && /function openRSort\(\)/.test(T) && /function closeRSort\(/.test(T) && /closeRSort\(false\)/.test(T.slice(T.indexOf('function openCat'), T.indexOf('function openCat') + 300)), '메뉴·체크·서로 닫기');
-  assert(/'Escape'/.test(T.slice(T.indexOf('function openRSort'))) && /renderRSort\(\)/.test(T), 'Escape / 다시 그리기');
-  assert(/row\.appendChild\(chip\)/.test(T), '분류 칩은 종류 칩 뒤에');
-  assert(/rSort = nextSort\(RECIPE_SORTS, rSort, k\)/.test(T) && /if \(!d\.dir\) closeRSort\(true\)/.test(T) && !/RS_OPTS/.test(T), '4줄 메뉴: 같은 기준은 방향만 뒤집고 열린 채, 추천순만 닫힘');
-  assert(/'으로 정렬'/.test(T) && /function spinAr\(el\)\{ if \(!el \|\| !el\.animate \|\| reduceMo\(\)\) return;/.test(T) && /duration:150/.test(T), '알림 문구 + 150ms 화살표 회전(동작 줄이기 존중)');
-  assert(/\.rsort \.catpop button\[aria-checked=false\] \.sd-dir\{visibility:hidden\}/.test(T), '고른 줄만 방향 표시(폭 고정)');
-  assert(/button\.kchip\{min-height:calc\(36em \/ 13\.5\);padding:calc\(6em \/ 13\.5\) calc\(14em \/ 13\.5\);/.test(T) && /\.kind-row\{display:flex;flex-wrap:wrap;gap:9px 7px;/.test(T) && !/button\.kchip\{padding-left:calc\(9em/.test(T) && !/column-gap:6px/.test(T) && /button\.sortdd\{[^}]*padding:0 2px;margin:0 -2px 0 0;/.test(T), '칩 좌우 14px·칩 사이 7px·정렬 좌우 2px (원래대로)');
-  console.log('레시피 정렬 드롭다운 ok'); }
+  const tools = T.slice(T.indexOf('<section class="tab" id="tab-recipes">'), T.indexOf('<div class="fdrawer" id="rDrawer">'));
+  const drawer = T.slice(T.indexOf('<div class="fdrawer" id="rDrawer">'), T.indexOf('<div class="page-h"><div class="rtitle">'));
+  const head = T.slice(T.indexOf('<div class="page-h"><div class="rtitle">'), T.indexOf('<div id="recipeList">'));
+  assert(/<button type="button" id="rSortBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop" aria-label="정렬: 추천순"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"\/><\/svg><\/button>/.test(tools) && /id="rSortPop" class="catpop" role="menu"/.test(tools), '정렬 버튼 = 검색창 왼쪽, 예전 아이콘 그대로');
+  assert(!/rCatBtn|rCatPop|catchip|sortdd|maybeCatHint|mr_cat_hint|tickCat/.test(T), '분류 팝오버·아이콘 티커·첫 힌트·분류 칩·제목 줄 정렬 버튼 없음');
+  assert(/\.field\.rfield button\.fbtn\{right:auto;left:6px\}/.test(T) && /\.field\.rfield \.catpop\{right:auto;left:0\}/.test(T), '왼쪽 버튼, 메뉴는 왼쪽 아래');
+  assert(/class="fd-sec kind-row"/.test(drawer) && /id="catGroup"/.test(drawer) && /id="apGroup"/.test(drawer) && drawer.indexOf('kind-row') < drawer.indexOf('catGroup') && drawer.indexOf('catGroup') < drawer.indexOf('apGroup'), '서랍 안: 종류 → 분류 → 없는 가전제품');
+  assert(/>종류<\/p>/.test(drawer) && />분류<\/p>/.test(drawer) && />없는 가전제품<\/p>/.test(drawer) && (drawer.match(/aria-labelledby="fdk/g) || []).length === 3, '묶음마다 작은 이름표 + aria-labelledby');
+  assert(!/kind-row|kchip/.test(head) && /<span class="rsort" id="rSortLbl" hidden><\/span>/.test(head), '제목 줄: 칩 없음, 지금 정렬은 작은 글자만');
+  assert(/<span class="fd-lab">필터<\/span><span class="fd-n" id="fdN" hidden><\/span>/.test(drawer) && /aria-label="레시피 필터"/.test(drawer), '손잡이 이름 「필터」');
+  assert(/var on = rKinds\.length \+ \(rCat \? 1 : 0\) \+ apActiveCount\(rAp\)/.test(T), '손잡이 개수 = 켜진 필터 전부');
+  assert(/lb\.hidden = dflt; lb\.innerHTML = dflt \? '' : rsLab\(rSort\);/.test(T) && /\.rsort\{[^}]*margin-left:auto;[^}]*color:var\(--m\)/.test(T), '추천순이 아닐 때만 제목 줄 오른쪽 흐린 글자');
+  assert(/role="menuitemradio"/.test(T) && /function openRSort\(\)/.test(T) && /rSort = nextSort\(RECIPE_SORTS, rSort, k\)/.test(T) && /if \(!d\.dir\) closeRSort\(true\)/.test(T), '4줄 메뉴: 같은 기준은 방향만 뒤집고 열린 채, 추천순만 닫힘');
+  assert(/'으로 정렬'/.test(T) && /function spinAr\(el\)\{ if \(!el \|\| !el\.animate \|\| reduceMo\(\)\) return;/.test(T) && /#rSortPop button\[aria-checked=false\] \.sd-dir\{visibility:hidden\}/.test(T), '알림 문구 + 화살표 회전');
+  assert(/button\.kchip\{min-height:calc\(36em \/ 13\.5\);padding:calc\(6em \/ 13\.5\) calc\(14em \/ 13\.5\);/.test(T) && /\.fdrawer \.kind-row\{gap:9px 7px;margin-top:0\}/.test(T), '칩 좌우 14px·칩 사이 7px');
+  assert(/class="fdcat" data-cat="'\+esc\(c\)\+'" aria-pressed="false">'\+ic\(catIcon\(c\)\)/.test(T) && /setCat\(rCat === c \? '' : c\)/.test(T), '분류 아이콘: aria-pressed, 다시 누르면 해제');
+  assert(/class="rcat" data-cat="'\+esc\(r\.cat\)\+'" role="button" tabindex="0" aria-label="'\+esc\(r\.cat\)\+'만 보기"/.test(T) && /function catFromCard\(el, kb\)/.test(T) && /\$\('rDrawerBtn'\)\.focus\(\{preventScroll: true\}\)/.test(T), '카드 분류 누르기 그대로 (키보드면 손잡이로 초점)');
+  assert(/button\.fdcat\{position:relative;[^}]*min-height:44px/.test(T) && /\.fd-pad\{container-type:inline-size\}/.test(T) && /html\.ts-cq #tab-recipes \.page-h,html\.ts-cq \.fd-pad\{container-type:normal!important\}/.test(T), '44px, 칸 수는 컨테이너 기준');
+  assert(['oven', 'steamer', 'airfryer'].every(k => T.includes('<symbol id="i-ap-' + k + '"')) && /class="fdcat fdap" data-ap="'\+a\.k\+'" aria-pressed="false"><span class="ap-ic">'\+ic\('ap-'\+a\.k\)\+X/.test(T) && /button\.fdap\[aria-pressed=true\] \.ap-x\{visibility:visible\}/.test(T) && /a\.l\.replace\(\/ 없음\$\/, ''\)/.test(T), '가전 아이콘 + 짧은 이름, 켜면 X');
+  console.log('레시피 필터 서랍·정렬 버튼 ok'); }
 // 없는 가전제품 필터: 이름·조리법 문장 중 대체 표현이 없는 문장에만 나오면 "꼭 필요"
 { const A = L.ALL_RECIPES, need = k => A.filter(r => L.recipeAppliances(r)[k]).length;
   assert.equal(A.length, 1078); assert.equal(need('oven'), 67, 'oven'); assert.equal(need('steamer'), 92, 'steamer'); assert.equal(need('airfryer'), 3, 'airfryer');

@@ -112,17 +112,37 @@ main{max-width:680px;margin:0 auto;padding:4px 16px 0}
 .fd-body{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .2s cubic-bezier(.16,1,.3,1),visibility 0s .2s}
 .fdrawer.open .fd-body{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .2s cubic-bezier(.16,1,.3,1),visibility 0s}
 .fd-in{min-height:0;overflow:hidden}
-.fd-pad{padding:12px 12px 2px}
+.fd-pad{padding:18px 12px 4px}
 .fd-sec{display:flex;flex-wrap:wrap;gap:10px 14px;justify-content:center}
-button.fdtog{position:relative;min-height:0;padding:calc(6em / 13) 2px;background:none;box-shadow:none;border-radius:6px;color:var(--t2);font-size:.8125rem;font-weight:600;gap:6px;letter-spacing:-.02em;white-space:nowrap}
-button.fdtog::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
-button.fdtog:hover{filter:none;color:var(--t)}
-button.fdtog:active{transform:none}
-button.fdtog:focus-visible{outline:2px solid var(--g);outline-offset:2px}
-button.fdtog .ck{width:1.05em;height:1.05em;flex:none;border-radius:4px;box-shadow:inset 0 0 0 1.5px var(--line);fill:none;stroke:transparent;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;transition:background .15s,box-shadow .15s}
-button.fdtog[aria-pressed=true]{color:var(--t)}
-button.fdtog[aria-pressed=true] .ck{background:var(--g);box-shadow:none;stroke:var(--a-on)}
-button.fdtog small{font-size:.71875rem;font-weight:650;color:var(--m);font-variant-numeric:tabular-nums}
+.fd-grp+.fd-grp{margin-top:20px}
+.fd-k{margin:0 0 8px;text-align:center;font-size:.6875rem;font-weight:600;color:var(--m);letter-spacing:-.01em;line-height:1.32}
+.fdrawer .kind-row{gap:9px 7px;margin-top:0}
+/* 분류: 상자 없이 아이콘 위·이름 아래. 들어가는 만큼 6칸 → 3칸 → 2칸 (글자 크기에 따라) */
+.fd-pad{container-type:inline-size}
+.fd-cats{display:grid;grid-template-columns:repeat(6,1fr);gap:4px 0;font-size:.6875rem}
+@container (max-width:18.5em){.fd-cats{grid-template-columns:repeat(3,1fr)}}
+@container (max-width:9.45em){.fd-cats{grid-template-columns:repeat(2,1fr)}}
+button.fdcat{position:relative;flex-direction:column;gap:3px;min-height:44px;min-width:0;padding:5px 2px;background:none;box-shadow:none;border-radius:10px;color:var(--t2);font-size:1em;font-weight:600;letter-spacing:-.02em;white-space:nowrap;line-height:1.32}
+button.fdcat svg{width:1.75em;height:1.75em;color:var(--m);transition:color .15s}
+button.fdcat:hover{filter:none;color:var(--t)}
+button.fdcat:active{transform:none}
+button.fdcat:focus-visible{outline:2px solid var(--g);outline-offset:-2px}
+button.fdcat[aria-pressed=true]{color:var(--t);font-weight:800}
+button.fdcat[aria-pressed=true] svg{color:var(--g-ink)}
+button.fdcat[aria-pressed=true]::before{content:"";position:absolute;bottom:0;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--g)}
+/* 없는 가전제품: 분류와 같은 아이콘+짧은 이름. 켜면(없음) 아이콘 위에 X */
+.fd-aps{gap:2px 6px}
+.fd-aps>button.fdcat{min-width:4.6em;padding:5px 6px;font-size:.6875rem}
+button.fdcat .ap-ic{position:relative;display:block;width:1.75em;height:1.75em}
+button.fdcat .ap-ic svg{position:absolute;inset:0}
+button.fdcat .ap-x{visibility:hidden;fill:none;stroke-linecap:round}
+button.fdcat .ap-x path:first-child{stroke:color-mix(in srgb,var(--card) 55%,var(--card2));stroke-width:5}
+button.fdcat .ap-x path:last-child{stroke:var(--g-ink);stroke-width:2.2}
+button.fdap[aria-pressed=true] .ap-x{visibility:visible}
+button.fdap[aria-pressed=true] .ap-ic svg.i{color:var(--m);opacity:.55}
+button.fdap[aria-pressed=true]::before{display:none}
+button.fdcat small{font-size:.9em;font-weight:650;color:var(--m);font-variant-numeric:tabular-nums;margin-left:3px}
+@media (prefers-color-scheme:dark){button.fdcat[aria-pressed=true] svg{color:var(--g)}button.fdcat .ap-x path:last-child{stroke:var(--g)}}
 .fd-hint{margin:4px 0 0;text-align:center;font-size:.6875rem;color:var(--m);line-height:1.43}
 .fd-hint[hidden]{display:none}
 button.fd-lip{position:relative;display:flex;width:100%;min-height:0;padding:calc(3em / 11.5) 10px calc(4em / 11.5);background:none;box-shadow:none;border-radius:0 0 14px 14px;color:var(--m);font-size:.71875rem;font-weight:600;letter-spacing:-.01em;gap:4px;line-height:1.43;white-space:nowrap}
@@ -347,22 +367,17 @@ button.kchip[aria-pressed=true] small{color:var(--g)}
 .sortbar{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;margin:7px -4px -5px;padding:8px 4px}
 .sortbar::-webkit-scrollbar{display:none}
 .sortbar[hidden]{display:none}
-/* 레시피 정렬: 제목 줄(「추천 레시피  전체 N개」) 오른쪽 끝의 글자만 있는 작은 「추천순 ▾」 → 분류 메뉴와 같은 모양의 메뉴.
-   글자 기준선은 「전체 N개」와 맞춤. 한 줄에 다 안 들어가면(큰 글자/320) 정렬만 제목 바로 아래 줄 오른쪽 끝으로 */
+/* 레시피 정렬: 검색창 왼쪽 아이콘 → 메뉴 4줄. 지금 정렬은 추천순이 아닐 때만 제목 줄 오른쪽 끝에 누를 수 없는 작은 글자(「↑ 절약률 높은순」)로.
+   글자 기준선은 「전체 N개」와 맞춤. 한 줄에 다 안 들어가면(큰 글자/320) 제목 바로 아래 줄 오른쪽 끝으로 */
 .rtitle{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px}
 .rtitle h1{min-width:0}
-.rsort{position:relative;flex:none;margin-left:auto;display:flex;align-items:baseline;font-size:.84375rem}
-button.sortdd{position:relative;min-height:0;padding:0 2px;margin:0 -2px 0 0;background:none;box-shadow:none;border-radius:6px;color:var(--m);font-size:.75rem;font-weight:600;gap:3px;letter-spacing:-.02em;white-space:nowrap}
-button.sortdd::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
-button.sortdd:hover,button.sortdd[aria-expanded=true]{filter:none;color:var(--t)}
-button.sortdd:active{transform:none}
-button.sortdd:focus-visible{outline:2px solid var(--g);outline-offset:2px}
-button.sortdd .sd-ar{display:inline-block;color:var(--g);font-weight:800}
-button.sortdd svg{width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.rsort .catpop{top:calc(100% + 2px);min-width:9.5em}
-.rsort .catpop button{white-space:nowrap}
-.rsort .catpop button .sd-dir{margin-left:auto;padding-left:14px;font-size:.75rem;font-weight:600;color:var(--m)}
-.rsort .catpop button[aria-checked=false] .sd-dir{visibility:hidden}
+.rsort{flex:none;margin-left:auto;font-size:.75rem;font-weight:600;color:var(--m);letter-spacing:-.02em;white-space:nowrap}
+.rsort[hidden]{display:none}
+.rsort .sd-ar{display:inline-block;color:var(--g);font-weight:800;margin-right:3px}
+#rSortPop{min-width:9.5em}
+#rSortPop button{white-space:nowrap}
+#rSortPop button .sd-dir{margin-left:auto;padding-left:14px;font-size:.75rem;font-weight:600;color:var(--m)}
+#rSortPop button[aria-checked=false] .sd-dir{visibility:hidden}
 .catpop button .sd-ar{display:inline-block;color:var(--g);font-weight:800;margin-right:1px}
 #tab-recipes #recipeList{margin-top:37.5px}
 /* 정렬 줄은 위아래 여백 8px(누르는 영역 44px)만큼 margin을 줄여 위치는 그대로 */
@@ -375,18 +390,13 @@ button.sp[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:in
 button.sp i{font-style:normal;font-weight:800;color:var(--g);font-size:.8125rem;line-height:1.1}
 button.sp:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 @media (prefers-color-scheme:dark){button.sp[aria-pressed=true]{box-shadow:none}button.sp[aria-pressed=true] i{color:var(--a-on)}}
-/* 레시피 분류: 검색창 오른쪽 끝 작은 아이콘 → 작은 팝오버 (하나만 선택) */
+/* 검색창 안 아이콘 버튼 (레시피: 왼쪽 정렬 버튼) → 작은 팝오버 */
 .field.has-fbtn>input{padding-right:50px}
 button.fbtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:38px;height:38px;min-height:0;padding:0;border-radius:11px;background:transparent;color:var(--m)}
 button.fbtn:hover{filter:none;background:var(--card2);color:var(--t)}
 button.fbtn[aria-expanded=true]{background:var(--card2);color:var(--t)}
 button.fbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round}
 button.fbtn.on{color:var(--a-ink)}
-button.fbtn .fdot{display:none;position:absolute;top:7px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 0 2px var(--card)}
-button.fbtn.on .fdot{display:block}
-/* 분류 버튼 아이콘: 지금 분류 아이콘으로 바뀌고, 바뀔 때 아래→위로 살짝 올라오는 티커 (버튼 안에서만 보이게 잘라요) */
-button.fbtn .fic{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}
-button.fbtn .fic>svg{position:absolute;left:calc(50% - 10px);top:calc(50% - 10px)}
 button.fbtn.on{background:color-mix(in srgb,var(--g) 15%,transparent)}
 button.fbtn.on:hover,button.fbtn.on[aria-expanded=true]{background:color-mix(in srgb,var(--g) 24%,var(--card2))}
 /* 카드의 분류(아이콘+이름)를 누르면 그 분류만 — 보이는 모양은 그대로, 누르는 자리만 44px */
@@ -404,10 +414,6 @@ button.fbtn.on:hover,button.fbtn.on[aria-expanded=true]{background:color-mix(in 
 .catpop button[aria-checked=true] svg.cat-ic{color:var(--g-ink)}
 .catpop button[aria-checked=true] .ck{visibility:visible}
 @media (prefers-color-scheme:dark){.catpop{box-shadow:0 0 0 1px var(--line),0 10px 30px rgba(0,0,0,.5)}button.fbtn.on{color:var(--g)}}
-button.catchip{min-height:calc(36em / 13.5);padding:calc(6em / 13.5) calc(10em / 13.5) calc(6em / 13.5) calc(13em / 13.5);border-radius:999px;font-size:.84375rem;font-weight:700;gap:4px;background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g);letter-spacing:-.02em}
-button.catchip small{font-size:.6875rem;font-weight:700;color:var(--g)}
-button.catchip svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;opacity:.8}
-@media (prefers-color-scheme:dark){button.catchip{box-shadow:none}button.catchip small{color:color-mix(in srgb,var(--a-on) 70%,transparent)}}
 button.kchip:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 @media (prefers-color-scheme:dark){button.kchip[aria-pressed=true]{box-shadow:none}button.kchip[aria-pressed=true] small{color:color-mix(in srgb,var(--a-on) 70%,transparent)}}
 .tag.conv{background:color-mix(in srgb,var(--g) 16%,transparent);color:var(--g-ink)}
@@ -620,14 +626,14 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 @media (prefers-color-scheme:dark){.mart input:checked{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F1626' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4L18 8'/%3E%3C/svg%3E")}}
 /* ---- 큰 글씨·확대 대응 ---- */
 /* 누르는 곳은 최소 44×44px: 보이는 크기는 그대로 두고 투명한 영역만 넓혀요 */
-a.brand,button.sp,button.kchip,button.catchip,button.tipb,button.mn-toggle,button.hdr-btn{position:relative}
+a.brand,button.sp,button.kchip,button.tipb,button.mn-toggle,button.hdr-btn{position:relative}
 button.tipb{z-index:1}
-a.brand::after,button.sp::after,button.kchip::after,button.catchip::after,button.tipb::after,button.mn-toggle::after,button.hdr-btn::after,button.fbtn::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+a.brand::after,button.sp::after,button.kchip::after,button.tipb::after,button.mn-toggle::after,button.hdr-btn::after,button.fbtn::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
 /* 좁은 화면: 머리줄을 조금 낮게 */
 @media (max-width:359px){.top-in{padding:6px 12px;padding-top:calc(6px + env(safe-area-inset-top));min-height:48px;gap:8px}.hdr-btn .hb-ic{width:32px;height:32px}}
 /* 할인 상품 줄: 좁거나 글씨가 크면 가격을 이름 아래로 */
 #tab-deals .card{container-type:inline-size}
-html.ts-cq #tab-deals .card,html.ts-cq .recipe,html.ts-cq #tab-recipes .page-h{container-type:normal!important}
+html.ts-cq #tab-deals .card,html.ts-cq .recipe,html.ts-cq #tab-recipes .page-h,html.ts-cq .fd-pad{container-type:normal!important}
 /* 크게·아주 크게: 상품명·규격·행사·재료 줄이 「…키/위」처럼 한 글자만 남기고 꺾이지 않게 (낱말 단위 + 마지막 줄 고르게) */
 /* 띄어쓰기 없는 긴 상품명이 마지막 한 글자만 남기고 꺾이면 (fixOrphans) 두 줄로 고르게 */
 .deal .dn.brk,.deal .dspec.brk{word-break:break-all;text-wrap:balance}
@@ -672,6 +678,9 @@ html:is([data-ts="1.5"],[data-ts="2"]) :is(.meta span,.ingtxt){word-break:keep-a
   <symbol id="i-c-rice" viewBox="0 0 24 24"><path d="M3.5 12.5h17a8.5 8.5 0 0 1-17 0zM9 21.5h6"/><path d="M5.5 12.5c0-2 1.4-3.4 3-3.1.6-1.7 2-2.5 3.5-2.5s2.9.8 3.5 2.5c1.6-.3 3 1.1 3 3.1"/></symbol>
   <symbol id="i-c-dessert" viewBox="0 0 24 24"><path d="M7.5 11a4.5 4.5 0 1 1 9 0zM7.5 11 12 21.5 16.5 11"/></symbol>
   <symbol id="i-c-etc" viewBox="0 0 24 24"><path d="M6 3v5.5a2.5 2.5 0 0 0 5 0V3M8.5 3v18M17.5 21V3c-2.2 1.6-3.3 4.2-3.3 8 0 .9.6 1.5 1.5 1.5h1.8"/></symbol>
+  <symbol id="i-ap-oven" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 8.5h17M7 6h.01M10 6h.01"/><rect x="7" y="11.5" width="10" height="5.5" rx="1"/></symbol>
+  <symbol id="i-ap-steamer" viewBox="0 0 24 24"><path d="M4 12.5h16v5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5zM4 16h16M5.5 12.5c0-2.2 2.9-3.5 6.5-3.5s6.5 1.3 6.5 3.5M12 9V7.5"/><path d="M8 6c-.7-.8-.7-1.7 0-2.5M16 6c-.7-.8-.7-1.7 0-2.5"/></symbol>
+  <symbol id="i-ap-airfryer" viewBox="0 0 24 24"><path d="M7 3.5h10a2.5 2.5 0 0 1 2.5 2.5v12a2.5 2.5 0 0 1-2.5 2.5H7A2.5 2.5 0 0 1 4.5 18V6A2.5 2.5 0 0 1 7 3.5zM4.5 12.5h15M10 16.5h4"/><circle cx="12" cy="8" r="1.8"/></symbol>
   <symbol id="i-c-all" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
   <symbol id="i-basket" viewBox="0 0 24 24"><path d="M3 10h18l-1.6 8.4a2 2 0 0 1-2 1.6H6.6a2 2 0 0 1-2-1.6zM8 10l3-6M16 10l-3-6M9 14v2.5M15 14v2.5"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.4v.1"/></symbol>
@@ -766,24 +775,29 @@ html:is([data-ts="1.5"],[data-ts="2"]) :is(.meta span,.ingtxt){word-break:keep-a
   <!-- 검색줄: 맨 위 (할인 재료와 같은 자리). 스크롤하면 따라오지 않아요 -->
   <div class="tools">
     <div class="field has-fbtn has-sbtn rfield"><input id="rSearch" type="search" enterkeyhint="search" placeholder="레시피·재료 검색" aria-label="레시피 검색"><button type="button" id="rSearchBtn" class="sbtn" aria-label="검색"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button>
-      <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="분류: 전체"><span class="fic" data-ic="" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span><i class="fdot" aria-hidden="true"></i></button>
-      <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
+      <button type="button" id="rSortBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop" aria-label="정렬: 추천순"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button>
+      <div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden></div>
     </div>
   </div>
   <!-- 필터 서랍: 검색창 밑(z축)에 숨어 있고 아래로 살짝 삐져나온 손잡이만 보여요. 누르면 검색창 뒤에서 아래로 열려요 (다른 필터도 여기에 넣을 수 있는 틀) -->
   <div class="fdrawer" id="rDrawer">
-    <div class="fd-body" id="rDrawerBody" role="region" aria-label="없는 가전제품 필터"><div class="fd-in"><div class="fd-pad">
-      <div class="fd-sec" id="apGroup" role="group" aria-label="없는 가전제품 (켜면 그 가전제품이 꼭 필요한 레시피를 숨겨요)"></div>
-      <p class="fd-hint" id="apHint" hidden>오븐으로 대신할 수 있는 레시피는 남겨둬요</p>
+    <div class="fd-body" id="rDrawerBody" role="region" aria-label="레시피 필터"><div class="fd-in"><div class="fd-pad">
+      <div class="fd-grp"><p class="fd-k" id="fdkKind">종류</p>
+      <div class="fd-sec kind-row" role="group" aria-labelledby="fdkKind">
+        <button type="button" class="kchip" data-kind="" aria-pressed="true">전체 <small class="kc"></small></button>
+        <button type="button" class="kchip" data-kind="jachi" aria-pressed="false" title="재료 적고 저렴한 한 끼">자취생 <small class="kc"></small></button>
+        <button type="button" class="kchip" data-kind="quick" aria-pressed="false" title="라면·만두·햄·참치·즉석밥 같은 간편식품으로">간편식품 <small class="kc"></small></button>
+      </div></div>
+      <div class="fd-grp"><p class="fd-k" id="fdkCat">분류</p>
+      <div class="fd-sec fd-cats" id="catGroup" role="group" aria-labelledby="fdkCat"></div></div>
+      <div class="fd-grp"><p class="fd-k" id="fdkAp">없는 가전제품</p>
+      <div class="fd-sec fd-aps" id="apGroup" role="group" aria-labelledby="fdkAp" aria-describedby="fdkApD"></div>
+      <span class="vh" id="fdkApD">켜면 그 가전제품이 꼭 필요한 레시피를 숨겨요</span>
+      <p class="fd-hint" id="apHint" hidden>오븐으로 대신할 수 있는 레시피는 남겨둬요</p></div>
     </div></div></div>
-    <button type="button" class="fd-lip" id="rDrawerBtn" aria-expanded="false" aria-controls="rDrawerBody"><svg class="fd-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg><span class="fd-lab">없는 가전제품 필터링</span><span class="fd-n" id="apN" hidden></span></button>
+    <button type="button" class="fd-lip" id="rDrawerBtn" aria-expanded="false" aria-controls="rDrawerBody"><svg class="fd-cv" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg><span class="fd-lab">필터</span><span class="fd-n" id="fdN" hidden></span></button>
   </div>
-  <div class="page-h"><div class="rtitle"><h1>추천 레시피<small id="recipeTotal" class="h-tot"></small></h1><div class="rsort"><button type="button" id="rSortBtn" class="sortdd" aria-haspopup="menu" aria-expanded="false" aria-controls="rSortPop"></button><div id="rSortPop" class="catpop" role="menu" aria-label="레시피 정렬" hidden></div></div></div><p id="recipeSummary"></p></div>
-  <div class="kind-row" role="group" aria-label="레시피 종류 (여러 개 고를 수 있어요)">
-    <button type="button" class="kchip" data-kind="" aria-pressed="true">전체 <small class="kc"></small></button>
-    <button type="button" class="kchip" data-kind="jachi" aria-pressed="false" title="재료 적고 저렴한 한 끼">자취생 <small class="kc"></small></button>
-    <button type="button" class="kchip" data-kind="quick" aria-pressed="false" title="라면·만두·햄·참치·즉석밥 같은 간편식품으로">간편식품 <small class="kc"></small></button>
-  </div>
+  <div class="page-h"><div class="rtitle"><h1>추천 레시피<small id="recipeTotal" class="h-tot"></small></h1><span class="rsort" id="rSortLbl" hidden></span></div><p id="recipeSummary"></p></div>
   <div id="selInd" class="sel-ind" role="status" hidden></div>
   <div id="sortStatus" class="vh" role="status" aria-live="polite"></div>
   <div id="recipeList"></div>
@@ -2694,7 +2708,7 @@ function showTab(id){
   document.body.classList.toggle('deals-on', id==='tab-deals');
   if (id==='tab-deals') renderDeals();
   if (id==='tab-deals') syncBars();
-  if (id==='tab-recipes'){ renderRecipes(); if (typeof maybeCatHint === 'function') maybeCatHint(); }
+  if (id==='tab-recipes'){ renderRecipes(); }
   window.scrollTo(0,0);
   if (typeof updateFab === 'function') updateFab();
 }
@@ -3164,7 +3178,9 @@ function rsDir(o){ return sortLabel(RECIPE_SORTS, o).replace(/^.* /, ''); }
 function rsLab(o){ var ar = sortArrow(RECIPE_SORTS, o); return (ar ? '<span class="sd-ar" aria-hidden="true">'+ar+'</span>' : '') + esc(sortLabel(RECIPE_SORTS, o)); }
 function spinAr(el){ if (!el || !el.animate || reduceMo()) return; el.animate([{transform:'rotate(-180deg)'}, {transform:'none'}], {duration:150, easing:'cubic-bezier(0.16,1,0.3,1)'}); }
 function renderRSort(flip){
-  var b = $('rSortBtn'); b.innerHTML = rsLab(rSort) + CARET; b.setAttribute('aria-label', '정렬: ' + sortLabel(RECIPE_SORTS, rSort));
+  // 정렬 버튼은 검색창 왼쪽 아이콘(모양 그대로). 지금 정렬은 추천순이 아닐 때만 제목 줄 오른쪽 끝에 작은 글자로
+  var b = $('rSortBtn'), lb = $('rSortLbl'), dflt = rSort.k === RECIPE_SORTS[0].k; b.setAttribute('aria-label', '정렬: ' + sortLabel(RECIPE_SORTS, rSort));
+  lb.hidden = dflt; lb.innerHTML = dflt ? '' : rsLab(rSort);
   var pop = $('rSortPop');
   if (!pop.firstChild) pop.innerHTML = RECIPE_SORTS.map(function(d){
     return '<button type="button" role="menuitemradio" data-sort="'+d.k+'" aria-checked="false" tabindex="-1"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span class="sd-n">'+esc(rsName(d))+'</span>'+(d.dir ? '<span class="sd-dir" aria-hidden="true"><span class="sd-ar"></span><span class="sd-dl"></span></span>' : '')+'</button>';
@@ -3176,10 +3192,10 @@ function renderRSort(flip){
     if (dir){ dir.querySelector('.sd-ar').textContent = sortArrow(RECIPE_SORTS, o); dir.querySelector('.sd-dl').textContent = rsDir(o); }
     if (flip && on) spinAr(dir && dir.querySelector('.sd-ar'));
   });
-  if (flip) spinAr(b.querySelector('.sd-ar'));
+  if (flip) spinAr(lb.querySelector('.sd-ar'));
 }
 function rsOpen(){ return !$('rSortPop').hidden; }
-function openRSort(){ closeCat(false); renderRSort(); $('rSortPop').hidden = false; $('rSortBtn').setAttribute('aria-expanded', 'true');
+function openRSort(){ renderRSort(); $('rSortPop').hidden = false; $('rSortBtn').setAttribute('aria-expanded', 'true');
   // 메뉴 아래쪽이 하단 탭 막대에 가리면(큰 글자) 그만큼만 내려 보여요 — 버튼은 화면 안에 남게
   var pr = $('rSortPop').getBoundingClientRect(), nv = document.querySelector('nav'), lim = (nv ? nv.getBoundingClientRect().top : innerHeight) - 8, bt = $('rSortBtn').getBoundingClientRect().top - 70;
   if (pr.bottom > lim) window.scrollBy(0, Math.min(pr.bottom - lim, Math.max(0, bt))); var b = $('rSortPop').querySelector('[aria-checked=true]') || $('rSortPop').querySelector('button'); if (b) b.focus(); }
@@ -3342,9 +3358,9 @@ $('recipeList').addEventListener('click', function(e){
 function catFromCard(el, kb){
   var c = el.getAttribute('data-cat'); if (!c) return;
   setCat(c);
-  // 검색줄(바뀐 분류 버튼)이 보이게 탭 맨 위로 — 헤더가 위에 붙어 있어서 0으로 가요
+  // 필터 서랍 손잡이(금색 개수)가 보이게 탭 맨 위로 — 헤더가 위에 붙어 있어서 0으로 가요
   if (window.scrollY > 0) window.scrollTo({top: 0, behavior: reduceMo() ? 'auto' : 'smooth'});
-  if (kb) $('rCatBtn').focus({preventScroll: true});
+  if (kb) $('rDrawerBtn').focus({preventScroll: true});
 }
 $('recipeList').addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('.rcat'); if (!b) return;
@@ -3369,14 +3385,16 @@ document.querySelector('.kind-row').addEventListener('click', function(e){
 // ---- 필터 서랍 (검색창 밑) + 없는 가전제품 ----
 function renderAp(cnt){
   var g = $('apGroup');
-  if (!g.firstChild) g.innerHTML = APPLIANCES.map(function(a){ return '<button type="button" class="fdtog" data-ap="'+a.k+'" aria-pressed="false"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4L18 8"/></svg>'+esc(a.l)+' <small class="ac"></small></button>'; }).join('');
+  var X = '<svg class="ap-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5l15 15M19.5 4.5l-15 15"/><path d="M4.5 4.5l15 15M19.5 4.5l-15 15"/></svg>';
+  if (!g.firstChild) g.innerHTML = APPLIANCES.map(function(a){ return '<button type="button" class="fdcat fdap" data-ap="'+a.k+'" aria-pressed="false"><span class="ap-ic">'+ic('ap-'+a.k)+X+'</span><span class="ap-w">'+esc(a.l.replace(/ 없음$/, ''))+'<small class="ac"></small></span></button>'; }).join('');
   APPLIANCES.forEach(function(a){ var b = g.querySelector('[data-ap="'+a.k+'"]'), n = cnt ? cnt[a.k] : 0;
     b.setAttribute('aria-pressed', String(rAp[a.k])); b.querySelector('.ac').textContent = n.toLocaleString('ko-KR');
     b.setAttribute('aria-label', a.l + ', 레시피 ' + n.toLocaleString('ko-KR') + '개 ' + (rAp[a.k] ? '숨기는 중' : '숨김')); });
   $('apHint').hidden = !apFryerHint(rAp);
-  var on = apActiveCount(rAp), btn = $('rDrawerBtn');
-  $('apN').hidden = !on; $('apN').textContent = on ? '· ' + on : ''; btn.classList.toggle('on', !!on);
-  btn.setAttribute('aria-label', '없는 가전제품 필터링' + (on ? ', ' + on + '개 켜짐' : ''));
+  // 손잡이의 금색 개수 = 켜진 필터 전부 (종류 칩 「전체」 말고 고른 것 + 분류 + 없는 가전제품)
+  var on = rKinds.length + (rCat ? 1 : 0) + apActiveCount(rAp), btn = $('rDrawerBtn');
+  $('fdN').hidden = !on; $('fdN').textContent = on ? '· ' + on : ''; btn.classList.toggle('on', !!on);
+  btn.setAttribute('aria-label', '필터' + (on ? ', ' + on + '개 켜짐' : ''));
 }
 function setDrawer(open){ $('rDrawer').classList.toggle('open', open); $('rDrawerBtn').setAttribute('aria-expanded', String(open)); }
 $('rDrawerBtn').addEventListener('click', function(){ setDrawer(!$('rDrawer').classList.contains('open')); });
@@ -3389,83 +3407,17 @@ $('rSearch').addEventListener('input', function(){ var v = this.value; clearTime
 function runRSearch(){ clearTimeout(rTimer); var q = $('rSearch').value.trim(); if (q !== rQuery){ rQuery = q; rLimit = PAGE; renderRecipes(); } $('rSearch').blur(); }
 $('rSearchBtn').addEventListener('click', runRSearch);
 $('rSearch').addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); runRSearch(); } });
-// ---- 레시피 분류 팝오버 (검색창 안 아이콘) ----
-function renderCatUI(){
-  var on = !!rCat, btn = $('rCatBtn');
-  btn.classList.toggle('on', on);
-  btn.setAttribute('aria-label', '분류: ' + (rCat || '전체'));
-  catHintTok++; tickCat(rCat, 140);
-  $('rCatPop').innerHTML = [''].concat(RECIPE_CATS).map(function(c){
-    var ck = rCat === c;
-    return '<button type="button" role="menuitemradio" data-cat="'+esc(c)+'" aria-checked="'+ck+'" tabindex="-1"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>'+ic(catIcon(c), 'cat-ic')+esc(c || '전체')+'</button>';
-  }).join('');
-  var row = document.querySelector('.kind-row'), chip = row.querySelector('.catchip');
-  if (!on){ if (chip) chip.remove(); return; }
-  if (!chip){ chip = document.createElement('button'); chip.type = 'button'; chip.className = 'catchip'; row.appendChild(chip); }
-  chip.setAttribute('aria-label', '분류 「' + rCat + '」 필터 해제');
-  chip.innerHTML = '<small aria-hidden="true">분류</small>' + esc(rCat) + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-}
-// ---- 분류 버튼 아이콘 티커: 이전 아이콘은 위로 올라가며 사라지고(ease-in), 그 사이 새 아이콘이 아래에서 올라오며 나타나요(ease-out) ----
-var catHintTok = 0;
+// ---- 레시피 분류: 필터 서랍 안 아이콘 줄 (하나만, 고른 걸 다시 누르면 해제) ----
 function reduceMo(){ return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); }
-function catBtnSvg(c){ return c ? '<svg class="i" viewBox="0 0 24 24"><use href="#i-'+catIcon(c)+'"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>'; }
-function tickCat(c, dur){
-  var box = document.querySelector('#rCatBtn .fic'); if (!box) return Promise.resolve();
-  if (box.getAttribute('data-ic') === c) return Promise.resolve();
-  box.setAttribute('data-ic', c);
-  var old = [].slice.call(box.children), t = document.createElement('span'); t.innerHTML = catBtnSvg(c); var nu = t.firstChild;
-  if (reduceMo() || !nu.animate){ box.innerHTML = ''; box.appendChild(nu); return Promise.resolve(); }
-  box.appendChild(nu);
-  var d = dur || 180, Y = 7;
-  old.forEach(function(o){
-    var cur = getComputedStyle(o), m = new DOMMatrixReadOnly(cur.transform === 'none' ? undefined : cur.transform), y0 = m.m42, o0 = +cur.opacity;
-    o.getAnimations().forEach(function(a){ a.onfinish = a.oncancel = null; a.cancel(); });
-    var a = o.animate([{transform:'translateY('+y0+'px)', opacity:o0}, {transform:'translateY(-'+Y+'px)', opacity:0}], {duration:d, easing:'cubic-bezier(0.7,0,0.84,0)', fill:'forwards'});
-    a.onfinish = a.oncancel = function(){ if (o.parentNode) o.remove(); };
-  });
-  var e = nu.animate([{transform:'translateY('+Y+'px)', opacity:0}, {transform:'translateY(0)', opacity:1}], {duration:d, delay:old.length ? Math.round(d*0.55) : 0, easing:'cubic-bezier(0.16,1,0.3,1)', fill:'backwards'});
-  return e.finished.catch(function(){});
-}
-// 레시피 탭을 처음 열 때 한 번만: 반찬 → 국&찌개 → 일품 → 기본 아이콘 (분류가 버튼과 이어져 있다는 힌트)
-function maybeCatHint(){
-  try { if (localStorage.getItem('mr_cat_hint')) return; } catch(e){ return; }
-  if (rCat || reduceMo() || !Element.prototype.animate) return;
-  try { localStorage.setItem('mr_cat_hint', '1'); } catch(e){}
-  var tok = ++catHintTok, seq = ['반찬', '국&찌개', '일품', ''], i = 0;
-  var box = document.querySelector('#rCatBtn .fic');
-  function hold(){ return box.animate([{opacity:1}, {opacity:1}], {duration:350}).finished.catch(function(){}); }
-  function step(){
-    if (tok !== catHintTok || rCat || !$('tab-recipes').classList.contains('on')){ if (tok === catHintTok) tickCat(rCat, 140); return; }
-    var c = seq[i++];
-    tickCat(c, 180).then(function(){ if (i < seq.length) hold().then(step); });
-  }
-  setTimeout(step, 450);
+function renderCatUI(){
+  var g = $('catGroup');
+  if (!g.firstChild) g.innerHTML = RECIPE_CATS.map(function(c){ return '<button type="button" class="fdcat" data-cat="'+esc(c)+'" aria-pressed="false">'+ic(catIcon(c))+'<span>'+esc(c)+'</span></button>'; }).join('');
+  [].forEach.call(g.querySelectorAll('[data-cat]'), function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-cat') === rCat)); });
 }
 function setCat(c){ if (rCat === c) return; rCat = c; rLimit = PAGE; renderCatUI(); renderRecipes(); }
-function catOpen(){ return !$('rCatPop').hidden; }
-function openCat(){
-  if (typeof closeRSort === 'function') closeRSort(false); renderCatUI(); $('rCatPop').hidden = false; $('rCatBtn').setAttribute('aria-expanded', 'true');
-  var b = $('rCatPop').querySelector('[aria-checked=true]') || $('rCatPop').querySelector('button'); if (b) b.focus();
-}
-function closeCat(refocus){ if (!catOpen()) return; $('rCatPop').hidden = true; $('rCatBtn').setAttribute('aria-expanded', 'false'); if (refocus) $('rCatBtn').focus(); }
-$('rCatBtn').addEventListener('click', function(e){ e.stopPropagation(); if (catOpen()) closeCat(); else openCat(); });
-$('rCatPop').addEventListener('click', function(e){
-  var b = e.target.closest('[data-cat]'); if (!b) return; e.stopPropagation();
-  setCat(b.getAttribute('data-cat')); closeCat(true);
-});
-$('rCatPop').addEventListener('keydown', function(e){
-  var all = [].slice.call(this.querySelectorAll('button')), i = all.indexOf(document.activeElement), j = -1;
-  if (e.key === 'ArrowDown') j = (i + 1) % all.length; else if (e.key === 'ArrowUp') j = (i - 1 + all.length) % all.length;
-  else if (e.key === 'Home') j = 0; else if (e.key === 'End') j = all.length - 1;
-  else if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeCat(true); return; }
-  else if (e.key === 'Tab'){ closeCat(false); return; }
-  if (j >= 0){ e.preventDefault(); all[j].focus(); }
-});
-document.addEventListener('click', function(e){ if (catOpen() && !e.target.closest('#rCatPop, #rCatBtn')) closeCat(false); });
-document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && catOpen()){ e.preventDefault(); closeCat(true); } });
-document.querySelector('.kind-row').addEventListener('click', function(e){
-  var b = e.target.closest('.catchip'); if (!b) return;
-  setCat(''); var t = $('rCatBtn'); if (t) t.focus();
+$('catGroup').addEventListener('click', function(e){
+  var b = e.target.closest('[data-cat]'); if (!b) return; var c = b.getAttribute('data-cat');
+  setCat(rCat === c ? '' : c);
 });
 renderCatUI();
 $('btnMore').addEventListener('click', function(){ rLimit += PAGE; renderRecipes(true); });

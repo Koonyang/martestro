@@ -17,6 +17,8 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.evaluateOnNewDocument(() => { const RD = Date, off = new RD('2026-10-30T12:00:00+09:00').getTime() - RD.now();
     class FD extends RD { constructor(...a) { if (a.length === 0) super(RD.now() + off); else super(...a); } static now() { return RD.now() + off; } } window.Date = FD; });
   let overpassReq = 0; const LIVE = !!process.env.LIVE;
+  const drOpen = async open => { if ((await p.$eval('#rDrawerBtn', b => b.getAttribute('aria-expanded'))) !== String(open)) { await p.$eval('#rDrawerBtn', b => b.scrollIntoView({ block: 'center' })); await p.click('#rDrawerBtn'); await new Promise(r => setTimeout(r, 320)); } };
+  const kclick = async k => { await drOpen(true); const q = '#rDrawerBody .kchip[data-kind="' + k + '"]'; await p.$eval(q, e => e.scrollIntoView({ block: 'center' })); await p.click(q); };
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   await p.setRequestInterception(true);
   p.on('request', r => { const u = r.url();
@@ -262,12 +264,10 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
         return { cats, hrefs, one: hrefs.every(h => h.length === 1), distinct: new Set(hrefs.map(h => h[0])).size === cats.length, exists, sz, bowl: !!document.querySelector('#recipeList use[href="#i-bowl"]') }; });
       console.log('category icons:', JSON.stringify(ci));
       if (!ci.cats.length || !ci.one || !ci.distinct || !ci.exists || ci.bowl || ci.sz[0] !== 14) throw new Error('분류 아이콘 이상 ' + JSON.stringify(ci));
-      await p.click('#rCatBtn'); await W(150);
-      const mi = await p.evaluate(() => [...document.querySelectorAll('#rCatPop button')].map(b => (b.dataset.cat || '전체') + '=' + ((b.querySelector('svg.cat-ic use') || {}).getAttribute ? b.querySelector('svg.cat-ic use').getAttribute('href') : '')));
-      console.log('category menu icons:', mi.join(' '));
-      if (mi.length !== 7 || new Set(mi.map(x => x.split('=')[1])).size !== 7 || mi.some(x => !x.split('=')[1])) throw new Error('분류 메뉴 아이콘 이상 ' + mi);
-      for (const s of mi.slice(1)) { const [c, h] = s.split('='); if (ci.hrefs[ci.cats.indexOf(c)] && ci.hrefs[ci.cats.indexOf(c)][0] !== h) throw new Error('카드·메뉴 아이콘 불일치 ' + s); }
-      await p.keyboard.press('Escape'); await W(100); }
+      const mi = await p.evaluate(() => [...document.querySelectorAll('#catGroup button')].map(b => b.dataset.cat + '=' + ((b.querySelector('svg use') || {}).getAttribute ? b.querySelector('svg use').getAttribute('href') : '')));
+      console.log('drawer category icons:', mi.join(' '));
+      if (mi.length !== 6 || new Set(mi.map(x => x.split('=')[1])).size !== 6 || mi.some(x => !x.split('=')[1])) throw new Error('서랍 분류 아이콘 이상 ' + mi);
+      for (const s of mi) { const [c, h] = s.split('='); if (ci.hrefs[ci.cats.indexOf(c)] && ci.hrefs[ci.cats.indexOf(c)][0] !== h) throw new Error('카드·서랍 아이콘 불일치 ' + s); } }
     await p.evaluate(() => document.querySelectorAll('#recipeList details[open]').forEach(d => d.open = false)); }
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
   // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
@@ -337,7 +337,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   console.log('deals 간편식품:', conv); if (!conv || conv.kinds.length < 4) throw new Error('할인 재료 탭에 간편식품 묶음이 없어요');
   // 레시피 종류 칩: 전체 ↔ 자취생/간편식품(여러 개, 합집합), 마지막 칩 끄면 전체
   await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
-  const chips = () => p.$$eval('.kchip', bs => bs.map(b => b.getAttribute('data-kind') + ':' + b.getAttribute('aria-pressed') + ':' + b.querySelector('.kc').innerText));
+  const chips = () => p.$$eval('.kchip', bs => bs.map(b => b.getAttribute('data-kind') + ':' + b.getAttribute('aria-pressed') + ':' + b.querySelector('.kc').textContent));
   const nCards = () => p.$$eval('#recipeList .recipe', e => e.length);
   const sum = () => p.$eval('#recipeSummary', e => e.innerText.replace(/\s+/g, ' '));
   { const s0 = await sum(); console.log('recipe subtitle:', s0); const hd0 = await p.evaluate(() => { const s = document.getElementById('recipeSummary'), t = document.getElementById('recipeTotal'); return { tot: t.hidden ? '' : t.textContent, one: s.getBoundingClientRect().height < 30 && s.scrollWidth <= s.clientWidth, h1: document.querySelector('#tab-recipes .page-h h1').firstChild.textContent }; }); console.log('recipe header:', hd0);
@@ -345,18 +345,19 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   let ch = await chips(); console.log('chips:', ch); if (!/^:true:/.test(ch[0]) || !/^jachi:false:\d/.test(ch[1]) || !/^quick:false:\d/.test(ch[2])) throw new Error('칩 기본 상태 이상');
   const cnt = ch.map(x => +x.split(':')[2].replace(/,/g, ''));
   if (!(cnt[1] > 3 && cnt[2] > 3 && cnt[1] < cnt[0] && cnt[2] < cnt[0])) throw new Error('칩 개수 이상 ' + cnt);
-  await p.click('.kchip[data-kind="quick"]'); ch = await chips(); console.log('quick:', ch, await sum());
+  await kclick('quick'); ch = await chips(); console.log('quick:', ch, await sum());
   if (!/^:false/.test(ch[0]) || !/^quick:true/.test(ch[2])) throw new Error('간편식품 칩 상태 이상');
   if (await nCards() !== Math.min(30, cnt[2])) throw new Error('간편식품 카드 수 ' + await nCards() + ' != ' + cnt[2]);
   const qNames = await p.$$eval('#recipeList .recipe h3', e => e.slice(0, 5).map(x => x.innerText)); console.log('quick top5:', qNames);
-  await p.click('.kchip[data-kind="jachi"]'); ch = await chips(); console.log('both:', ch, await sum());
+  await kclick('jachi'); ch = await chips(); console.log('both:', ch, await sum());
   const both = +((await p.$eval('#recipeSummary', e => e.dataset.kind)).match(/자취생·간편식품 ([\d,]+)개/) || [0, '0'])[1].replace(/,/g, '');
   if (!/^jachi:true/.test(ch[1]) || !/^quick:true/.test(ch[2]) || !(both >= Math.max(cnt[1], cnt[2]) && both <= cnt[1] + cnt[2])) throw new Error('합집합 이상 ' + both);
   if (cnt[2] > 30 || cnt[1] > 30) { const m0 = await p.$eval('#btnMore', b => b.innerText); await p.click('#btnMore'); await new Promise(r => setTimeout(r, 300)); console.log('more:', m0, '→', await nCards()); if (await nCards() !== Math.min(60, both)) throw new Error('더 보기 필터 이상'); }
-  await p.click('.kchip[data-kind="quick"]'); await p.click('.kchip[data-kind="jachi"]'); ch = await chips(); console.log('fallback:', ch);
+  await kclick('quick'); await kclick('jachi'); ch = await chips(); console.log('fallback:', ch);
   if (!/^:true/.test(ch[0]) || /true/.test(ch[1] + ch[2])) throw new Error('마지막 칩 끄면 전체로 안 돌아감');
-  await p.click('.kchip[data-kind="jachi"]'); await p.click('.kchip[data-kind=""]'); ch = await chips(); if (!/^:true/.test(ch[0]) || /true/.test(ch[1])) throw new Error('전체 눌러도 다른 칩이 안 꺼짐');
+  await kclick('jachi'); await kclick(''); ch = await chips(); if (!/^:true/.test(ch[0]) || /true/.test(ch[1])) throw new Error('전체 눌러도 다른 칩이 안 꺼짐');
   if (await nCards() !== Math.min(30, cnt[0])) throw new Error('전체 복귀 후 카드 수 이상');
+  await drOpen(false); await p.evaluate(() => scrollTo(0, 0));
   // 할인 재료 고르기 → 플로팅 「해당 재료로 레시피 추천 · N개」 → 레시피 필터 + 「선택 재료」 표시
   await p.click('nav button[data-tab="tab-deals"]'); await new Promise(r => setTimeout(r, 300));
   const pickRow = async ing => { const k = await p.$eval(`.deal[data-ing="${ing}"]`, e => { e.scrollIntoView({ block: 'center' }); return e.getAttribute('data-sel'); }); await p.click(`.deal[data-sel="${k.replace(/"/g, '\\"')}"] .dn`); return k; };
@@ -380,7 +381,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   { const s1 = await sum(); console.log('recipe subtitle (sel):', s1); const m = s1.match(/^선택한 재료로 만들 수 있는 레시피 ([\d,]+)개$/); const t1 = await p.evaluate(() => { const s = document.getElementById('recipeSummary'), t = document.getElementById('recipeTotal'); return { tot: t.hidden ? '' : t.textContent, one: s.getBoundingClientRect().height < 30 && s.scrollWidth <= s.clientWidth }; }); if (!t1.one || !/^전체 [\d,]+개$/.test(t1.tot) || !m || +m[1].replace(/,/g, '') !== nAll) throw new Error('레시피 부제(재료 선택) 이상 ' + s1); }
   const first = cardIngs[0].filter(k => k === '돼지고기' || k === '양파').length; console.log('sel recipes:', nAll, 'first has both:', first, await p.$$eval('#recipeList .recipe h3', e => e.slice(0, 4).map(x => x.innerText)));
   if (first !== 2) throw new Error('두 재료 다 쓰는 레시피가 앞에 안 옴');
-  await p.click('.kchip[data-kind="quick"]'); const nq = await nCards(); const cq = await chips(); console.log('sel+quick:', cq); if (+cq[2].split(':')[2] > nAll) throw new Error('선택+간편식품 AND 이상'); await p.click('.kchip[data-kind=""]');
+  await kclick('quick'); const nq = await nCards(); const cq = await chips(); console.log('sel+quick:', cq); if (+cq[2].split(':')[2] > nAll) throw new Error('선택+간편식품 AND 이상'); await kclick(''); await drOpen(false); await p.evaluate(() => scrollTo(0, 0));
   await p.type('#rSearch', 'zzzz없는요리'); await new Promise(r => setTimeout(r, 500));
   const emp = await p.$eval('#recipeList', e => e.innerText.replace(/\s+/g, ' ')); console.log('sel empty:', emp); if (!/고른 재료가 들어간 레시피가 없어요/.test(emp)) throw new Error('빈 상태 이상');
   await p.$eval('#rSearch', e => { e.value = ''; e.dispatchEvent(new Event('input')); }); await new Promise(r => setTimeout(r, 500));
@@ -448,8 +449,9 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     // 레시피
     await p.click('nav button[data-tab="tab-recipes"]'); await W(400);
     const rRows = () => p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe')].map(c => { const g = c.querySelector('.sring .sr-p'), m = [...c.querySelectorAll('.rmeta span')].map(e => e.textContent).find(t => /kcal$/.test(t)), mm = [...c.querySelectorAll('.rmeta span')].some(e => /\d+분$/.test(e.textContent)); return { save: g ? +g.textContent.replace(/[^\d]/g, '') : null, kcal: m ? +m.replace(/[^\d]/g, '') : null, mins: mm, rank: !!c.querySelector('.rank, .rk, .num') }; }));
-    // 레시피 정렬: 칩 줄 없이 글자만 있는 「추천순 ▾」 → 메뉴에서 고르기 (rcur = 이름+화살표)
-    const rcur = () => p.evaluate(() => { const b = document.getElementById('rSortBtn'), a = b.querySelector('.sd-ar'); return b.textContent.replace(a ? a.textContent : '', '') + (a ? a.textContent : ''); });
+    // 레시피 정렬: 검색창 왼쪽 아이콘 버튼 → 메뉴에서 고르기. 지금 정렬은 추천순이 아닐 때만 제목 줄 오른쪽 작은 글자 (rcur = 이름+화살표, 숨김이면 추천순)
+    const rcur = () => p.evaluate(() => { const l = document.getElementById('rSortLbl'), b = document.getElementById('rSortBtn'); if (l.hidden) return b.getAttribute('aria-label') === '정렬: 추천순' ? '추천순' : 'mismatch'; const a = l.querySelector('.sd-ar'), t = l.textContent.replace(a ? a.textContent : '', '');
+      return b.getAttribute('aria-label') === '정렬: ' + t ? t + (a ? a.textContent : '') : 'mismatch ' + b.getAttribute('aria-label'); });
     const rpick = async (k, rev) => { if (await p.evaluate(() => document.getElementById('rSortPop').hidden)) { await p.click('#rSortBtn'); await W(150); }
       for (let n = 0; n < 2; n++) { await p.click('#rSortPop [data-sort="' + k + '"]'); await W(300); const cur = await p.evaluate(() => JSON.parse(localStorage.getItem('mr_rsort') || '{}')); if (k === 'rec' || (cur.k === k && !!cur.rev === rev)) break; }
       if (await p.evaluate(() => !document.getElementById('rSortPop').hidden)) { await p.keyboard.press('Escape'); await W(100); } };
@@ -510,82 +512,86 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       await p.click('#rSortBtn'); await W(150); await p.mouse.click(30, 700); await W(150); s0 = await st(); if (s0.open || s0.ex !== 'false') throw new Error('정렬 메뉴 바깥 탭 이상');
       await p.click('#rSortBtn'); await W(150); await p.keyboard.press('Home'); await p.keyboard.press('Enter'); await W(300); s0 = await st();
       if (s0.open || await rcur() !== '추천순' || s0.foc !== 'btn' || await live() !== '추천순으로 정렬') throw new Error('추천순 고르면 닫힘 이상 ' + JSON.stringify(s0));
-      await rpick('rec', false);
+      await rpick('save', false);
       const vp0 = p.viewport(); const bad = [];
       for (const vw of [390, 320]) for (const ts of [1, 1.5, 2]) {
-        await p.setViewport({ ...vp0, width: vw }); await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); window.__applyTextSize(); window.scrollTo(0, 0); }, ts); await W(350); await p.evaluate(() => document.getElementById('rSortBtn').scrollIntoView({ block: 'center' })); await W(150);
+        await p.setViewport({ ...vp0, width: vw }); await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); window.__applyTextSize(); window.scrollTo(0, 0); }, ts); await W(350);
         await p.click('#rSortBtn'); await W(250);
-        const m = await p.evaluate(() => { const b = document.getElementById('rSortBtn'), r = b.getBoundingClientRect(), lh = parseFloat(getComputedStyle(b).fontSize) * 2.2, pop = document.getElementById('rSortPop').getBoundingClientRect(),
-          sum = document.getElementById('recipeSummary'), kr = document.querySelector('.kind-row').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-          const hit = [[cx, cy - 21], [cx, cy + 21], [r.right - 22 < r.left ? cx : r.right - 21, cy]].every(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.closest('#rSortBtn, #rSortPop'); });
-          const items = [...document.querySelectorAll('#rSortPop button')].map(x => x.getBoundingClientRect().height);
-          const h1 = document.querySelector('#tab-recipes .page-h h1'), tr = document.querySelector('#tab-recipes .rtitle').getBoundingClientRect(), tn = h1.firstChild, words = [];
+        const m = await p.evaluate(() => { const b = document.getElementById('rSortBtn'), r = b.getBoundingClientRect(), f = document.getElementById('rSearch').getBoundingClientRect(), pop = document.getElementById('rSortPop').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          const hit = [[cx, cy - 21], [cx, cy + 21], [cx - 21, cy], [cx + 21, cy]].every(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.closest('#rSortBtn, #rSortPop'); });
+          const items = [...document.querySelectorAll('#rSortPop button')].map(x => x.getBoundingClientRect().height), l = document.getElementById('rSortLbl'), lr = l.getBoundingClientRect(), tr = document.querySelector('#tab-recipes .rtitle').getBoundingClientRect(), sum = document.getElementById('recipeSummary');
+          const h1 = document.querySelector('#tab-recipes .page-h h1'), tn = h1.firstChild, words = [];
           { let o = 0; for (const w of tn.textContent.split(' ')) { if (w) { const rg = document.createRange(); rg.setStart(tn, o); rg.setEnd(tn, o + w.length); words.push(rg.getClientRects().length); } o += w.length + 1; } }
-          return { h: Math.round(r.height), oneLine: r.height < lh, inX: r.left >= 0 && r.right <= innerWidth, popX: pop.left >= 0 && pop.right <= innerWidth, popH: Math.max(...items), itemFs: parseFloat(getComputedStyle(document.querySelector('#rSortPop button')).fontSize), hit, inRow: r.bottom <= kr.top, right: Math.abs(r.right - tr.right - 2) < 1.5, below: pop.top >= r.bottom, onScr: pop.bottom <= innerHeight, word: words.every(n => n === 1), docW: document.documentElement.scrollWidth <= innerWidth,
+          return { left: r.left > f.left && r.right < f.left + f.width / 2, vmid: Math.abs(cy - (f.top + f.bottom) / 2) < 0.6, popX: pop.left >= 0 && pop.right <= innerWidth, popH: Math.max(...items), itemFs: parseFloat(getComputedStyle(document.querySelector('#rSortPop button')).fontSize), hit, below: pop.top >= f.bottom - 1, onScr: pop.bottom <= innerHeight,
+            lbl: !l.hidden && lr.right <= tr.right + 0.5 && lr.left >= 0 && lr.height < parseFloat(getComputedStyle(l).fontSize) * 2, word: words.every(n => n === 1), docW: document.documentElement.scrollWidth <= innerWidth,
             sumLines: sum ? Math.round(sum.getBoundingClientRect().height / parseFloat(getComputedStyle(sum).lineHeight)) : -1 }; });
         await p.keyboard.press('Escape'); await W(100);
-        if (!m.oneLine || !m.inX || !m.popX || !m.inRow || !m.right || !m.below || !m.onScr || !m.word || !m.docW || (vw === 390 && ts === 1 && (m.sumLines !== 1 || !m.hit)) || m.popH > m.itemFs * 3) bad.push(vw + '/' + ts + ' ' + JSON.stringify(m));
-        console.log('recipe sort dd', vw, ts, JSON.stringify(m));
+        if (!m.left || !m.vmid || !m.popX || !m.hit || !m.below || !m.onScr || !m.lbl || !m.word || !m.docW || (vw === 390 && ts === 1 && m.sumLines !== 1) || m.popH > m.itemFs * 3) bad.push(vw + '/' + ts + ' ' + JSON.stringify(m));
+        console.log('recipe sort btn', vw, ts, JSON.stringify(m));
       }
       await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); window.scrollTo(0, 0); }); await p.setViewport(vp0); await W(300);
       if (bad.length) throw new Error('정렬 메뉴 크기별 이상 ' + bad.join(' | '));
-      // 390/1x: 모든 정렬에서 트리거는 제목(「추천 레시피  전체 N개」) 줄 오른쪽 끝 — 「전체 N개」가 가장 넓어도(9,999)·숨겨져도. 칩 줄엔 칩만(좌우 14px·사이 7px)
+      // 390/1x: 추천순이면 제목 줄에 정렬 글자 없음, 다른 정렬이면 「추천 레시피  전체 N개」 줄 오른쪽 끝에 작은 글자 — 「전체 N개」가 가장 넓어도(9,999)·숨겨져도
       { const off = [];
         for (const [k, rev] of [['rec', false], ['save', false], ['save', true], ['cost', false], ['cost', true], ['kcal', false], ['kcal', true]]) for (const tot of ['전체 9,999개', '']) {
           await rpick(k, rev); await p.evaluate(() => window.scrollTo(0, 0));
           const m = await p.evaluate(tot => { const t = document.getElementById('recipeTotal'), t0 = [t.textContent, t.hidden]; t.textContent = tot; t.hidden = !tot;
-            const h1 = document.querySelector('#tab-recipes .page-h h1'), hr = h1.getBoundingClientRect(), lh = parseFloat(getComputedStyle(h1).lineHeight), b = document.getElementById('rSortBtn'), r = b.getBoundingClientRect(), tr = document.querySelector('#tab-recipes .rtitle').getBoundingClientRect(),
-              ch = [...document.querySelectorAll('.kind-row .kchip')], row = document.querySelector('.kind-row'), sum = document.getElementById('recipeSummary'), tb = t.hidden ? null : t.getBoundingClientRect();
-            const res = { lab: b.textContent, tot, oneTitle: hr.height < lh * 1.5, line: r.top >= hr.top && r.bottom <= hr.top + lh, base: !tb || Math.abs((tb.top + tb.bottom) / 2 - (r.top + r.bottom) / 2) < 3, right: Math.abs(r.right - tr.right - 2) < 1.5, apart: !tb || r.left >= tb.right + 8,
-              onlyChips: !row.querySelector('#rSortBtn, .rsort'), padL: getComputedStyle(ch[0]).paddingLeft, padR: getComputedStyle(ch[0]).paddingRight, gap: getComputedStyle(row).columnGap, bPad: getComputedStyle(b).paddingLeft,
+            const h1 = document.querySelector('#tab-recipes .page-h h1'), hr = h1.getBoundingClientRect(), lh = parseFloat(getComputedStyle(h1).lineHeight), l = document.getElementById('rSortLbl'), r = l.getBoundingClientRect(), tr = document.querySelector('#tab-recipes .rtitle').getBoundingClientRect(),
+              sum = document.getElementById('recipeSummary'), tb = t.hidden ? null : t.getBoundingClientRect(), cs = getComputedStyle(l);
+            const res = { lab: l.hidden ? '' : l.textContent, tot, oneTitle: hr.height < lh * 1.5, line: l.hidden || (r.top >= hr.top && r.bottom <= hr.top + lh), base: l.hidden || !tb || Math.abs((tb.top + tb.bottom) / 2 - (r.top + r.bottom) / 2) < 3, right: l.hidden || Math.abs(r.right - tr.right) < 1.5, apart: l.hidden || !tb || r.left >= tb.right + 8,
+              muted: cs.color === getComputedStyle(document.getElementById('recipeTotal')).color || cs.fontSize === '12px', noBtn: !document.querySelector('#tab-recipes .rtitle button'),
               sum1: Math.round(sum.getBoundingClientRect().height / parseFloat(getComputedStyle(sum).lineHeight)) === 1, docW: document.documentElement.scrollWidth <= innerWidth };
             t.textContent = t0[0]; t.hidden = t0[1]; return res; }, tot);
-          if (!m.oneTitle || !m.line || !m.base || !m.right || !m.apart || !m.onlyChips || m.padL !== '14px' || m.padR !== '14px' || m.gap !== '7px' || m.bPad !== '2px' || !m.sum1 || !m.docW) off.push(JSON.stringify(m)); }
-        console.log('recipe sort on title line 390/1x:', off.length ? off : 'ok');
-        if (off.length) throw new Error('390/1x 정렬이 제목 줄에서 밀려남 ' + off.join(' | ')); await rpick('rec', false); }
+          if (!m.oneTitle || !m.line || !m.base || !m.right || !m.apart || !m.noBtn || !m.muted || (k === 'rec') !== (m.lab === '') || !m.sum1 || !m.docW) off.push(JSON.stringify(m)); }
+        console.log('recipe sort label on title line 390/1x:', off.length ? off : 'ok');
+        if (off.length) throw new Error('390/1x 정렬 글자 이상 ' + off.join(' | ')); await rpick('rec', false); }
     }
     // 레시피 검색창: 맨 위 (할인 재료 검색과 같은 자리·높이·글자), 따라오지 않음
     { await p.evaluate(() => scrollTo(0, 0)); await W(150); const rs = await p.evaluate(() => { const e = document.getElementById('rSearch'), st = e.closest('.tools'), d = document.getElementById('dSearch'), r = e.getBoundingClientRect(); return { top: r.top, h: r.height, fs: getComputedStyle(e).fontSize, dfs: getComputedStyle(d).fontSize, pos: getComputedStyle(st).position, first: st.parentElement.firstElementChild === st }; });
       console.log('recipe search top:', rs); if (rs.pos === 'sticky' || rs.pos === 'fixed' || !rs.first || Math.abs(rs.top - 76) > 1.5 || Math.abs(rs.h - 53.27) > 1 || rs.fs !== '16px' || rs.dfs !== rs.fs) throw new Error('레시피 검색창 맨 위 sticky 아님 ' + JSON.stringify(rs)); }
-    // 레시피 머리말 여백: 할인 재료 머리말처럼 위아래 37.5px (검색창 밑 서랍 손잡이 아래 ↔ 제목 위, 칩(또는 고른 재료 줄) 아래 ↔ 첫 카드), 390/1x
-    { await p.evaluate(() => scrollTo(0, 0)); await W(150); const g = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), sb = r('#rDrawerBtn'), h1 = r('#tab-recipes .page-h h1'), kr = r('#tab-recipes .kind-row'), si = document.getElementById('selInd'), last = si.hidden ? kr : si.getBoundingClientRect(), c = document.querySelector('#recipeList > *');
-        return { vw: innerWidth, ts: document.documentElement.getAttribute('data-ts'), above: +(h1.top - sb.bottom).toFixed(2), below: c ? +(c.getBoundingClientRect().top - last.bottom).toFixed(2) : -1, chipsIn: kr.top - r('#tab-recipes .page-h').bottom, pos: getComputedStyle(document.querySelector('#tab-recipes .tools')).position }; });
-      console.log('recipe header gaps:', g); if (g.vw !== 390 || Math.abs(g.above - 37.5) > 0.6 || Math.abs(g.below - 37.5) > 0.6 || Math.abs(g.above - g.below) > 1 || g.chipsIn !== 12 || g.pos === 'sticky' || g.pos === 'fixed') throw new Error('레시피 머리말 위아래 여백 이상 ' + JSON.stringify(g)); }
-    // 없는 가전제품 서랍: 검색창 뒤에 숨은 손잡이 → 눌러서 펼침(200ms), 토글 3개(aria-pressed, 숨길 개수), 개수 연동, 저장, 1.5x/2x/320 넘침 없음
+    // 레시피 머리말 여백: 할인 재료 머리말처럼 위아래 37.5px (검색창 밑 서랍 손잡이 아래 ↔ 제목 위, 부제(또는 고른 재료 줄) 아래 ↔ 첫 카드 — 종류 칩은 서랍 안), 390/1x
+    { await p.evaluate(() => scrollTo(0, 0)); await W(150); const g = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), sb = r('#rDrawerBtn'), h1 = r('#tab-recipes .page-h h1'), si = document.getElementById('selInd'), last = si.hidden ? r('#tab-recipes .page-h') : si.getBoundingClientRect(), c = document.querySelector('#recipeList > *');
+        return { vw: innerWidth, ts: document.documentElement.getAttribute('data-ts'), above: +(h1.top - sb.bottom).toFixed(2), below: c ? +(c.getBoundingClientRect().top - last.bottom).toFixed(2) : -1, chipsIn: !!document.querySelector('#rDrawerBody .kind-row') && !document.querySelector('#tab-recipes > .kind-row'), pos: getComputedStyle(document.querySelector('#tab-recipes .tools')).position }; });
+      console.log('recipe header gaps:', g); if (g.vw !== 390 || Math.abs(g.above - 37.5) > 0.6 || Math.abs(g.below - 37.5) > 0.6 || Math.abs(g.above - g.below) > 1 || !g.chipsIn || g.pos === 'sticky' || g.pos === 'fixed') throw new Error('레시피 머리말 위아래 여백 이상 ' + JSON.stringify(g)); }
+    // 필터 서랍: 검색창 뒤에 숨은 손잡이 「필터」 → 눌러서 펼침(200ms). 안에는 위에서부터 종류 칩 · 분류 아이콘 · 없는 가전제품 아이콘(켜면 X, aria-pressed, 숨길 개수). 개수 연동, 저장, 1.5x/2x/320 넘침 없음
     { const ds = () => p.evaluate(() => { const r = s => { const e = document.querySelector(s); if (!e) return null; const x = e.getBoundingClientRect(); return { l: x.left, t: x.top, r: x.right, b: x.bottom, w: x.width, h: x.height }; }, btn = document.getElementById('rDrawerBtn'), body = document.getElementById('rDrawerBody');
         const lip = r('#rDrawerBtn'), sb = r('#rSearch'), cx = lip.l + lip.w / 2, cy = (lip.t + lip.b) / 2, top = document.elementFromPoint(cx, sb.b - 4);
         return { vw: innerWidth, docW: document.documentElement.scrollWidth, ex: btn.getAttribute('aria-expanded'), ac: btn.getAttribute('aria-controls'), bodyId: body.id, lab: btn.innerText.replace(/\s+/g, ' ').trim(), on: btn.classList.contains('on'),
           narrower: lip.l > sb.l && lip.r < sb.r, behind: !!(top && top.closest('#tab-recipes .tools')), lipHit: [[cx, cy - 21], [cx, cy + 21]].map(([x, y]) => document.elementFromPoint(x, y)).filter(e => e && e.closest('#rDrawerBtn, #tab-recipes .tools')).length === 2,
           bodyH: r('#rDrawerBody').h, vis: getComputedStyle(body).visibility, gap: +(r('#tab-recipes .page-h h1').t - lip.b).toFixed(2), pos: getComputedStyle(document.getElementById('rDrawer')).position,
-          togs: [...document.querySelectorAll('#apGroup .fdtog')].map(b => { const x = b.getBoundingClientRect(), a = getComputedStyle(b, '::after'); return { k: b.dataset.ap, t: b.childNodes[1].textContent.trim(), n: +b.querySelector('small').textContent.replace(/,/g, ''), pr: b.getAttribute('aria-pressed'), r: x.right, l: x.left, hit: Math.max(x.height, parseFloat(a.height) || 0) }; }),
-          hint: !document.getElementById('apHint').hidden, hintTxt: document.getElementById('apHint').textContent, chip0: +document.querySelector('.kind-row .kchip .kc').innerText.replace(/,/g, ''), sum: document.getElementById('recipeSummary').innerText, tot: document.getElementById('recipeTotal').innerText.replace(/\s+/g, ' ') }; });
-      const tg = async k => { await p.click(`#apGroup .fdtog[data-ap="${k}"]`); await W(150); return ds(); };
+          togs: [...document.querySelectorAll('#apGroup .fdap')].map(b => { const x = b.getBoundingClientRect(), a = getComputedStyle(b, '::after'); return { k: b.dataset.ap, t: b.querySelector('.ap-w').firstChild.textContent.trim(), al: b.getAttribute('aria-label'), x: getComputedStyle(b.querySelector('.ap-x')).visibility, n: +b.querySelector('small').textContent.replace(/,/g, ''), pr: b.getAttribute('aria-pressed'), r: x.right, l: x.left, hit: Math.max(x.height, parseFloat(a.height) || 0) }; }),
+          allBtns: [...body.querySelectorAll('button')].map(b => { const x = b.getBoundingClientRect(); return { l: x.left, r: x.right, h: Math.max(x.height, parseFloat(getComputedStyle(b, '::after').height) || 0), clip: [...b.querySelectorAll('span')].some(sp => sp.scrollWidth > sp.clientWidth + 1) }; }),
+          secs: [...body.querySelectorAll('.fd-grp')].map(g => g.querySelector('.fd-k').textContent + ':' + g.querySelectorAll('button').length + ':' + Math.round(g.getBoundingClientRect().top)),
+          hint: !document.getElementById('apHint').hidden, hintTxt: document.getElementById('apHint').textContent, chip0: +document.querySelector('.kind-row .kchip .kc').textContent.replace(/,/g, ''), sum: document.getElementById('recipeSummary').innerText, tot: document.getElementById('recipeTotal').innerText.replace(/\s+/g, ' ') }; });
+      const tg = async k => { await p.click(`#apGroup .fdap[data-ap="${k}"]`); await W(150); return ds(); };
       await p.evaluate(() => { localStorage.removeItem('mr_ap'); scrollTo(0, 0); }); await W(100);
       let a = await ds(); console.log('drawer closed:', JSON.stringify({ ex: a.ex, lab: a.lab, narrower: a.narrower, behind: a.behind, bodyH: a.bodyH, vis: a.vis, gap: a.gap }));
-      if (a.ex !== 'false' || a.ac !== a.bodyId || a.lab !== '없는 가전제품 필터링' || a.on || !a.narrower || !a.behind || !a.lipHit || a.bodyH > 0.5 || a.vis !== 'hidden' || Math.abs(a.gap - 37.5) > 0.6 || a.pos === 'sticky') throw new Error('서랍 닫힌 상태 이상 ' + JSON.stringify(a));
+      if (a.ex !== 'false' || a.ac !== a.bodyId || a.lab !== '필터' || a.on || !a.narrower || !a.behind || !a.lipHit || a.bodyH > 0.5 || a.vis !== 'hidden' || Math.abs(a.gap - 37.5) > 0.6 || a.pos === 'sticky') throw new Error('서랍 닫힌 상태 이상 ' + JSON.stringify(a));
       const base = a.chip0; await p.click('#rDrawerBtn'); await W(60); const mid = (await ds()).bodyH; await W(300); a = await ds();
       const tr = await p.$eval('#rDrawerBody', e => getComputedStyle(e).transition);
       console.log('drawer open:', JSON.stringify({ ex: a.ex, mid, bodyH: a.bodyH, togs: a.togs, gap: a.gap, tr }));
-      if (a.ex !== 'true' || a.bodyH < 44 || a.vis !== 'visible' || !(mid > 0 && mid < a.bodyH) || !/0\.2s/.test(tr) || Math.abs(a.gap - 37.5) > 0.6 || a.togs.map(t => t.t).join('|') !== '오븐 없음|찜기 없음|에어프라이어 없음' || a.togs.some(t => t.pr !== 'false' || t.hit < 44) || a.togs[2].n !== 0 || !(a.togs[0].n > 0 && a.togs[1].n > 0)) throw new Error('서랍 열기 이상 ' + JSON.stringify(a));
+      if (a.ex !== 'true' || a.bodyH < 44 || a.vis !== 'visible' || !(mid > 0 && mid < a.bodyH) || !/0\.2s/.test(tr) || Math.abs(a.gap - 37.5) > 0.6 || a.togs.map(t => t.t).join('|') !== '오븐|찜기|에어프라이어' || !a.togs.every((t, i) => t.al.startsWith(['오븐 없음', '찜기 없음', '에어프라이어 없음'][i] + ',')) || a.togs.some(t => t.pr !== 'false' || t.hit < 44 || t.x !== 'hidden') || a.secs.map(x => x.split(':').slice(0, 2).join(':')).join() !== '종류:3,분류:6,없는 가전제품:3' || !a.secs.every((x, i) => !i || +x.split(':')[2] > +a.secs[i - 1].split(':')[2]) || a.allBtns.some(b => b.h < 44) || a.togs[2].n !== 0 || !(a.togs[0].n > 0 && a.togs[1].n > 0)) throw new Error('서랍 열기 이상 ' + JSON.stringify(a));
+      const kc = await p.evaluate(() => { const c = document.querySelector('#rDrawerBody .kchip'), row = c.parentElement; return [getComputedStyle(c).paddingLeft, getComputedStyle(c).paddingRight, getComputedStyle(row).columnGap].join(); });
+      if (kc !== '14px,14px,7px') throw new Error('서랍 안 종류 칩 여백 이상 ' + kc);
       const nOven = a.togs[0].n; a = await tg('oven');
       console.log('oven on:', a.chip0, base, nOven, a.togs.map(t => t.n), a.lab, a.tot);
-      if (a.togs[0].pr !== 'true' || a.chip0 !== base - nOven || a.togs[0].n !== nOven || !(a.togs[2].n >= 0) || !/· 1$/.test(a.lab) || !a.on || !/[\d,]+개/.test(a.sum)) throw new Error('오븐 없음 이상 ' + JSON.stringify(a));
+      if (a.togs[0].pr !== 'true' || a.togs[0].x !== 'visible' || a.togs[1].x !== 'hidden' || a.chip0 !== base - nOven || a.togs[0].n !== nOven || !(a.togs[2].n >= 0) || !/· 1$/.test(a.lab) || !a.on || !/[\d,]+개/.test(a.sum)) throw new Error('오븐 없음 이상 ' + JSON.stringify(a));
       const fr = a.togs[2].n; a = await tg('airfryer'); if (a.chip0 !== base - nOven - fr || a.hint || !/· 2$/.test(a.lab)) throw new Error('오븐+에어프라이어 이상 ' + JSON.stringify(a));
       a = await tg('oven'); if (a.chip0 !== base || !a.hint || a.hintTxt !== '오븐으로 대신할 수 있는 레시피는 남겨둬요' || a.togs[2].n !== 0 || a.togs[2].pr !== 'true') throw new Error('에어프라이어만 이상 ' + JSON.stringify(a));
       a = await tg('airfryer'); a = await tg('steamer'); if (a.chip0 !== base - a.togs[1].n || a.togs[1].pr !== 'true') throw new Error('찜기 없음 이상 ' + JSON.stringify(a));
       const saved = await p.evaluate(() => localStorage.getItem('mr_ap')); if (!/"steamer":true/.test(saved) || /"oven":true/.test(saved)) throw new Error('mr_ap 저장 이상 ' + saved);
       await p.click('#rDrawerBtn'); await W(300); a = await ds(); if (a.ex !== 'false' || a.bodyH > 0.5 || !a.on || !/· 1$/.test(a.lab) || Math.abs(a.gap - 37.5) > 0.6) throw new Error('닫힌 채 필터 켜짐 이상 ' + JSON.stringify(a));
-      const lipCol = await p.$eval('#apN', e => getComputedStyle(e).color), labCol = await p.$eval('#rDrawerBtn .fd-lab', e => getComputedStyle(e).color); if (lipCol === labCol) throw new Error('손잡이 활성 표시(금색) 없음');
+      const lipCol = await p.$eval('#fdN', e => getComputedStyle(e).color), labCol = await p.$eval('#rDrawerBtn .fd-lab', e => getComputedStyle(e).color); if (lipCol === labCol) throw new Error('손잡이 활성 표시(금색) 없음');
       await p.reload({ waitUntil: 'networkidle0' }); await p.click('nav button[data-tab="tab-recipes"]'); await W(400); a = await ds();
       if (a.ex !== 'false' || !a.on || a.togs[1].pr !== 'true' || a.chip0 !== base - a.togs[1].n) throw new Error('새로고침 후 유지 이상 ' + JSON.stringify(a));
       await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]); await p.click('#rDrawerBtn'); await W(30); const rm = (await ds()).bodyH; await p.click('#rDrawerBtn'); await W(30); await p.emulateMediaFeatures([]);
       if (rm < 44) throw new Error('동작 줄이기: 바로 펼쳐져야 함 ' + rm);
       await p.click('#rDrawerBtn'); await W(300); await tg('steamer'); await p.click('#rDrawerBtn'); await W(300); a = await ds();
-      if (a.on || a.lab !== '없는 가전제품 필터링' || a.chip0 !== base || await p.evaluate(() => localStorage.getItem('mr_ap')) !== '{"oven":false,"steamer":false,"airfryer":false}') throw new Error('끄기 저장 이상 ' + JSON.stringify(a));
+      if (a.on || a.lab !== '필터' || a.chip0 !== base || await p.evaluate(() => localStorage.getItem('mr_ap')) !== '{"oven":false,"steamer":false,"airfryer":false}') throw new Error('끄기 저장 이상 ' + JSON.stringify(a));
       const vp0 = p.viewport(), bad = [];
       for (const vw of [390, 320]) for (const ts of [1, 1.5, 2]) { await p.setViewport({ ...vp0, width: vw }); await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); window.__applyTextSize(); scrollTo(0, 0); }, ts); await W(250);
-        await p.click('#rDrawerBtn'); await W(300); await p.evaluate(() => { const b = document.querySelector('#apGroup .fdtog[data-ap="oven"]'); b.click(); }); await W(150); a = await ds(); await p.evaluate(() => document.querySelector('#apGroup .fdtog[data-ap="oven"]').click()); await W(100); await p.click('#rDrawerBtn'); await W(300); const c = await ds();
-        const ok = a.docW <= vw && a.togs.every(t => t.l >= 0 && t.r <= vw) && Math.abs(a.gap - 37.5) < 0.6 && Math.abs(c.gap - 37.5) < 0.6 && c.narrower && c.behind && a.lab.endsWith('· 1') && a.togs.every(t => t.hit >= 44);
+        await p.click('#rDrawerBtn'); await W(300); await p.evaluate(() => { const b = document.querySelector('#apGroup .fdap[data-ap="oven"]'); b.click(); }); await W(150); a = await ds(); await p.evaluate(() => document.querySelector('#apGroup .fdap[data-ap="oven"]').click()); await W(100); await p.click('#rDrawerBtn'); await W(300); await p.evaluate(() => scrollTo(0, 0)); await W(80); const c = await ds();
+        const ok = a.docW <= vw && a.allBtns.every(b => b.l >= 0 && b.r <= vw && b.h >= 44 && !b.clip) && a.togs.every(t => t.l >= 0 && t.r <= vw) && Math.abs(a.gap - 37.5) < 0.6 && Math.abs(c.gap - 37.5) < 0.6 && c.narrower && c.behind && a.lab.endsWith('· 1') && a.togs.every(t => t.hit >= 44);
         console.log('drawer size', vw, ts, ok, a.docW, a.bodyH.toFixed(1), a.togs.map(t => Math.round(t.l) + '-' + Math.round(t.r)).join(','), a.gap, c.gap); if (!ok) bad.push([vw, ts, a, c]); }
       await p.setViewport(vp0); await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); scrollTo(0, 0); }); await W(250);
       if (bad.length) throw new Error('서랍 크기별 이상 ' + JSON.stringify(bad)); }
@@ -593,8 +599,8 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     { const sc = await p.evaluate(() => { const st = id => { const e = document.getElementById(id), c = getComputedStyle(e); return { bg: c.backgroundColor, bd: c.border, bs: c.boxShadow, ph: getComputedStyle(e, '::placeholder').color }; };
         return { stuck: document.getElementById('dSticky').classList.contains('stuck'), d: st('dSearch'), r: st('rSearch') }; });
       console.log('search boxes:', JSON.stringify(sc)); if (sc.stuck || JSON.stringify(sc.d) !== JSON.stringify(sc.r) || sc.r.bs === 'none') throw new Error('두 검색창 색이 달라요 ' + JSON.stringify(sc)); }
-    // 레시피 검색: 오른쪽 돋보기 = 검색 버튼(44×44, '검색'), 왼쪽 = 분류 아이콘
-    { const ic = await p.evaluate(() => { const i = document.getElementById('rSearch').getBoundingClientRect(), s = document.getElementById('rSearchBtn'), sr = s.getBoundingClientRect(), c = document.getElementById('rCatBtn').getBoundingClientRect(), cs = getComputedStyle(document.getElementById('rSearch'));
+    // 레시피 검색: 오른쪽 돋보기 = 검색 버튼(44×44, '검색'), 왼쪽 = 정렬 아이콘 버튼
+    { const ic = await p.evaluate(() => { const i = document.getElementById('rSearch').getBoundingClientRect(), s = document.getElementById('rSearchBtn'), sr = s.getBoundingClientRect(), c = document.getElementById('rSortBtn').getBoundingClientRect(), cs = getComputedStyle(document.getElementById('rSearch'));
         return { lbl: s.getAttribute('aria-label'), sw: sr.width, sh: sr.height, sRight: sr.left > i.left + i.width / 2 && sr.right <= i.right, cLeft: c.right < i.left + i.width / 2 && c.left >= i.left, svm: Math.abs((sr.top + sr.bottom) - (i.top + i.bottom)) / 2, cvm: Math.abs((c.top + c.bottom) - (i.top + i.bottom)) / 2, pl: parseFloat(cs.paddingLeft), pr: parseFloat(cs.paddingRight), cGap: c.right - i.left, sGap: i.right - sr.left, leftSvg: !!document.querySelector('#tab-recipes .tools .field > svg') }; });
       console.log('recipe search icons:', ic);
       if (ic.lbl !== '검색' || ic.sw < 44 || ic.sh < 44 || !ic.sRight || !ic.cLeft || ic.svm > 0.6 || ic.cvm > 0.6 || ic.pl < ic.cGap || ic.pr < ic.sGap || ic.leftSvg) throw new Error('레시피 검색 아이콘 배치 이상 ' + JSON.stringify(ic));
@@ -603,25 +609,23 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       await p.$eval('#rSearch', e => { e.value = ''; }); await p.click('#rSearchBtn'); await W(50);
       const r2 = await p.evaluate(() => document.querySelectorAll('#recipeList .recipe').length);
       console.log('recipe search btn:', r1, r2); if (r1.n !== 0 || r1.foc === 'rSearch' || r2 === 0) throw new Error('레시피 돋보기 검색 버튼 동작 이상'); }
-    // 분류: 큰 select 대신 검색창 안 아이콘 → 팝오버 (하나만), 고르면 금색 점 + 칩(✕)
-    const cs = () => p.evaluate(() => { const b = document.getElementById('rCatBtn'), pop = document.getElementById('rCatPop'), f = document.querySelector('#tab-recipes .tools .field'), t = document.querySelector('#tab-recipes .tools'), ch = document.querySelector('.kind-row .catchip');
-      return { sel: !!document.getElementById('rCat') || !!document.querySelector('#tab-recipes .tools select'), fw: Math.round(f.getBoundingClientRect().width), tw: Math.round(t.getBoundingClientRect().width), hp: b.getAttribute('aria-haspopup'), ex: b.getAttribute('aria-expanded'), al: b.getAttribute('aria-label'), open: !pop.hidden && pop.getBoundingClientRect().height > 0,
-        items: [...pop.querySelectorAll('[role=menuitemradio]')].map(x => x.textContent + (x.getAttribute('aria-checked') === 'true' ? '*' : '')), dot: getComputedStyle(b.querySelector('.fdot')).display !== 'none', chip: ch ? ch.textContent : null, foc: document.activeElement && (document.activeElement.id || document.activeElement.textContent),
+    // 분류: 팝오버 대신 필터 서랍 안 아이콘 줄 (하나만, 다시 누르면 해제), 손잡이에 켜진 필터 개수
+    const cs = () => p.evaluate(() => { const f = document.querySelector('#tab-recipes .tools .field'), t = document.querySelector('#tab-recipes .tools'), bs = [...document.querySelectorAll('#catGroup button')];
+      return { sel: !!document.getElementById('rCat') || !!document.querySelector('#tab-recipes .tools select') || !!document.getElementById('rCatBtn') || !!document.getElementById('rCatPop') || !!document.querySelector('.catchip'), fw: Math.round(f.getBoundingClientRect().width), tw: Math.round(t.getBoundingClientRect().width),
+        items: bs.map(x => x.textContent + (x.getAttribute('aria-pressed') === 'true' ? '*' : '')), minH: Math.min(...bs.map(x => x.getBoundingClientRect().height)), lab: document.getElementById('rDrawerBtn').innerText.replace(/\s+/g, ' ').trim(), foc: document.activeElement && (document.activeElement.id || document.activeElement.textContent),
         cats: [...document.querySelectorAll('#recipeList .recipe .rmeta')].map(m => m.textContent) }; });
-    let c0 = await cs(); console.log('cat ui:', {fw: c0.fw, tw: c0.tw, hp: c0.hp, al: c0.al});
-    if (c0.sel || c0.fw !== c0.tw || c0.hp !== 'menu' || c0.ex !== 'false' || c0.open || c0.dot || c0.chip) throw new Error('분류 아이콘 기본 상태 이상 ' + JSON.stringify(c0));
-    await p.click('#rCatBtn'); await W(200); let c1 = await cs();
-    if (!c1.open || c1.ex !== 'true' || c1.items.length < 5 || c1.items[0] !== '전체*' || c1.items.filter(x => x.endsWith('*')).length !== 1 || c1.foc !== '전체') throw new Error('분류 팝오버 열기 이상 ' + JSON.stringify(c1));
-    await p.keyboard.press('Escape'); await W(150); c1 = await cs(); if (c1.open || c1.ex !== 'false' || c1.foc !== 'rCatBtn') throw new Error('ESC로 닫기 이상');
-    await p.click('#rCatBtn'); await W(150); await p.click('#tab-recipes .page-h h1'); await W(150); c1 = await cs(); if (c1.open) throw new Error('바깥 누르면 닫혀야 함');
-    await p.click('#rCatBtn'); await W(150); await p.evaluate(() => [...document.querySelectorAll('#rCatPop [role=menuitemradio]')].find(x => x.textContent === '반찬').click()); await W(400); c1 = await cs();
-    if (c1.open || !c1.dot || !/반찬/.test(c1.chip || '') || !/반찬/.test(c1.al) || !c1.cats.length || !c1.cats.every(x => /반찬/.test(x)) || c1.foc !== 'rCatBtn') throw new Error('분류 반찬 선택 이상 ' + JSON.stringify(c1));
-    await p.click('#rCatBtn'); await W(150); c1 = await cs(); if (c1.items.filter(x => x.endsWith('*')).join() !== '반찬*' || c1.foc !== '반찬') throw new Error('선택 표시 이상');
-    await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter'); await W(400); c1 = await cs();
-    if (c1.open || !c1.chip || /반찬/.test(c1.chip) || !c1.cats.every(x => x.includes(c1.chip.replace('분류', '')))) throw new Error('키보드로 분류 바꾸기 이상 ' + JSON.stringify(c1));
-    await p.click('.kind-row .catchip'); await W(400); c1 = await cs();
-    if (c1.chip || c1.dot || !/전체/.test(c1.al) || c1.foc !== 'rCatBtn') throw new Error('분류 칩 ✕ 해제 이상 ' + JSON.stringify(c1));
-    console.log('category popover OK');
+    let c0 = await cs(); console.log('cat ui:', JSON.stringify({ fw: c0.fw, tw: c0.tw, items: c0.items, lab: c0.lab }));
+    if (c0.sel || c0.fw !== c0.tw || c0.items.join() !== '반찬,국&찌개,일품,밥,후식,기타' || c0.lab !== '필터') throw new Error('분류 기본 상태 이상 ' + JSON.stringify(c0));
+    await drOpen(true); c0 = await cs(); if (c0.minH < 44) throw new Error('분류 아이콘 44px 아님 ' + c0.minH);
+    await p.click('#catGroup [data-cat="반찬"]'); await W(300); let c1 = await cs();
+    if (c1.items.filter(x => x.endsWith('*')).join() !== '반찬*' || !c1.cats.length || !c1.cats.every(x => /반찬/.test(x)) || c1.lab !== '필터 · 1') throw new Error('분류 반찬 선택 이상 ' + JSON.stringify(c1));
+    await p.focus('#catGroup [data-cat="국&찌개"]'); await p.keyboard.press('Enter'); await W(300); c1 = await cs();
+    if (c1.items.filter(x => x.endsWith('*')).join() !== '국&찌개*' || !c1.cats.every(x => x.includes('국&찌개')) || c1.lab !== '필터 · 1') throw new Error('키보드로 분류 바꾸기 이상 ' + JSON.stringify(c1));
+    await kclick('jachi'); await W(300); c1 = await cs(); if (c1.lab !== '필터 · 2') throw new Error('종류+분류 개수 이상 ' + c1.lab);
+    await kclick(''); await p.click('#catGroup [data-cat="국&찌개"]'); await W(300); c1 = await cs();
+    if (c1.items.some(x => x.endsWith('*')) || c1.lab !== '필터' || c1.cats.every(x => x.includes('국&찌개'))) throw new Error('분류 다시 눌러 해제 이상 ' + JSON.stringify(c1));
+    await drOpen(false); await p.evaluate(() => scrollTo(0, 0));
+    console.log('category drawer OK');
     await p.click('nav button[data-tab="tab-deals"]'); await W(250);
     console.log('sort pills OK');
   }
@@ -636,7 +640,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       const sel = tab === 'deals' ? '#dealList .deal .dn' : '#recipeList .recipe h3';
       [...document.querySelectorAll(sel)].filter(vis).slice(0, 8).forEach(e => { const fs = parseFloat(getComputedStyle(e).fontSize), w = e.getBoundingClientRect().width; if (w < fs * 3) out.thin.push(e.textContent.slice(0, 10) + ' ' + Math.round(w) + 'px'); });
       out.nThin = document.querySelectorAll(sel).length;
-      const targets = tab === 'deals' ? ['a.brand', 'button.hdr-btn', '#dSortBar button.sp', '#dealList button.tipb'] : ['a.brand', '#rCatBtn', '.kind-row button.kchip', '#rSortBtn', '#recipeList button.tipb', '#recipeList button.mn-toggle'];
+      const targets = tab === 'deals' ? ['a.brand', 'button.hdr-btn', '#dSortBar button.sp', '#dealList button.tipb'] : ['a.brand', '#rSortBtn', '#recipeList button.tipb', '#recipeList button.mn-toggle'];
       targets.forEach(q => { const e = [...document.querySelectorAll(q)].find(vis); if (!e) { out.small.push(q + ' 없음'); return; }
         if (!e.closest('#top')) e.scrollIntoView({ block: 'center', inline: 'nearest' });
         const r = e.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, h = 21.5;
@@ -727,48 +731,33 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       if (ts > 1 && orphans.length) throw new Error(`한 글자만 남은 줄 ${vw}/${ts}x: ` + orphans.join(', '));
     }
     await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.setViewport(vp0); await p.reload({ waitUntil: 'networkidle0' }); await W(500); }
-  // 분류 버튼 ↔ 카드 분류 아이콘: 지금 분류 아이콘으로 바뀌고, 처음 한 번만 티커 힌트, 카드 분류를 누르면 그 분류만
+  // 카드 분류 아이콘을 누르면 그 분류만 → 탭 맨 위, 서랍 손잡이에 금색 개수 (예전 분류 버튼 아이콘 티커·첫 힌트는 없어요)
   { const W = ms => new Promise(r => setTimeout(r, ms)); const vp0 = p.viewport();
-    const st = () => p.evaluate(() => { const b = document.getElementById('rCatBtn'), bx = b.querySelector('.fic'), u = bx.lastElementChild && bx.lastElementChild.querySelector('use');
-      return { ic: bx.getAttribute('data-ic'), kids: bx.children.length, href: u ? u.getAttribute('href') : 'def', al: b.getAttribute('aria-label'), on: b.classList.contains('on'), ov: getComputedStyle(bx).overflow, anim: bx.getAnimations({ subtree: true }).length, flag: localStorage.getItem('mr_cat_hint'), sy: scrollY,
+    const st = () => p.evaluate(() => { const b = document.getElementById('rDrawerBtn'), pr = [...document.querySelectorAll('#catGroup [aria-pressed=true]')].map(x => x.dataset.cat);
+      return { lab: b.innerText.replace(/\s+/g, ' ').trim(), on: b.classList.contains('on'), ex: b.getAttribute('aria-expanded'), pr: pr.join(), sy: scrollY, anim: document.getElementById('rSortBtn').getAnimations({ subtree: true }).length, oldHint: !!document.querySelector('#rSortBtn .fic') || localStorage.getItem('mr_cat_hint') !== null,
         cats: [...new Set([...document.querySelectorAll('#recipeList .rcat')].map(x => x.dataset.cat))] }; });
-    const pickCat = async c => { await p.click('#rCatBtn'); await W(120); await p.evaluate(c => [...document.querySelectorAll('#rCatPop [role=menuitemradio]')].find(x => x.dataset.cat === c).click(), c); await W(60); };
-    await p.evaluate(() => localStorage.removeItem('mr_cat_hint')); await p.reload({ waitUntil: 'networkidle0' }); await W(500);
-    let s0 = await st(); if (s0.ic !== '' || s0.href !== 'def' || s0.al !== '분류: 전체' || s0.on || s0.ov !== 'hidden') throw new Error('분류 버튼 기본 상태 이상 ' + JSON.stringify(s0));
-    await p.click('nav button[data-tab="tab-recipes"]'); const seen = []; let mid = 0;
-    for (let i = 0; i < 60; i++) { const s = await st(); if (!seen.length || seen[seen.length - 1] !== s.ic) seen.push(s.ic); if (s.kids > 1) mid++; if (i > 10 && s.ic === '' && s.kids === 1 && !s.anim) break; await W(50); }
-    s0 = await st(); console.log('cat hint:', seen.join('>'), 'mid frames', mid, s0.flag);
-    if (seen.join('>') !== '>반찬>국&찌개>일품>' || !mid || s0.flag !== '1' || s0.href !== 'def' || s0.kids !== 1) throw new Error('분류 힌트 순서 이상 ' + seen.join('>') + ' ' + JSON.stringify(s0));
-    await p.click('nav button[data-tab="tab-deals"]'); await W(200); await p.click('nav button[data-tab="tab-recipes"]'); await W(900); s0 = await st();
-    if (s0.ic !== '' || s0.anim) throw new Error('분류 힌트가 두 번 나와요');
-    // 줄인 움직임: 힌트 없음, 바꿀 때도 애니메이션 없음
-    await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
-    await p.evaluate(() => localStorage.removeItem('mr_cat_hint')); await p.reload({ waitUntil: 'networkidle0' }); await W(400);
-    await p.click('nav button[data-tab="tab-recipes"]'); let rm = 0; for (let i = 0; i < 12; i++) { const s = await st(); if (s.ic !== '' || s.anim) rm++; await W(150); }
-    await pickCat('국&찌개'); s0 = await st(); const rmSwap = s0.anim + ':' + s0.kids + ':' + s0.ic; await pickCat('');
-    if (rm || (await st()).flag || rmSwap !== '0:1:국&찌개') throw new Error('줄인 움직임에서 분류 힌트/전환 이상 ' + rm + ' ' + rmSwap);
-    await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
-    await p.evaluate(() => localStorage.setItem('mr_cat_hint', '1'));
+    const clearCat = async () => { const c = (await st()).pr; if (!c) return; await drOpen(true); await p.click('#catGroup [data-cat="' + c + '"]'); await W(200); await drOpen(false); await p.evaluate(() => scrollTo(0, 0)); };
+    await p.click('nav button[data-tab="tab-recipes"]'); await W(900); let s0 = await st();
+    if (s0.anim || s0.oldHint || s0.lab !== '필터' || s0.pr) throw new Error('레시피 탭 첫 상태 이상(힌트 없음) ' + JSON.stringify(s0));
     for (const ts of [1, 1.5, 2]) {
       await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); }, ts); await p.reload({ waitUntil: 'networkidle0' }); await W(400);
       await p.click('nav button[data-tab="tab-recipes"]'); await W(500);
       const tgt = await p.evaluate(() => { const els = [...document.querySelectorAll('#recipeList .rcat')]; const el = els.slice(1).find(x => x.dataset.cat !== els[0].dataset.cat) || els[2]; el.scrollIntoView({ block: 'center' }); return el.dataset.cat; }); await W(300);
       const g = await p.evaluate(c => { const el = [...document.querySelectorAll('#recipeList .rcat')].find(x => x.dataset.cat === c && Math.abs(x.getBoundingClientRect().top - innerHeight / 2) < 80); const r = el.getBoundingClientRect(), a = getComputedStyle(el, '::after');
-        return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, aw: parseFloat(a.width), ah: parseFloat(a.height), role: el.getAttribute('role'), tab: el.tabIndex, al: el.getAttribute('aria-label'), lh: el.getBoundingClientRect().height }; }, tgt);
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height, aw: parseFloat(a.width), ah: parseFloat(a.height), role: el.getAttribute('role'), tab: el.tabIndex, al: el.getAttribute('aria-label') }; }, tgt);
       if (g.role !== 'button' || g.tab !== 0 || g.al !== tgt + '만 보기' || g.aw < 44 || g.ah < 44) throw new Error('카드 분류 버튼 속성 이상 ' + JSON.stringify(g));
       await p.mouse.click(g.x, g.y + Math.min(18, g.h / 2 + 8)); await W(900); s0 = await st();
-      console.log('card cat tap ts', ts, tgt, JSON.stringify({ al: s0.al, href: s0.href, on: s0.on, sy: s0.sy, cats: s0.cats }));
-      if (s0.al !== '분류: ' + tgt || s0.ic !== tgt || !s0.on || s0.kids !== 1 || s0.href === 'def' || s0.cats.join() !== tgt || s0.sy > 2) throw new Error('카드 분류 누르기 이상 ' + JSON.stringify(s0));
-      const want = await p.evaluate(c => document.querySelector('#recipeList .rcat[data-cat="' + c + '"] use').getAttribute('href'), tgt); if (s0.href !== want) throw new Error('분류 버튼 아이콘이 카드 분류와 달라요 ' + s0.href + ' ' + want);
-      if (ts === 1) { await p.click('.kind-row .catchip'); await W(300); await p.evaluate(() => { const e = document.querySelector('#recipeList .rcat'); e.focus(); }); const kc = await p.evaluate(() => document.activeElement.dataset.cat);
-        await p.keyboard.press('Enter'); await W(500); s0 = await st(); if (s0.ic !== kc || (await p.evaluate(() => document.activeElement.id)) !== 'rCatBtn') throw new Error('카드 분류 키보드 이상 ' + JSON.stringify(s0)); }
-      await p.click('.kind-row .catchip'); await W(400); s0 = await st(); if (s0.ic !== '' || s0.href !== 'def' || s0.on || s0.al !== '분류: 전체') throw new Error('분류 해제 뒤 버튼 아이콘 이상 ' + JSON.stringify(s0));
+      console.log('card cat tap ts', ts, tgt, JSON.stringify(s0));
+      if (s0.pr !== tgt || s0.lab !== '필터 · 1' || !s0.on || s0.ex !== 'false' || s0.cats.join() !== tgt || s0.sy > 2) throw new Error('카드 분류 누르기 이상 ' + JSON.stringify(s0));
+      if (ts === 1) { await clearCat(); await p.evaluate(() => { const e = document.querySelector('#recipeList .rcat'); e.focus(); }); const kc = await p.evaluate(() => document.activeElement.dataset.cat);
+        await p.keyboard.press('Enter'); await W(500); s0 = await st(); if (s0.pr !== kc || (await p.evaluate(() => document.activeElement.id)) !== 'rDrawerBtn') throw new Error('카드 분류 키보드 이상 ' + JSON.stringify(s0)); }
+      await clearCat(); s0 = await st(); if (s0.pr || s0.on || s0.lab !== '필터') throw new Error('분류 해제 뒤 손잡이 이상 ' + JSON.stringify(s0));
     }
     await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.setViewport(vp0); await p.reload({ waitUntil: 'networkidle0' }); await W(500);
     console.log('filter link OK'); }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
-    const gap = await p.evaluate(() => { const si = document.getElementById('selInd'), t = (si.hidden ? document.querySelector('.kind-row') : si).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? c.getBoundingClientRect().top - t.bottom : -1 }; });
+    const gap = await p.evaluate(() => { const si = document.getElementById('selInd'), t = (si.hidden ? document.querySelector('#tab-recipes .page-h') : si).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? c.getBoundingClientRect().top - t.bottom : -1 }; });
     console.log('recipes tools gap:', gap); if (gap.sw || Math.abs(gap.gap - 37.5) > 1) throw new Error('레시피 탭 스위치/간격 이상 ' + JSON.stringify(gap));
     await p.click('nav button[data-tab="tab-deals"]'); }
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');
