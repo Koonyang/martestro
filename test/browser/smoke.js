@@ -238,14 +238,36 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.click('#tab-recipes .page-h h1'); await W(150);
     const pc = await p.evaluate(() => ({ hid: document.getElementById('tipPop').hidden, exp: document.querySelector('#recipeList .recipe .sring').getAttribute('aria-expanded') }));
     if (!pc.hid || pc.exp !== 'false') throw new Error('바깥 누르면 링 말풍선이 닫혀야 함'); }
-  { // 펼친 레시피: 맨 아래 「할인 상품」 목록은 없고(재료·단계는 그대로), 카드의 할인 칩은 토글 위에 그대로. 출처 표기는 작게(11px)
+  { const W = ms => new Promise(r => setTimeout(r, ms)); // 펼친 레시피: 맨 아래 「할인 상품」 목록은 없고(재료·단계는 그대로), 카드의 할인 칩은 토글 위에 그대로. 출처 표기는 작게(11px)
     const ex = await p.evaluate(() => { const cards = [...document.querySelectorAll('#recipeList .recipe')]; const c = cards.find(x => x.querySelector('details') && x.querySelector('.sring')); const d = c.querySelector('details'); d.open = true;
       const pub = cards.map(x => x.querySelector('details .rc-src')).find(Boolean); const cs = pub && getComputedStyle(pub);
       return { dealList: !!d.querySelector('.deal-ul') || /할인 상품/.test(d.innerText), anyDealList: !!document.querySelector('#recipeList details .deal-ul'), steps: d.querySelectorAll('ol li').length, ingtxt: !!d.querySelector('.ingtxt'), chipsAbove: !!c.querySelector(':scope > .ings .ing.hit') && !!(c.querySelector(':scope > .ings').compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING),
         src: cs ? { fs: parseFloat(cs.fontSize), lh: cs.lineHeight, txt: pub.textContent.slice(0, 12), oldCls: pub.classList.contains('small') } : null }; });
     console.log('expanded recipe:', ex);
     if (ex.dealList || ex.anyDealList || !ex.steps || !ex.ingtxt || !ex.chipsAbove) throw new Error('펼친 레시피 하단 할인 목록 제거/재료·단계·칩 유지 이상 ' + JSON.stringify(ex));
-    if (ex.src && (ex.src.fs < 11 || ex.src.fs > 11.5 || ex.src.txt !== '출처: 식품의약품안전처')) throw new Error('레시피 출처 표기 크기 이상 ' + JSON.stringify(ex.src));
+    if (ex.src && (ex.src.fs < 8 || ex.src.fs > 10 || ex.src.txt !== '출처: 식품의약품안전처')) throw new Error('레시피 출처 표기 크기 이상 ' + JSON.stringify(ex.src));
+    { // 출처 표기: 펼친 레시피 모두 한 줄 (기본 10px, 넘치면 자동으로 줄어들되 8px 아래로는 안 감) — 390px, 320px
+      const vp0 = p.viewport();
+      const credits = () => p.evaluate(() => { document.querySelectorAll('#recipeList .recipe details').forEach(d => { if (d.querySelector('.rc-src') && !d.open) { d.open = true; } });
+        return new Promise(res => setTimeout(() => res([...document.querySelectorAll('#recipeList details[open] .rc-src')].map(e => { const cs = getComputedStyle(e); return { fs: parseFloat(cs.fontSize), one: e.scrollWidth <= e.clientWidth && e.getBoundingClientRect().height <= parseFloat(cs.lineHeight) * 1.3, wrap: e.classList.contains('wrap'), ell: cs.textOverflow === 'ellipsis' }; })), 250)); });
+      for (const vw of [390, 320]) { await p.setViewport({ ...vp0, width: vw }); await W(300); const cr = await credits();
+        const sum = { vw, n: cr.length, min: Math.min(...cr.map(c => c.fs)), max: Math.max(...cr.map(c => c.fs)), bad: cr.filter(c => !c.one || c.wrap || c.ell || c.fs < 8).length };
+        console.log('credit one-line:', sum);
+        if (!cr.length || sum.bad || sum.max > 10) throw new Error('출처 표기가 한 줄에 안 들어가요 ' + JSON.stringify(sum)); }
+      await p.setViewport(vp0); await W(200); }
+    { // 분류 아이콘: 분류마다 서로 다른 아이콘, 분류 메뉴에도 같은 아이콘
+      const ci = await p.evaluate(() => { const m = {}; document.querySelectorAll('#recipeList .rmeta .rcat').forEach(s => { const u = s.querySelector('svg use'); const h = u && u.getAttribute('href'); (m[s.dataset.cat] = m[s.dataset.cat] || new Set()).add(h); });
+        const cats = Object.keys(m), hrefs = cats.map(c => [...m[c]]); const sz = (() => { const s = document.querySelector('#recipeList .rmeta .rcat svg'); const r = s.getBoundingClientRect(); return [r.width, r.height]; })();
+        const exists = hrefs.flat().every(h => h && document.querySelector(h + ' > *'));
+        return { cats, hrefs, one: hrefs.every(h => h.length === 1), distinct: new Set(hrefs.map(h => h[0])).size === cats.length, exists, sz, bowl: !!document.querySelector('#recipeList use[href="#i-bowl"]') }; });
+      console.log('category icons:', JSON.stringify(ci));
+      if (!ci.cats.length || !ci.one || !ci.distinct || !ci.exists || ci.bowl || ci.sz[0] !== 14) throw new Error('분류 아이콘 이상 ' + JSON.stringify(ci));
+      await p.click('#rCatBtn'); await W(150);
+      const mi = await p.evaluate(() => [...document.querySelectorAll('#rCatPop button')].map(b => (b.dataset.cat || '전체') + '=' + ((b.querySelector('svg.cat-ic use') || {}).getAttribute ? b.querySelector('svg.cat-ic use').getAttribute('href') : '')));
+      console.log('category menu icons:', mi.join(' '));
+      if (mi.length !== 7 || new Set(mi.map(x => x.split('=')[1])).size !== 7 || mi.some(x => !x.split('=')[1])) throw new Error('분류 메뉴 아이콘 이상 ' + mi);
+      for (const s of mi.slice(1)) { const [c, h] = s.split('='); if (ci.hrefs[ci.cats.indexOf(c)] && ci.hrefs[ci.cats.indexOf(c)][0] !== h) throw new Error('카드·메뉴 아이콘 불일치 ' + s); }
+      await p.keyboard.press('Escape'); await W(100); }
     await p.evaluate(() => document.querySelectorAll('#recipeList details[open]').forEach(d => d.open = false)); }
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
   // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
