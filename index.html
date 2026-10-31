@@ -159,6 +159,12 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .dsticky{position:sticky;top:var(--hdrH,56px);z-index:15;margin:1px -16px 0;padding:6px 16px 8px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
 .dsticky.stuck{border-bottom-color:var(--line)}
 .dsticky .search-row{margin-top:0}
+/* 할인 재료 검색: 확인 버튼 대신 칸 오른쪽 안쪽 돋보기 버튼 (누르면 확인과 같음) */
+.field.has-sbtn>input{padding-left:16px;padding-right:54px}
+.search-row button.sbtn{position:absolute;right:4px;top:50%;margin-top:-22px;width:44px;height:44px;min-height:0;padding:0;border-radius:12px;background:transparent;color:var(--t2)}
+.search-row button.sbtn:hover{filter:none;background:color-mix(in srgb,var(--a2) 70%,transparent)}
+.search-row button.sbtn:focus-visible{outline:2px solid var(--g);outline-offset:-2px}
+.search-row button.sbtn svg{width:20px;height:20px}
 .dsticky .kw-chips{margin:8px 0 0}
 #tab-recipes>.tools:first-child{margin-top:7px}
 body.deals-on .top.scrolled{border-bottom-color:transparent}
@@ -550,8 +556,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
   <!-- 검색줄: 카드 밖, 헤더 바로 아래에 붙어서 스크롤해도 따라와요 (헤더 + 검색 = 위쪽 막대) -->
   <div class="dsticky" id="dSticky">
     <form id="dealSearch" class="search-row kw-form" role="search" aria-label="할인 재료 키워드 검색" >
-      <div class="field"><svg class="i"><use href="#i-search"/></svg><input id="dSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="재료·상품·마트 검색 (예: 돼지)" aria-label="할인 재료 검색 키워드" aria-describedby="dKwHint"></div>
-      <button type="submit" id="dSearchGo">확인</button>
+      <div class="field has-sbtn"><input id="dSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="재료·상품·마트 검색 (예: 돼지)" aria-label="할인 재료 검색 키워드" aria-describedby="dKwHint"><button type="submit" id="dSearchBtn" class="sbtn" aria-label="검색"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg></button></div>
     </form>
     <span id="dKwHint" class="vh">키워드를 넣고 확인을 누르면 필터로 추가돼요. 여러 개를 넣으면 하나라도 맞는 재료를 보여 줘요.</span>
     <div id="dealKws" class="kw-chips" role="group" aria-label="검색 키워드" hidden></div>

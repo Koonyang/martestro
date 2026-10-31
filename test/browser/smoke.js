@@ -172,7 +172,11 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     const base = await kwState(); if (!base.top || base.kws.length) throw new Error('검색창 위치/초기 키워드 이상');
     const pk = await p.$('#dealList .deal.pickable:not(.picked) .pick'); const pkName = await pk.evaluate(b => b.closest('.deal').dataset.sel); await pk.click(); await W(150);
     const otherGroup = await p.$$eval('#dealList .ing-h', hs => (hs.map(h => h.firstChild.textContent.trim()).find(t => !/돼지/.test(t)) || ''));
-    await p.type('#dSearch', '돼지'); await p.click('#dSearchGo'); await W(150);
+    { const sbx = await p.evaluate(() => { const i = document.getElementById('dSearch').getBoundingClientRect(), b = document.getElementById('dSearchBtn'), r = b.getBoundingClientRect(), f = document.getElementById('dealSearch').getBoundingClientRect(), cs = getComputedStyle(document.getElementById('dSearch'));
+        return { go: !!document.getElementById('dSearchGo'), lbl: b.getAttribute('aria-label'), type: b.type, bw: r.width, bh: r.height, inW: Math.abs(i.width - f.width) < 0.5, inside: r.right <= i.right && r.left > i.left + i.width / 2 && r.top >= i.top && r.bottom <= i.bottom, vmid: Math.abs((r.top + r.bottom) - (i.top + i.bottom)) / 2, ih: i.height, pr: parseFloat(cs.paddingRight), gap: i.right - r.left, leftSvg: !!document.querySelector('#dealSearch .field > svg') }; });
+      console.log('deals search icon btn:', sbx);
+      if (sbx.go || sbx.lbl !== '검색' || sbx.type !== 'submit' || sbx.bw < 44 || sbx.bh < 44 || !sbx.inW || !sbx.inside || sbx.vmid > 0.6 || Math.abs(sbx.ih - 53.27) > 1 || sbx.pr < sbx.gap || sbx.leftSvg) throw new Error('할인 재료 검색 돋보기 버튼 이상 ' + JSON.stringify(sbx)); }
+    await p.type('#dSearch', '돼지'); await p.click('#dSearchBtn'); await W(150);
     let k1 = await kwState(); console.log('kw 돼지:', k1);
     if (k1.kws.join() !== '돼지' || k1.input !== '' || !k1.rows || k1.rows >= base.rows || k1.rows !== k1.all || k1.groups !== k1.rows) throw new Error('키워드 1개 필터 이상 ' + JSON.stringify(k1));
     const kw2 = otherGroup || '두부';
@@ -187,7 +191,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     k1 = await kwState(); if (k1.kws.join() !== '돼지') throw new Error('✕ 지우기 이상 ' + k1.kws);
     const lbl = await p.$eval('#dealKws button.kw-x', b => b.getAttribute('aria-label')); if (lbl !== '키워드 돼지 지우기') throw new Error('✕ 라벨 ' + lbl);
     // 빈 결과
-    await p.type('#dSearch', 'zzqq없는말'); await p.click('#dSearchGo'); await W(100); await p.click('#dealKws button.kw-x[data-kw="0"]'); await W(150);
+    await p.type('#dSearch', 'zzqq없는말'); await p.click('#dSearchBtn'); await W(100); await p.click('#dealKws button.kw-x[data-kw="0"]'); await W(150);
     const ke = await kwState(); if (ke.rows || !ke.empty) throw new Error('빈 결과 안내 이상 ' + JSON.stringify(ke));
     const emptyTxt = await p.$eval('#dealList .empty', e => e.innerText); if (!/zzqq없는말/.test(emptyTxt)) throw new Error('빈 결과 문구 ' + emptyTxt);
     const why = await p.$eval('#dealList .empty .kw-why', e => ({ t: e.textContent, fs: parseFloat(getComputedStyle(e).fontSize), hfs: parseFloat(getComputedStyle(e.closest('.empty').querySelector('b')).fontSize) }));
@@ -197,7 +201,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     // 키워드 칩을 넣거나 지우면 맨 위로 (부드럽게, 움직임 줄이기면 바로)
     {
       const sy = () => p.evaluate(() => Math.round(scrollY)), down = async y => { await p.evaluate(y => scrollTo(0, y), y); await W(120); return sy(); };
-      const y0 = await down(1500); await p.type('#dSearch', '돼지'); await p.click('#dSearchGo'); const yMid = await sy(); await W(1000); const yA = await sy();
+      const y0 = await down(1500); await p.type('#dSearch', '돼지'); await p.click('#dSearchBtn'); const yMid = await sy(); await W(1000); const yA = await sy();
       await p.type('#dSearch', '두부'); await p.keyboard.press('Enter'); await W(150);
       const y1 = await down(600); await p.click('#dealKws button.kw-x[data-kw="1"]'); await W(1000); const yR = await sy();
       await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
