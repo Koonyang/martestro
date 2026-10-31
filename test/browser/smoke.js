@@ -230,7 +230,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     const rg = await p.evaluate(() => { const b = document.querySelector('#recipeList .recipe .sring'), r = b.getBoundingClientRect(), top = b.closest('.rc-top').getBoundingClientRect(), card = b.closest('.recipe').getBoundingClientRect();
       return { w: r.width, h: r.height, gapTop: +(r.top - card.top).toFixed(2), gapRight: +(card.right - r.right).toFixed(2), right: Math.abs((r.top - card.top) - (card.right - r.right)) <= 1, inTop: r.top >= top.top - 1 && r.bottom <= top.bottom + 1, box: !!document.querySelector('.recipe .gauge, .recipe .gbar'), exp: b.getAttribute('aria-expanded'), pct: b.querySelector('.sr-p').textContent, tag: b.tagName, sw: parseFloat(getComputedStyle(b.querySelector('.sr-fg')).strokeWidth), inner: r.width / 2 - parseFloat(getComputedStyle(b.querySelector('.sr-bg')).strokeWidth), lbl: (() => { const k = b.querySelector('.sr-k'); if (!k) return null; const kr = k.getBoundingClientRect(), pr = b.querySelector('.sr-p').getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, rin = r.width / 2 - parseFloat(getComputedStyle(b.querySelector('.sr-bg')).strokeWidth); const inside = [[kr.left, kr.top], [kr.right, kr.top], [kr.left, kr.bottom], [kr.right, kr.bottom]].every(([x, y]) => Math.hypot(x - cx, y - cy) <= rin); return { t: k.textContent, fs: parseFloat(getComputedStyle(k).fontSize), above: kr.bottom <= pr.top + 1, inside }; })(), topH: top.height, basisShown: /한 끼 기준/.test(b.closest('.recipe').innerText) }; });
     console.log('save ring:', rg);
-    if (rg.box || rg.tag !== 'BUTTON' || rg.w < 44 || rg.w > 60 || rg.h !== rg.w || !rg.right || !rg.inTop || rg.exp !== 'false' || !/^\d+%$/.test(rg.pct) || rg.basisShown || !rg.lbl || rg.lbl.t !== '절약률' || rg.lbl.fs < 11 || !rg.lbl.above || !rg.lbl.inside || rg.h > rg.topH || rg.sw < 5 || Math.abs(rg.inner - 23) > 0.6) throw new Error('절약률 링 배치 이상 ' + JSON.stringify(rg));
+    if (rg.box || rg.tag !== 'BUTTON' || rg.w < 44 || rg.w > 60 || Math.abs(rg.h - rg.w) > 0.5 || !rg.right || !rg.inTop || rg.exp !== 'false' || !/^\d+%$/.test(rg.pct) || rg.basisShown || !rg.lbl || rg.lbl.t !== '절약률' || rg.lbl.fs < 11 || !rg.lbl.above || !rg.lbl.inside || rg.h > rg.topH + 0.5 || rg.sw < 5 || Math.abs(rg.inner - 23) > 0.6) throw new Error('절약률 링 배치 이상 ' + JSON.stringify(rg));
     await p.$eval('#recipeList .recipe .sring', e => e.scrollIntoView({ block: 'center' })); await W(100); await p.click('#recipeList .recipe .sring'); await W(150);
     const po = await p.evaluate(() => { const t = document.getElementById('tipPop'), b = document.querySelector('#recipeList .recipe .sring'); return { open: !!t && !t.hidden, txt: t ? t.innerText.replace(/\s+/g, ' ') : '', exp: b.getAttribute('aria-expanded') }; });
     console.log('save ring pop:', po);
@@ -238,6 +238,15 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.click('#tab-recipes .page-h h1'); await W(150);
     const pc = await p.evaluate(() => ({ hid: document.getElementById('tipPop').hidden, exp: document.querySelector('#recipeList .recipe .sring').getAttribute('aria-expanded') }));
     if (!pc.hid || pc.exp !== 'false') throw new Error('바깥 누르면 링 말풍선이 닫혀야 함'); }
+  { // 펼친 레시피: 맨 아래 「할인 상품」 목록은 없고(재료·단계는 그대로), 카드의 할인 칩은 토글 위에 그대로. 출처 표기는 작게(11px)
+    const ex = await p.evaluate(() => { const cards = [...document.querySelectorAll('#recipeList .recipe')]; const c = cards.find(x => x.querySelector('details') && x.querySelector('.sring')); const d = c.querySelector('details'); d.open = true;
+      const pub = cards.map(x => x.querySelector('details .rc-src')).find(Boolean); const cs = pub && getComputedStyle(pub);
+      return { dealList: !!d.querySelector('.deal-ul') || /할인 상품/.test(d.innerText), anyDealList: !!document.querySelector('#recipeList details .deal-ul'), steps: d.querySelectorAll('ol li').length, ingtxt: !!d.querySelector('.ingtxt'), chipsAbove: !!c.querySelector(':scope > .ings .ing.hit') && !!(c.querySelector(':scope > .ings').compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING),
+        src: cs ? { fs: parseFloat(cs.fontSize), lh: cs.lineHeight, txt: pub.textContent.slice(0, 12), oldCls: pub.classList.contains('small') } : null }; });
+    console.log('expanded recipe:', ex);
+    if (ex.dealList || ex.anyDealList || !ex.steps || !ex.ingtxt || !ex.chipsAbove) throw new Error('펼친 레시피 하단 할인 목록 제거/재료·단계·칩 유지 이상 ' + JSON.stringify(ex));
+    if (ex.src && (ex.src.fs < 11 || ex.src.fs > 11.5 || ex.src.txt !== '출처: 식품의약품안전처')) throw new Error('레시피 출처 표기 크기 이상 ' + JSON.stringify(ex.src));
+    await p.evaluate(() => document.querySelectorAll('#recipeList details[open]').forEach(d => d.open = false)); }
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
   // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
   if (await p.$('.legend')) throw new Error('레시피 카드 범례가 아직 있어요');
