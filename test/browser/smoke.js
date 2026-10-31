@@ -139,9 +139,9 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     console.log('deals top layout:', JSON.stringify(l0), 'scrolled', JSON.stringify(l1));
     if (l0.inCard || l0.sumInCard || !l0.sortInCard || l0.pos !== 'sticky' || l0.dateLine || !l0.firstChild || l0.stuck) throw new Error('할인 재료 위쪽 배치 이상');
     { const g = await p.evaluate(() => { const r = s => document.querySelector(s).getBoundingClientRect(), sb = r('#dealSearch'), hd = r('.dhead'), sw = r('.dhead .dfsw'), pg = r('.dhead .page-h'), cd = r('.dlist-card'), top = Math.min(sw.top, pg.top), bot = Math.max(sw.bottom, pg.bottom), bar = document.querySelector('.dfdots i.on'), dot = document.querySelector('.dfdots i:not(.on)'), b = bar && bar.getBoundingClientRect(), d = dot && dot.getBoundingClientRect();
-        return { above: Math.round(top - sb.bottom), below: Math.round(cd.top - bot), bar: b ? [Math.round(b.width), Math.round(b.height)] : null, mid: b && d ? Math.abs((b.top + b.bottom) - (d.top + d.bottom)) / 2 : 0 }; });
+        return { sbB: sb.bottom, cardT: cd.top, above: top - sb.bottom, below: cd.top - bot, vmid: Math.abs((sw.top + sw.bottom) - (pg.top + pg.bottom)) / 2, bar: b ? [Math.round(b.width), Math.round(b.height)] : null, mid: b && d ? Math.abs((b.top + b.bottom) - (d.top + d.bottom)) / 2 : 0 }; });
       console.log('deals header gaps:', g);
-      if (Math.abs(g.above - 45) > 1 || Math.abs(g.below - 45) > 1 || (g.bar && (g.bar[0] !== 10 || g.bar[1] !== 3)) || g.mid > 0.6) throw new Error('할인 재료 머리말 여백·쪽 표시 막대 이상 ' + JSON.stringify(g)); }
+      if (Math.abs(g.above - 42.5) > 0.6 || Math.abs(g.below - 42.5) > 0.6 || Math.abs(g.above - g.below) > 1 || g.vmid > 1 || (g.bar && (g.bar[0] !== 10 || g.bar[1] !== 3)) || g.mid > 0.6) throw new Error('할인 재료 머리말 여백·쪽 표시 막대 이상 ' + JSON.stringify(g)); }
     if (Math.abs(l1.dsTop - l1.hdB) > 1 || !l1.stuck) throw new Error('스크롤해도 검색줄이 헤더 밑에 붙어 있어야 해요');
   }
   const dfState = () => p.evaluate(() => { const sw = document.querySelector('#dealSummary .dfsw'), ks = ['all', 'today', 'soon'], ns = sw.dataset.n.split(',').map(Number);
