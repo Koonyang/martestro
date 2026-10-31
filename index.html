@@ -320,11 +320,13 @@ button.sortdd::after{content:"";position:absolute;left:50%;top:50%;width:max(100
 button.sortdd:hover,button.sortdd[aria-expanded=true]{filter:none;color:var(--t)}
 button.sortdd:active{transform:none}
 button.sortdd:focus-visible{outline:2px solid var(--g);outline-offset:2px}
-button.sortdd .sd-ar{color:var(--g);font-weight:800}
+button.sortdd .sd-ar{display:inline-block;color:var(--g);font-weight:800}
 button.sortdd svg{width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .rsort .catpop{top:calc(100% + 2px);min-width:9.5em}
 .rsort .catpop button{white-space:nowrap}
-.catpop button .sd-ar{color:var(--g);font-weight:800;margin-left:-2px}
+.rsort .catpop button .sd-dir{margin-left:auto;padding-left:14px;font-size:.75rem;font-weight:600;color:var(--m)}
+.rsort .catpop button[aria-checked=false] .sd-dir{visibility:hidden}
+.catpop button .sd-ar{display:inline-block;color:var(--g);font-weight:800;margin-right:1px}
 #tab-recipes #recipeList{margin-top:16px}
 /* 정렬 줄은 위아래 여백 8px(누르는 영역 44px)만큼 margin을 줄여 위치는 그대로 */
 .sb-k{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;font-size:.75rem;font-weight:700;color:var(--m);margin-right:1px}
@@ -3079,16 +3081,27 @@ $('dSortBar').addEventListener('click', function(e){
   $('sortStatus').textContent = '할인 재료 정렬: ' + sortLabel(DEAL_SORTS, dSort);
   renderDeals();
 });
-// 레시피 정렬: 글자만 있는 「↓ 비용 낮은순 ▾」 → 메뉴(분류 메뉴와 같은 모양, 고른 것에 체크). 방향마다 따로 한 줄
-var RS_OPTS = []; RECIPE_SORTS.forEach(function(d){ (d.dir ? [false, true] : [false]).forEach(function(rev){ RS_OPTS.push({k: d.k, rev: rev}); }); });
+// 레시피 정렬: 글자만 있는 「↓ 비용 낮은순 ▾」 → 메뉴 4줄(추천순·절약률·비용·칼로리). 안 고른 기준은 기본 방향으로,
+// 고른 기준을 또 누르면 방향만 뒤집고 메뉴는 열린 채(목록은 뒤에서 바로 다시 정렬). 추천순은 고르면 닫혀요
 var CARET = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-function rsLab(o, pad){ var ar = sortArrow(RECIPE_SORTS, o); return (ar ? '<span class="sd-ar" aria-hidden="true">'+ar+'</span>' : pad ? '<span class="sd-ar" aria-hidden="true" style="visibility:hidden">↓</span>' : '') + esc(sortLabel(RECIPE_SORTS, o)); }
-function renderRSort(){
+function rsName(d){ return d.l[0].replace(/ (높은|낮은)순$/, ''); }
+function rsDir(o){ return sortLabel(RECIPE_SORTS, o).replace(/^.* /, ''); }
+function rsLab(o){ var ar = sortArrow(RECIPE_SORTS, o); return (ar ? '<span class="sd-ar" aria-hidden="true">'+ar+'</span>' : '') + esc(sortLabel(RECIPE_SORTS, o)); }
+function spinAr(el){ if (!el || !el.animate || reduceMo()) return; el.animate([{transform:'rotate(-180deg)'}, {transform:'none'}], {duration:150, easing:'cubic-bezier(0.16,1,0.3,1)'}); }
+function renderRSort(flip){
   var b = $('rSortBtn'); b.innerHTML = rsLab(rSort) + CARET; b.setAttribute('aria-label', '정렬: ' + sortLabel(RECIPE_SORTS, rSort));
-  $('rSortPop').innerHTML = RS_OPTS.map(function(o, i){
-    var ck = o.k === rSort.k && o.rev === !!rSort.rev;
-    return '<button type="button" role="menuitemradio" data-i="'+i+'" data-sort="'+o.k+'" data-rev="'+o.rev+'" aria-checked="'+ck+'" tabindex="-1" aria-label="'+esc(sortLabel(RECIPE_SORTS, o))+'"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>'+rsLab(o, true)+'</button>';
+  var pop = $('rSortPop');
+  if (!pop.firstChild) pop.innerHTML = RECIPE_SORTS.map(function(d){
+    return '<button type="button" role="menuitemradio" data-sort="'+d.k+'" aria-checked="false" tabindex="-1"><svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span class="sd-n">'+esc(rsName(d))+'</span>'+(d.dir ? '<span class="sd-dir" aria-hidden="true"><span class="sd-ar"></span><span class="sd-dl"></span></span>' : '')+'</button>';
   }).join('');
+  [].forEach.call(pop.querySelectorAll('[data-sort]'), function(x){
+    var d = sortDef(RECIPE_SORTS, x.getAttribute('data-sort')), on = d.k === rSort.k, o = on ? rSort : {k: d.k, rev: false}, dir = x.querySelector('.sd-dir');
+    x.setAttribute('aria-checked', String(on));
+    x.setAttribute('aria-label', d.dir ? rsName(d) + ' ' + rsDir(o) + (on ? ', 다시 누르면 ' + rsDir({k: d.k, rev: !o.rev}) : '') : rsName(d));
+    if (dir){ dir.querySelector('.sd-ar').textContent = sortArrow(RECIPE_SORTS, o); dir.querySelector('.sd-dl').textContent = rsDir(o); }
+    if (flip && on) spinAr(dir && dir.querySelector('.sd-ar'));
+  });
+  if (flip) spinAr(b.querySelector('.sd-ar'));
 }
 function rsOpen(){ return !$('rSortPop').hidden; }
 function openRSort(){ closeCat(false); renderRSort(); $('rSortPop').hidden = false; $('rSortBtn').setAttribute('aria-expanded', 'true');
@@ -3098,12 +3111,13 @@ function openRSort(){ closeCat(false); renderRSort(); $('rSortPop').hidden = fal
 function closeRSort(refocus){ if (!rsOpen()) return; $('rSortPop').hidden = true; $('rSortBtn').setAttribute('aria-expanded', 'false'); if (refocus) $('rSortBtn').focus(); }
 $('rSortBtn').addEventListener('click', function(e){ e.stopPropagation(); if (rsOpen()) closeRSort(); else openRSort(); });
 $('rSortPop').addEventListener('click', function(e){
-  var b = e.target.closest('[data-i]'); if (!b) return; e.stopPropagation();
-  var o = RS_OPTS[+b.getAttribute('data-i')]; closeRSort(true);
-  if (o.k === rSort.k && o.rev === !!rSort.rev) return;
-  rSort = {k: o.k, rev: o.rev}; save('mr_rsort', rSort);
-  $('sortStatus').textContent = '레시피 정렬: ' + sortLabel(RECIPE_SORTS, rSort);
-  rLimit = PAGE; renderRecipes();
+  var b = e.target.closest('[data-sort]'); if (!b) return; e.stopPropagation();
+  var k = b.getAttribute('data-sort'), d = sortDef(RECIPE_SORTS, k), flip = !!d.dir && rSort.k === k;
+  if (!d.dir) closeRSort(true);
+  if (!d.dir && rSort.k === k) return;
+  rSort = nextSort(RECIPE_SORTS, rSort, k); save('mr_rsort', rSort);
+  $('sortStatus').textContent = sortLabel(RECIPE_SORTS, rSort) + '으로 정렬';
+  rLimit = PAGE; renderRecipes(); renderRSort(flip);
 });
 $('rSortPop').addEventListener('keydown', function(e){
   var all = [].slice.call(this.querySelectorAll('button')), i = all.indexOf(document.activeElement), j = -1;

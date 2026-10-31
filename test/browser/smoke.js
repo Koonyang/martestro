@@ -450,7 +450,9 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     const rRows = () => p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe')].map(c => { const g = c.querySelector('.sring .sr-p'), m = [...c.querySelectorAll('.rmeta span')].map(e => e.textContent).find(t => /kcal$/.test(t)), mm = [...c.querySelectorAll('.rmeta span')].some(e => /\d+분$/.test(e.textContent)); return { save: g ? +g.textContent.replace(/[^\d]/g, '') : null, kcal: m ? +m.replace(/[^\d]/g, '') : null, mins: mm, rank: !!c.querySelector('.rank, .rk, .num') }; }));
     // 레시피 정렬: 칩 줄 없이 글자만 있는 「추천순 ▾」 → 메뉴에서 고르기 (rcur = 이름+화살표)
     const rcur = () => p.evaluate(() => { const b = document.getElementById('rSortBtn'), a = b.querySelector('.sd-ar'); return b.textContent.replace(a ? a.textContent : '', '') + (a ? a.textContent : ''); });
-    const rpick = async (k, rev) => { await p.click('#rSortBtn'); await W(150); await p.click('#rSortPop [data-sort="' + k + '"][data-rev="' + rev + '"]'); await W(300); };
+    const rpick = async (k, rev) => { if (await p.evaluate(() => document.getElementById('rSortPop').hidden)) { await p.click('#rSortBtn'); await W(150); }
+      for (let n = 0; n < 2; n++) { await p.click('#rSortPop [data-sort="' + k + '"]'); await W(300); const cur = await p.evaluate(() => JSON.parse(localStorage.getItem('mr_rsort') || '{}')); if (k === 'rec' || (cur.k === k && !!cur.rev === rev)) break; }
+      if (await p.evaluate(() => !document.getElementById('rSortPop').hidden)) { await p.keyboard.press('Escape'); await W(100); } };
     if (await p.evaluate(() => !!document.getElementById('rSort' + 'Bar') || !!document.querySelector('#tab-recipes button.sp'))) throw new Error('레시피 정렬 칩 줄이 남아 있어요');
     if (await rcur() !== '추천순') throw new Error('레시피 정렬 기본 이상 ' + await rcur());
     await rpick('save', false); let rr = await rRows();
@@ -478,14 +480,36 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
           checked: it.filter(x => x.getAttribute('aria-checked') === 'true').map(x => x.innerText.replace(/\n/g, '').trim()), ckVis: it.filter(x => { const c = x.querySelector('svg'); return c && getComputedStyle(c).visibility !== 'hidden' && getComputedStyle(c).opacity !== '0'; }).length,
           foc: document.activeElement === b ? 'btn' : (document.activeElement.closest && document.activeElement.closest('#rSortPop') ? document.activeElement.innerText.replace(/\n/g, '').trim() : 'other') }; });
       let s0 = await st(); if (s0.hp !== 'menu' || s0.ex !== 'false' || s0.ctl !== 'rSortPop' || s0.open) throw new Error('정렬 버튼 aria 이상 ' + JSON.stringify(s0));
+      const live = () => p.evaluate(() => document.getElementById('sortStatus').textContent);
       await p.focus('#rSortBtn'); await p.keyboard.press('Enter'); await W(150); s0 = await st();
-      if (s0.ex !== 'true' || !s0.open || s0.role !== 'menu' || s0.n !== 7 || s0.checked.join() !== '추천순' || s0.ckVis !== 1 || s0.foc !== '추천순') throw new Error('정렬 메뉴 열림 이상 ' + JSON.stringify(s0));
-      await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown'); s0 = await st(); if (s0.foc !== '↓비용 낮은순') throw new Error('정렬 메뉴 화살표 키 이상 ' + s0.foc);
-      await p.keyboard.press('Escape'); await W(100); s0 = await st(); if (s0.open || s0.ex !== 'false' || s0.foc !== 'btn' || await rcur() !== '추천순') throw new Error('정렬 메뉴 Escape 이상 ' + JSON.stringify(s0));
+      if (s0.ex !== 'true' || !s0.open || s0.role !== 'menu' || s0.n !== 4 || s0.checked.join() !== '추천순' || s0.ckVis !== 1 || s0.foc !== '추천순') throw new Error('정렬 메뉴 열림 이상 ' + JSON.stringify(s0));
+      const names = await p.evaluate(() => [...document.querySelectorAll('#rSortPop button')].map(x => x.innerText.replace(/\n/g, '').trim()).join());
+      if (names !== '추천순,절약률,비용,칼로리') throw new Error('정렬 메뉴 4줄 이상 ' + names);
+      await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowDown'); s0 = await st(); if (s0.foc !== '비용') throw new Error('정렬 메뉴 화살표 키 이상 ' + s0.foc);
+      // 안 고른 기준: 기본 방향, 메뉴는 열린 채 (Enter = 탭)
+      const first = () => p.evaluate(() => { const c = document.querySelector('#recipeList .recipe'); return c ? c.textContent.slice(0, 40) : ''; });
+      await p.keyboard.press('Enter'); await W(300); s0 = await st(); const f1 = await first();
+      if (!s0.open || s0.ex !== 'true' || await rcur() !== '비용 낮은순↓' || s0.checked.join() !== '비용↓낮은순' || s0.foc !== '비용↓낮은순' || await live() !== '비용 낮은순으로 정렬') throw new Error('비용 처음 누름 이상 ' + JSON.stringify(s0) + await rcur() + await live());
+      // 고른 기준을 또 누르면 방향만 뒤집고 여전히 열림 (Space = 탭), 화살표 회전 애니메이션
+      await p.keyboard.press('Space'); const an = await p.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.classList && a.effect.target.classList.contains('sd-ar')).length); await W(300); s0 = await st();
+      if (await first() === f1) throw new Error('메뉴 뒤 목록이 바로 다시 정렬 안 됨');
+      if (!s0.open || await rcur() !== '비용 높은순↑' || s0.checked.join() !== '비용↑높은순' || await live() !== '비용 높은순으로 정렬' || an < 1) throw new Error('비용 다시 누름 이상 ' + JSON.stringify(s0) + await rcur() + ' an' + an);
+      if (await p.evaluate(() => document.querySelector('#rSortPop [data-sort="cost"]').getAttribute('aria-label')) !== '비용 높은순, 다시 누르면 낮은순') throw new Error('메뉴 항목 aria-label 이상');
+      await p.click('#rSortPop [data-sort="kcal"]'); await W(300); s0 = await st();
+      if (!s0.open || await rcur() !== '칼로리 낮은순↓' || s0.checked.join() !== '칼로리↓낮은순') throw new Error('다른 기준은 기본 방향 이상 ' + await rcur());
+      if (await p.evaluate(() => document.getElementById('rSortBtn').getAttribute('aria-label')) !== '정렬: 칼로리 낮은순') throw new Error('정렬 버튼 aria-label 이상');
+      // 절약률은 기본이 높은순
+      await p.click('#rSortPop [data-sort="save"]'); await W(300); if (await rcur() !== '절약률 높은순↑') throw new Error('절약률 기본 방향 이상 ' + await rcur());
+      // 동작 줄이기: 회전 없음
+      await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+      await p.click('#rSortPop [data-sort="save"]'); const an2 = await p.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.classList && a.effect.target.classList.contains('sd-ar')).length);
+      await p.emulateMediaFeatures([]); await W(300); if (an2 !== 0 || await rcur() !== '절약률 낮은순↓') throw new Error('동작 줄이기 회전 이상 ' + an2);
+      // 닫기: 트리거 탭 · Escape · 바깥 탭 · 추천순
+      await p.click('#rSortBtn'); await W(150); s0 = await st(); if (s0.open || s0.ex !== 'false') throw new Error('트리거 다시 눌러 닫기 이상');
+      await p.click('#rSortBtn'); await W(150); await p.keyboard.press('Escape'); await W(100); s0 = await st(); if (s0.open || s0.foc !== 'btn') throw new Error('정렬 메뉴 Escape 이상 ' + JSON.stringify(s0));
       await p.click('#rSortBtn'); await W(150); await p.mouse.click(30, 700); await W(150); s0 = await st(); if (s0.open || s0.ex !== 'false') throw new Error('정렬 메뉴 바깥 탭 이상');
-      await p.click('#rSortBtn'); await W(150); await p.keyboard.press('End'); await p.keyboard.press('Enter'); await W(300); s0 = await st();
-      if (s0.open || await rcur() !== '칼로리 높은순↑' || s0.foc !== 'btn' || s0.checked.join() !== '↑칼로리 높은순') throw new Error('정렬 메뉴 Enter 선택 이상 ' + JSON.stringify(s0) + await rcur());
-      if (await p.evaluate(() => document.getElementById('rSortBtn').getAttribute('aria-label')) !== '정렬: 칼로리 높은순') throw new Error('정렬 버튼 aria-label 이상');
+      await p.click('#rSortBtn'); await W(150); await p.keyboard.press('Home'); await p.keyboard.press('Enter'); await W(300); s0 = await st();
+      if (s0.open || await rcur() !== '추천순' || s0.foc !== 'btn' || await live() !== '추천순으로 정렬') throw new Error('추천순 고르면 닫힘 이상 ' + JSON.stringify(s0));
       await rpick('rec', false);
       const vp0 = p.viewport(); const bad = [];
       for (const vw of [390, 320]) for (const ts of [1, 1.5, 2]) {

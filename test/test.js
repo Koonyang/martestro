@@ -481,5 +481,8 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/role="menuitemradio"/.test(T) && /aria-checked/.test(T) && /function openRSort\(\)/.test(T) && /function closeRSort\(/.test(T) && /closeRSort\(false\)/.test(T.slice(T.indexOf('function openCat'), T.indexOf('function openCat') + 300)), '메뉴·체크·서로 닫기');
   assert(/'Escape'/.test(T.slice(T.indexOf('function openRSort'))) && /renderRSort\(\)/.test(T), 'Escape / 다시 그리기');
   assert(/insertBefore\(chip, row\.querySelector\('\.rsort'\)\)/.test(T), '분류 칩은 정렬 앞에');
+  assert(/rSort = nextSort\(RECIPE_SORTS, rSort, k\)/.test(T) && /if \(!d\.dir\) closeRSort\(true\)/.test(T) && !/RS_OPTS/.test(T), '4줄 메뉴: 같은 기준은 방향만 뒤집고 열린 채, 추천순만 닫힘');
+  assert(/'으로 정렬'/.test(T) && /function spinAr\(el\)\{ if \(!el \|\| !el\.animate \|\| reduceMo\(\)\) return;/.test(T) && /duration:150/.test(T), '알림 문구 + 150ms 화살표 회전(동작 줄이기 존중)');
+  assert(/\.rsort \.catpop button\[aria-checked=false\] \.sd-dir\{visibility:hidden\}/.test(T), '고른 줄만 방향 표시(폭 고정)');
   console.log('레시피 정렬 드롭다운 ok'); }
 console.log('ALL TESTS PASSED');
