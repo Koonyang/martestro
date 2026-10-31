@@ -159,10 +159,8 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .dsticky{position:sticky;top:var(--hdrH,56px);z-index:15;margin:1px -16px 0;padding:6px 16px 8px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(14px);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid transparent;transition:border-color .2s}
 .dsticky.stuck{border-bottom-color:var(--line)}
 .dsticky .search-row{margin-top:0}
-.dsticky .search-row input,.dsticky .search-row button{padding-top:9px;padding-bottom:9px;min-height:0}
-.dsticky .search-row input{font-size:14.5px}
-.dsticky .search-row button{font-size:14px}
 .dsticky .kw-chips{margin:8px 0 0}
+#tab-recipes>.tools:first-child{margin-top:7px}
 body.deals-on .top.scrolled{border-bottom-color:transparent}
 .dhead{display:flex;align-items:center;gap:10px;padding:28.5px 4px 0}
 .dhead .page-h{flex:1;min-width:0;padding:0}
@@ -586,6 +584,13 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
 
 <!-- ③ 레시피 -->
 <section class="tab" id="tab-recipes">
+  <!-- 검색줄: 맨 위 (할인 재료와 같은 자리). 스크롤하면 따라오지 않아요 -->
+  <div class="tools">
+    <div class="field has-fbtn"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색">
+      <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="레시피 분류: 전체"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i class="fdot" aria-hidden="true"></i></button>
+      <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
+    </div>
+  </div>
   <div class="page-h"><h1>추천 레시피</h1><p id="recipeSummary"></p></div>
   <div class="kind-row" role="group" aria-label="레시피 종류 (여러 개 고를 수 있어요)">
     <button type="button" class="kchip" data-kind="" aria-pressed="true">전체 <small class="kc"></small></button>
@@ -593,12 +598,6 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
     <button type="button" class="kchip" data-kind="quick" aria-pressed="false" title="라면·만두·햄·참치·즉석밥 같은 간편식품으로">간편식품 <small class="kc"></small></button>
   </div>
   <div id="selInd" class="sel-ind" role="status" hidden></div>
-  <div class="tools">
-    <div class="field has-fbtn"><svg class="i"><use href="#i-search"/></svg><input id="rSearch" type="search" placeholder="레시피·재료 검색" aria-label="레시피 검색">
-      <button type="button" id="rCatBtn" class="fbtn" aria-haspopup="menu" aria-expanded="false" aria-controls="rCatPop" aria-label="레시피 분류: 전체"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i class="fdot" aria-hidden="true"></i></button>
-      <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
-    </div>
-  </div>
   <div id="rSortBar" class="sortbar" role="group" aria-label="레시피 정렬 (다시 누르면 방향이 바뀌어요)"></div>
   <div id="sortStatus" class="vh" role="status" aria-live="polite"></div>
   <div id="recipeList"></div>
