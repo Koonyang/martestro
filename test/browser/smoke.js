@@ -527,6 +527,16 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       }
       await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); window.scrollTo(0, 0); }); await p.setViewport(vp0); await W(300);
       if (bad.length) throw new Error('정렬 메뉴 크기별 이상 ' + bad.join(' | '));
+      // 390/1x: 가장 넓은 개수(1,999·999·999)여도 모든 정렬에서 칩 3개와 같은 줄
+      { const off = [];
+        for (const [k, rev] of [['rec', false], ['save', false], ['save', true], ['cost', false], ['cost', true], ['kcal', false], ['kcal', true]]) {
+          await rpick(k, rev); await p.evaluate(() => window.scrollTo(0, 0));
+          const m = await p.evaluate(() => { const ch = [...document.querySelectorAll('.kind-row .kchip')]; ['1,999', '999', '999'].forEach((t, i) => { const s = ch[i] && ch[i].querySelector('.kc'); if (s) s.textContent = t; });
+            const c0 = ch[0].getBoundingClientRect(), t = document.getElementById('rSortBtn').getBoundingClientRect(), row = document.querySelector('.kind-row').getBoundingClientRect();
+            return { same: ch.every(c => Math.abs(c.getBoundingClientRect().top - c0.top) < 1) && t.top >= c0.top - 1 && t.bottom <= c0.bottom + 1, inX: t.right <= row.right + 2.5 && document.documentElement.scrollWidth <= innerWidth, lab: document.getElementById('rSortBtn').textContent, padL: getComputedStyle(ch[0]).paddingLeft }; });
+          if (!m.same || !m.inX || m.padL !== '9px') off.push(JSON.stringify(m)); }
+        console.log('recipe chips one line 390/1x:', off.length ? off : 'ok');
+        if (off.length) throw new Error('390/1x 정렬이 칩 줄에서 밀려남 ' + off.join(' | ')); await rpick('rec', false); }
     }
     // 레시피 검색창: 맨 위 (할인 재료 검색과 같은 자리·높이·글자), 따라오지 않음
     { await p.evaluate(() => scrollTo(0, 0)); await W(150); const rs = await p.evaluate(() => { const e = document.getElementById('rSearch'), st = e.closest('.tools'), d = document.getElementById('dSearch'), r = e.getBoundingClientRect(); return { top: r.top, h: r.height, fs: getComputedStyle(e).fontSize, dfs: getComputedStyle(d).fontSize, pos: getComputedStyle(st).position, first: st.parentElement.firstElementChild === st }; });

@@ -484,5 +484,6 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/rSort = nextSort\(RECIPE_SORTS, rSort, k\)/.test(T) && /if \(!d\.dir\) closeRSort\(true\)/.test(T) && !/RS_OPTS/.test(T), '4줄 메뉴: 같은 기준은 방향만 뒤집고 열린 채, 추천순만 닫힘');
   assert(/'으로 정렬'/.test(T) && /function spinAr\(el\)\{ if \(!el \|\| !el\.animate \|\| reduceMo\(\)\) return;/.test(T) && /duration:150/.test(T), '알림 문구 + 150ms 화살표 회전(동작 줄이기 존중)');
   assert(/\.rsort \.catpop button\[aria-checked=false\] \.sd-dir\{visibility:hidden\}/.test(T), '고른 줄만 방향 표시(폭 고정)');
+  assert(/html:not\(\[data-ts="1\.5"\]\):not\(\[data-ts="2"\]\) button\.kchip\{padding-left:calc\(9em \/ 13\.5\);padding-right:calc\(9em \/ 13\.5\)\}/.test(T) && /html:not\(\[data-ts="1\.5"\]\):not\(\[data-ts="2"\]\) \.kind-row\{column-gap:6px\}/.test(T) && /button\.kchip\{min-height:calc\(36em \/ 13\.5\);padding:calc\(6em \/ 13\.5\) calc\(14em \/ 13\.5\);[^}]*font-size:\.84375rem/.test(T), '보통 글자만 칩 좌우 9px(글자 크기 그대로)');
   console.log('레시피 정렬 드롭다운 ok'); }
 console.log('ALL TESTS PASSED');

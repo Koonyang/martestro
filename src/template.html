@@ -305,6 +305,10 @@ button.mn-toggle:focus-visible{outline:2px solid var(--g);outline-offset:1px}
 /* 레시피 종류 필터 칩 (전체 / 자취생 / 간편식품 — 자취생·간편식품은 함께 고를 수 있음) */
 .kind-row{display:flex;flex-wrap:wrap;gap:9px 7px;margin-top:12px}
 button.kchip{min-height:calc(36em / 13.5);padding:calc(6em / 13.5) calc(14em / 13.5);border-radius:999px;font-size:.84375rem;font-weight:700;gap:5px;background:var(--card);color:var(--t2);box-shadow:inset 0 0 0 1px var(--line);letter-spacing:-.02em}
+/* 보통 글자: 종류 칩 3개 + 정렬(가장 긴 「↑ 절약률 높은순 ▾」)이 390px 한 줄에 — 칩 좌우 여백 14→9px, 칩 사이 7→6px, 정렬 버튼 좌우 여백 2→0 (크게·아주 크게 줄바꿈은 그대로) */
+html:not([data-ts="1.5"]):not([data-ts="2"]) .kind-row{column-gap:6px}
+html:not([data-ts="1.5"]):not([data-ts="2"]) button.kchip{padding-left:calc(9em / 13.5);padding-right:calc(9em / 13.5)}
+html:not([data-ts="1.5"]):not([data-ts="2"]) button.sortdd{padding:0;margin:0}
 button.kchip small{font-size:.71875rem;font-weight:650;color:var(--m);font-variant-numeric:tabular-nums}
 button.kchip small:empty{display:none}
 button.kchip[aria-pressed=true]{background:var(--a);color:var(--a-on);box-shadow:inset 0 0 0 1.5px var(--g)}
