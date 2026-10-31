@@ -297,6 +297,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   const chips = () => p.$$eval('.kchip', bs => bs.map(b => b.getAttribute('data-kind') + ':' + b.getAttribute('aria-pressed') + ':' + b.querySelector('.kc').innerText));
   const nCards = () => p.$$eval('#recipeList .recipe', e => e.length);
   const sum = () => p.$eval('#recipeSummary', e => e.innerText.replace(/\s+/g, ' '));
+  { const s0 = await sum(); console.log('recipe subtitle:', s0); if (!/^(선택한 마트의 할인 재료로 만들 수 있는 레시피 [\d,]+개 \(전체 [\d,]+개 중\)|레시피 [\d,]+개( \(전체 [\d,]+개 중\))?)$/.test(s0) || /마트 \(|Mart|이마트|홈플러스|롯데|탑마트/.test(s0)) throw new Error('레시피 부제 이상 ' + s0); }
   let ch = await chips(); console.log('chips:', ch); if (!/^:true:/.test(ch[0]) || !/^jachi:false:\d/.test(ch[1]) || !/^quick:false:\d/.test(ch[2])) throw new Error('칩 기본 상태 이상');
   const cnt = ch.map(x => +x.split(':')[2].replace(/,/g, ''));
   if (!(cnt[1] > 3 && cnt[2] > 3 && cnt[1] < cnt[0] && cnt[2] < cnt[0])) throw new Error('칩 개수 이상 ' + cnt);
@@ -332,6 +333,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   const cardIngs = await p.$$eval('#recipeList .recipe', cs => cs.map(c => [...c.querySelectorAll('.ing')].map(i => i.childNodes[0].textContent.trim())));
   if (!cardIngs.length || cardIngs.some(l => !l.some(k => k === '돼지고기' || k === '양파'))) throw new Error('고른 재료 없는 레시피가 보여요');
   const nAll = +(await chips())[0].split(':')[2].replace(/,/g, ''); if (nAll !== nFab) throw new Error('플로팅 개수(' + nFab + ') ≠ 레시피 개수(' + nAll + ')');
+  { const s1 = await sum(); console.log('recipe subtitle (sel):', s1); const m = s1.match(/^선택한 재료로 만들 수 있는 레시피 ([\d,]+)개 \(전체 [\d,]+개 중\)$/); if (!m || +m[1].replace(/,/g, '') !== nAll) throw new Error('레시피 부제(재료 선택) 이상 ' + s1); }
   const first = cardIngs[0].filter(k => k === '돼지고기' || k === '양파').length; console.log('sel recipes:', nAll, 'first has both:', first, await p.$$eval('#recipeList .recipe h3', e => e.slice(0, 4).map(x => x.innerText)));
   if (first !== 2) throw new Error('두 재료 다 쓰는 레시피가 앞에 안 옴');
   await p.click('.kchip[data-kind="quick"]'); const nq = await nCards(); const cq = await chips(); console.log('sel+quick:', cq); if (+cq[2].split(':')[2] > nAll) throw new Error('선택+간편식품 AND 이상'); await p.click('.kchip[data-kind=""]');

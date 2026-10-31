@@ -1428,21 +1428,19 @@ function selHits(r, ings){ var n = 0; ings.forEach(function(k){ if (r.ings.some(
 function recipeItems(){
   var marts = selectedMarts();
   var items = []; // {s} 또는 {r}
-  var summary;
+  var summary, nRanked = 0, nExtra = 0;
   if (marts.length){
     var ranked = rankRecipes(ALL_RECIPES, collectDeals(), todayStr());
     ranked = filterRecipes(ranked, rQuery, rCat, function(s){ return s.recipe; });
     items = ranked.map(function(s){ return {s:s}; });
-    var nRanked = items.length;
+    nRanked = items.length;
     if (rQuery){ // 검색어가 있으면 할인 재료와 안 맞는 레시피도 뒤에 보여줘요
       var hit = {}; ranked.forEach(function(s){ hit[s.recipe.name] = 1; });
       filterRecipes(ALL_RECIPES, rQuery, rCat).forEach(function(r){ if (!hit[r.name]) items.push({r:r}); });
     }
-    summary = marts.map(function(m){ return esc(m.name); }).join(', ') + ' 할인 재료로 만들 수 있는 레시피 <b>'+nRanked+'개</b>' +
-      (items.length > nRanked ? ' · 할인 재료 없이 검색된 레시피 '+(items.length-nRanked)+'개' : '') + ' <span class="muted small">(전체 '+ALL_RECIPES.length.toLocaleString('ko-KR')+'개 중)</span>';
+    var nExtra = items.length - nRanked;
   } else {
     items = filterRecipes(ALL_RECIPES, rQuery, rCat).map(function(r){ return {r:r}; });
-    summary = '마트를 고르면 할인 재료 기준으로 순위를 매겨 드려요. 지금은 전체 레시피 <b>'+items.length.toLocaleString('ko-KR')+'개</b>를 보여 줘요.';
   }
   var kr = function(it){ return it.s ? it.s.recipe : it.r; };
   // 고른 재료가 하나라도 들어간 레시피만, 많이 쓰는 순서로 앞에 (같으면 원래 순위)
@@ -1451,8 +1449,10 @@ function recipeItems(){
   if (sel.length){
     items = items.map(function(it, i){ return {it:it, h:selHits(kr(it), sel), i:i}; }).filter(function(x){ return x.h > 0; })
       .sort(function(a, b){ return (b.h - a.h) || (a.i - b.i); }).map(function(x){ return x.it; });
-    summary += ' <span class="muted small">· 고른 재료가 든 레시피 '+items.length.toLocaleString('ko-KR')+'개</span>';
   }
+  // 제목 아래 한 줄: 마트 이름 없이 공통 문구 (재료 선택 > 마트 선택 > 레시피)
+  summary = recipeSubtitle({sel: sel.length > 0, mart: marts.length > 0, n: sel.length ? items.length : marts.length ? nRanked : items.length, total: ALL_RECIPES.length});
+  if (!sel.length && nExtra > 0) summary += ' <span class="muted small">· 할인 재료 없이 검색된 레시피 '+nExtra.toLocaleString('ko-KR')+'개</span>';
   // 종류 칩 개수(지금 목록 기준) + 필터
   var cnt = {'': items.length}; RECIPE_KINDS.forEach(function(k){ cnt[k[0]] = items.filter(function(it){ return kr(it)[k[0]]; }).length; });
   if (rKinds.length){
