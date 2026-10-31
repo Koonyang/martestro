@@ -446,10 +446,11 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(head.indexOf('__applyTextSize') > 0 && head.indexOf('__applyTextSize') < head.indexOf('<style'), '글자 크기는 스타일보다 먼저(그리기 전) 적용');
   assert(/localStorage\.getItem\('mr_ts'\)/.test(head) && /d\.style\.fontSize = pct \+ '%'/.test(head) && /removeProperty\('font-size'\)/.test(head), '루트는 %로만, 보통이면 그대로');
   assert(/v === 1\.5 \|\| v === 2 \? v : 1/.test(head), '배율 1·1.5·2');
-  assert(/<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기<\/span><button type="button" data-ts="1" aria-pressed="true">보통<\/button><button type="button" data-ts="1.5" aria-pressed="false">크게<\/button><button type="button" data-ts="2" aria-pressed="false">아주 크게<\/button><\/div>/.test(T), '글자 크기 버튼 마크업');
+  assert(/<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기<\/span><div class="tssw"><button type="button" class="dfa tsa" data-step="-1" aria-label="글자 더 작게" disabled>/.test(T) && /<span class="tsn" id="tsName">보통<\/span><div class="dfdots" aria-hidden="true"><i class="on"><\/i><i><\/i><i><\/i><\/div>/.test(T) && /class="dfa tsa" data-step="1" aria-label="글자 더 크게">/.test(T) && /<span class="vh" id="tsLive" aria-live="polite"><\/span><\/div>/.test(T), '글자 크기 넘김 스위치 마크업');
   assert(/<\/footer>\n<div class="ts-ctl"/.test(T), '푸터 바로 아래');
   assert(/\.opt-l>span\{white-space:nowrap\}/.test(T) && /\.seg button\{white-space:nowrap;/.test(T) && /\.fab b\{flex:none;white-space:nowrap\}/.test(T) && /확인&nbsp;<i class="sep">/.test(T), '큰 글자: 반경 라벨·km·N곳 배지 한 줄');
-  assert(/\.ts-ctl button\{background:none;[^}]*min-height:44px;min-width:44px/.test(T), '상자 없음 + 44px');
+  assert(/\.ts-ctl \.dfa\.tsa\{width:36px;height:44px;margin:-4px -6px -20px;padding:0 0 16px;/.test(T) && /\.ts-ctl\{display:flex;[^}]*white-space:nowrap\}/.test(T) && !/\.ts-ctl button\{/.test(T), '작은 스위치: 화살표 44px(여백과 겹침), 한 줄');
+  assert(/var LV = \['1', '1\.5', '2'\], NM = \['보통', '크게', '아주 크게'\]/.test(T) && /Math\.min\(LV\.length - 1, Math\.max\(0, i \+ d\)\)/.test(T) && /arr\[0\]\.disabled = i === 0; arr\[1\]\.disabled = i === LV\.length - 1/.test(T) && /\$\('tsLive'\)\.textContent = '글자 크기: ' \+ NM\[j\]/.test(T), '끝에서 멈춤 + 알림');
 }
 // 큰 글자: 플로팅 버튼 짧은 문구(점 없음)로 한 줄, 상품명 한 글자 꼬리 없애기, 마트 줄 쌓기, 글자 크기 바꿀 때 @container 다시 계산
 { const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');

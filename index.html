@@ -445,13 +445,19 @@ details ol li::before{content:counter(s);position:absolute;left:0;top:.4375rem;w
 .foot-link:hover{color:var(--a-ink);filter:none;text-decoration-color:var(--g)}
 .foot-link svg.i{width:15px;height:15px}
 /* 맨 아래 「글자 크기」: 작은 글씨, 상자 없이. 고른 것만 진하게+밑줄. 누르는 곳 44px */
-.ts-ctl{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0 2px;margin:-6px 0 4px;font-size:.75rem;color:var(--m)}
-.ts-ctl .ts-k{margin-right:4px;font-weight:600}
-.ts-ctl button{background:none;box-shadow:none;border:0;min-height:44px;min-width:44px;padding:0 8px;border-radius:8px;font-size:.75rem;font-weight:500;color:var(--m);letter-spacing:-.01em}
-.ts-ctl button:hover{filter:none;color:var(--a-ink)}
-.ts-ctl button:active{transform:none}
-.ts-ctl button[aria-pressed=true]{color:var(--t);font-weight:700;text-decoration:underline;text-decoration-color:var(--g);text-decoration-thickness:2px;text-underline-offset:4px}
-.ts-ctl button:focus-visible{outline:2px solid var(--g);outline-offset:-6px}
+/* 글자 크기: 할인 재료 「< 전체 >」 넘김 스위치를 작게 — 이름 + 화살표 + 점 막대, 한 줄. 화살표 누르는 자리는 44px(위 「출처」 링크를 덮지 않게 주로 아래쪽 여백과 겹쳐서 줄 높이는 그대로) */
+.ts-ctl{display:flex;align-items:center;justify-content:center;gap:2px;margin:-2px 0 10px;font-size:.6875rem;line-height:1.1;color:var(--m);white-space:nowrap}
+.ts-ctl .ts-k{margin-right:2px;font-weight:600}
+.ts-ctl .tssw{display:flex;align-items:center;margin:0}
+.ts-ctl .dfa.tsa{width:36px;height:44px;margin:-4px -6px -20px;padding:0 0 16px;color:var(--g)}
+.ts-ctl .dfa.tsa svg{width:13px;height:13px;stroke-width:2.8}
+.ts-ctl .dfa.tsa:disabled{color:var(--m);opacity:.35;cursor:default}
+.ts-ctl .dfa.tsa:active{transform:none}
+.ts-ctl .dfv{width:auto;min-width:4.6em;padding-top:1px}
+.ts-ctl .tsn{font-size:.75rem;font-weight:700;color:var(--t2);letter-spacing:-.02em}
+.ts-ctl .dfdots{gap:3px;height:6px;margin-top:1px}
+.ts-ctl .dfdots i{width:3px;height:3px;border-radius:2px}
+.ts-ctl .dfdots i.on{width:8px;height:2px}
 .sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:680px;max-height:88vh;max-height:88dvh;border-radius:24px 24px 0 0;background:var(--bg);color:var(--t);box-shadow:0 -10px 40px rgba(15,22,38,.25);overflow:hidden}
 .sheet[open]{display:flex;animation:sheetUp .34s var(--ease)}
 .sheet::backdrop{background:rgba(15,22,38,.45);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
@@ -726,7 +732,7 @@ html:is([data-ts="1.5"],[data-ts="2"]) :is(.meta span,.ingtxt){word-break:keep-a
 </section>
 
 <footer class="site-foot"><span id="dataStamp" class="stamp"></span><span class="dot" aria-hidden="true">·</span><button type="button" id="btnSrc" class="foot-link" aria-haspopup="dialog"><svg class="i"><use href="#i-info"/></svg>출처·데이터 정보</button></footer>
-<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기</span><button type="button" data-ts="1" aria-pressed="true">보통</button><button type="button" data-ts="1.5" aria-pressed="false">크게</button><button type="button" data-ts="2" aria-pressed="false">아주 크게</button></div>
+<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기</span><div class="tssw"><button type="button" class="dfa tsa" data-step="-1" aria-label="글자 더 작게" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><div class="dfv"><span class="tsn" id="tsName">보통</span><div class="dfdots" aria-hidden="true"><i class="on"></i><i></i><i></i></div></div><button type="button" class="dfa tsa" data-step="1" aria-label="글자 더 크게"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div><span class="vh" id="tsLive" aria-live="polite"></span></div>
 </main>
 
 <!-- 출처·데이터 정보: 메뉴 탭 대신 페이지 맨 아래 작은 링크로 여는 시트 -->
@@ -2912,15 +2918,26 @@ $('btnSrc').addEventListener('click', openSources);
 // 글자 크기 (보통·크게·아주 크게 = 기기 설정 × 1·1.5·2). 저장해 두고 다음에도 그리기 전에 적용
 (function(){
   var box = document.querySelector('.ts-ctl'); if (!box) return;
-  function sync(){ var cur = document.documentElement.getAttribute('data-ts') || '1'; box.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-ts') === cur ? 'true' : 'false'); }); }
+  // 할인 재료 넘김 스위치와 같은 방식(이름이 옆에서 밀려 들어오고, 점 막대가 늘고 줄어요). 끝에서는 멈추고 화살표를 꺼요
+  var LV = ['1', '1.5', '2'], NM = ['보통', '크게', '아주 크게'];
+  var name = box.querySelector('.tsn'), view = box.querySelector('.dfv'), dots = box.querySelectorAll('.dfdots i'), arr = box.querySelectorAll('.tsa');
+  function cur(){ return Math.max(0, LV.indexOf(document.documentElement.getAttribute('data-ts') || '1')); }
+  function sync(){ var i = cur(); name.textContent = NM[i]; arr[0].disabled = i === 0; arr[1].disabled = i === LV.length - 1; [].forEach.call(dots, function(e, k){ e.classList.toggle('on', k === i); }); }
   box.addEventListener('click', function(e){
-    var b = e.target.closest('button[data-ts]'); if (!b) return;
-    try { if (b.getAttribute('data-ts') === '1') localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', b.getAttribute('data-ts')); } catch (_) {}
-    var y = b.getBoundingClientRect().top;
+    var b = e.target.closest('.tsa'); if (!b || b.disabled) return;
+    var d = +b.getAttribute('data-step'), i = cur(), j = Math.min(LV.length - 1, Math.max(0, i + d)); if (j === i) return;
+    try { if (LV[j] === '1') localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', LV[j]); } catch (_) {}
+    var y = box.getBoundingClientRect().top;
     if (window.__applyTextSize) window.__applyTextSize();
-    sync(); window.dispatchEvent(new Event('resize'));
-    // 누른 버튼이 화면에서 도망가지 않게
-    window.scrollBy(0, b.getBoundingClientRect().top - y);
+    name.textContent = NM[j]; arr[0].disabled = j === 0; arr[1].disabled = j === LV.length - 1;
+    view.classList.remove('in-r', 'in-l'); void view.offsetWidth; view.classList.add(d > 0 ? 'in-r' : 'in-l');
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ [].forEach.call(dots, function(e, k){ e.classList.toggle('on', k === j); }); }); });
+    $('tsLive').textContent = '글자 크기: ' + NM[j];
+    // 끝에 닿아 화살표가 꺼지면 반대쪽 화살표로 포커스
+    if (b.disabled) arr[d > 0 ? 0 : 1].focus();
+    window.dispatchEvent(new Event('resize'));
+    // 스위치가 화면에서 도망가지 않게
+    window.scrollBy(0, box.getBoundingClientRect().top - y);
   });
   sync();
 })();

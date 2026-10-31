@@ -540,21 +540,36 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); document.documentElement.style.fontSize = ''; }); await p.setViewport(vp0); await W(300);
     await p.click('nav button[data-tab="tab-deals"]'); await W(250);
     if (problems.length) throw new Error('큰 글씨·확대 점검 실패\n' + problems.join('\n')); }
-  { // 맨 아래 「글자 크기」: 보통·크게·아주 크게 (기기 설정 × 1·1.5·2), aria-pressed, 44px, 저장 → 다시 열면 그리기 전에 적용
+  { // 맨 아래 「글자 크기」: 할인 재료 「< 전체 >」 스위치를 작게 (< 보통 > + 점 막대), 끝에서 멈춤, 44px 화살표, 한 줄·얇게, 저장 → 다시 열면 그리기 전에 적용
     const W = ms => new Promise(r => setTimeout(r, ms));
-    const st = () => p.evaluate(() => { const c = document.querySelector('.ts-ctl'); const bs = [...c.querySelectorAll('button')];
-      return { label: c.querySelector('#tsLbl').textContent, names: bs.map(b => b.textContent), pressed: bs.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent), sizes: bs.map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }),
-        rootFs: parseFloat(getComputedStyle(document.documentElement).fontSize), inline: document.documentElement.style.fontSize, ls: localStorage.getItem('mr_ts'), afterFoot: !!document.querySelector('.site-foot + .ts-ctl'), fs: parseFloat(getComputedStyle(c).fontSize), boxed: getComputedStyle(bs[0]).backgroundColor }; });
+    const st = () => p.evaluate(() => { const c = document.querySelector('.ts-ctl'); const as = [...c.querySelectorAll('.tsa')], kids = [...c.children].filter(x => !x.classList.contains('vh'));
+      const src = document.getElementById('btnSrc').getBoundingClientRect(), a1 = as[1].getBoundingClientRect();
+      return { label: c.querySelector('#tsLbl').textContent, name: c.querySelector('.tsn').textContent, als: as.map(b => b.getAttribute('aria-label')), dis: as.map(b => b.disabled), sizes: as.map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }),
+        dots: [...c.querySelectorAll('.dfdots i')].map(i => i.classList.contains('on') ? 1 : 0).join(''), live: (document.getElementById('tsLive') || {}).textContent, liveAttr: (document.getElementById('tsLive') || { getAttribute: () => null }).getAttribute('aria-live'),
+        h: c.getBoundingClientRect().height, lines: new Set(kids.map(x => Math.round(x.getBoundingClientRect().top + x.getBoundingClientRect().height / 2))).size, over: c.scrollWidth > c.clientWidth + 1 || document.documentElement.scrollWidth > innerWidth,
+        srcOverlap: a1.top < src.bottom - 1 && a1.right > src.left && a1.left < src.right,
+        rootFs: parseFloat(getComputedStyle(document.documentElement).fontSize), inline: document.documentElement.style.fontSize, ls: localStorage.getItem('mr_ts'), afterFoot: !!document.querySelector('.site-foot + .ts-ctl'), fs: parseFloat(getComputedStyle(c).fontSize) }; });
     let t = await st(); console.log('text-size control:', JSON.stringify(t));
-    if (t.label !== '글자 크기' || t.names.join() !== '보통,크게,아주 크게' || t.pressed.join() !== '보통' || t.sizes.some(([w, h]) => w < 44 || h < 44) || t.rootFs !== 16 || t.inline || !t.afterFoot || t.fs > 12.5 || !/rgba\(0, 0, 0, 0\)|transparent/.test(t.boxed)) throw new Error('글자 크기 조절 기본 상태 이상 ' + JSON.stringify(t));
-    for (const [name, fs, ls] of [['크게', 24, '1.5'], ['아주 크게', 32, '2'], ['보통', 16, null]]) {
-      await p.evaluate(n => [...document.querySelectorAll('.ts-ctl button')].find(b => b.textContent === n).click(), name); await W(250); t = await st();
-      if (t.rootFs !== fs || t.ls !== ls || t.pressed.join() !== name) throw new Error('글자 크기 ' + name + ' 이상 ' + JSON.stringify(t)); }
+    if (t.label !== '글자 크기' || t.name !== '보통' || t.als.join() !== '글자 더 작게,글자 더 크게' || t.dis.join() !== 'true,false' || t.dots !== '100' || t.liveAttr !== 'polite' || t.sizes.some(([w, h]) => w < 36 || h < 44) || t.h > 26 || t.lines !== 1 || t.over || t.srcOverlap || t.rootFs !== 16 || t.inline || !t.afterFoot || t.fs > 12.5) throw new Error('글자 크기 조절 기본 상태 이상 ' + JSON.stringify(t));
+    const big = () => p.evaluate(() => document.querySelector('.ts-ctl .tsa[data-step="1"]').click()), small = () => p.evaluate(() => document.querySelector('.ts-ctl .tsa[data-step="-1"]').click());
+    for (const [fn, name, fs, ls, dis, dots] of [[big, '크게', 24, '1.5', 'false,false', '010'], [big, '아주 크게', 32, '2', 'false,true', '001'], [big, '아주 크게', 32, '2', 'false,true', '001'], [small, '크게', 24, '1.5', 'false,false', '010'], [small, '보통', 16, null, 'true,false', '100']]) {
+      await fn(); await W(300); t = await st();
+      if (t.rootFs !== fs || t.ls !== ls || t.name !== name || t.dis.join() !== dis || t.dots !== dots || (t.live && t.live !== '글자 크기: ' + name) || t.lines !== 1 || t.over) throw new Error('글자 크기 ' + name + ' 이상 ' + JSON.stringify(t)); }
+    if (t.live !== '글자 크기: 보통') throw new Error('글자 크기 알림 이상 ' + t.live);
+    // 키보드: 끝에 닿아 화살표가 꺼지면 반대쪽으로 포커스
+    await p.focus('.ts-ctl .tsa[data-step="1"]'); await p.keyboard.press('Enter'); await W(150); await p.keyboard.press('Enter'); await W(250);
+    const kf = await p.evaluate(() => document.activeElement && document.activeElement.getAttribute('aria-label')); t = await st();
+    if (t.name !== '아주 크게' || kf !== '글자 더 작게') throw new Error('글자 크기 키보드 이상 ' + kf + ' ' + JSON.stringify(t));
+    // 320px·큰 글자에서도 한 줄, 넘침 없음
+    { const vp0 = p.viewport(); for (const vw of [390, 320]) { await p.setViewport({ ...vp0, width: vw }); for (const ls of ['1.5', '2']) { await p.evaluate(v => localStorage.setItem('mr_ts', v), ls); await p.reload({ waitUntil: 'networkidle0' }); await W(300); await p.evaluate(() => window.scrollTo(0, 1e6)); await W(200); t = await st();
+      console.log('text-size switcher', vw, ls, JSON.stringify({ h: t.h, lines: t.lines, over: t.over, name: t.name, srcOverlap: t.srcOverlap }));
+      if (t.lines !== 1 || t.over || t.srcOverlap || t.h > 40 || t.name !== (ls === '2' ? '아주 크게' : '크게')) throw new Error('글자 크기 스위치 줄바꿈/넘침 ' + vw + ' ' + ls + ' ' + JSON.stringify(t)); } }
+      await p.setViewport(vp0); await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.reload({ waitUntil: 'networkidle0' }); await W(300); }
     // 저장 → 새로 열 때 body가 생기기 전에 이미 커져 있어야 (깜빡임 없음)
     await p.evaluate(() => localStorage.setItem('mr_ts', '2'));
     await p.evaluateOnNewDocument(() => { new MutationObserver((ms, o) => { if (document.body) { window.__fsAtBody = getComputedStyle(document.documentElement).fontSize; o.disconnect(); } }).observe(document, { childList: true, subtree: true }); });
     await p.reload({ waitUntil: 'networkidle0' }); await W(400);
-    const early = await p.evaluate(() => ({ atBody: window.__fsAtBody, now: getComputedStyle(document.documentElement).fontSize, pressed: document.querySelector('.ts-ctl button[aria-pressed=true]').textContent, wmLines: document.querySelector('.brand .wm').getClientRects().length }));
+    const early = await p.evaluate(() => ({ atBody: window.__fsAtBody, now: getComputedStyle(document.documentElement).fontSize, pressed: document.querySelector('.ts-ctl .tsn').textContent, wmLines: document.querySelector('.brand .wm').getClientRects().length }));
     console.log('text-size saved/early:', JSON.stringify(early));
     if (early.atBody !== '32px' || early.now !== '32px' || early.pressed !== '아주 크게' || early.wmLines !== 1) throw new Error('저장된 글자 크기 미리 적용 이상 ' + JSON.stringify(early));
     await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.reload({ waitUntil: 'networkidle0' }); await W(400);
