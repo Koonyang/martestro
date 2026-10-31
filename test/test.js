@@ -424,4 +424,16 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert.strictEqual(L.recipeTotalLabel({sel:false, mart:false, n:1078, total:1078}), '');
   console.log('recipeSubtitle ok');
 }
+{ // 반찬 아이콘: 글자처럼 보이지 않게 — 동심원·외따로 선 세로줄 없이, 접시+잎 그림. 6개 분류 아이콘은 모두 서로 달라요
+  const html = require('fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  const sym = id => (html.match(new RegExp('<symbol id="' + id + '"[^>]*>([\\s\\S]*?)</symbol>')) || [])[1];
+  const side = sym('i-c-side');
+  assert(side, '반찬 아이콘 없음');
+  assert(!/<circle/.test(side), '반찬 아이콘에 원(동심원) 없음');
+  assert(!/M[\d.]+ [\d.]+v\d/.test(side), '반찬 아이콘에 외따로 선 세로줄 없음');
+  assert(/M2\.5 15h19/.test(side) && (side.match(/z/g) || []).length >= 3, '반찬 아이콘 = 접시 + 잎 두 장');
+  const ids = ['i-c-side', 'i-c-soup', 'i-c-main', 'i-c-rice', 'i-c-dessert', 'i-c-etc'];
+  assert.strictEqual(new Set(ids.map(sym)).size, 6, '분류 아이콘 6개 모두 달라요');
+  console.log('반찬 아이콘 ok');
+}
 console.log('ALL TESTS PASSED');
