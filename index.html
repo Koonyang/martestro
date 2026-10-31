@@ -341,18 +341,17 @@ button.thumb .rank{z-index:2}
 .big-wrap .big-img{margin-top:0;display:block}
 .big-wrap .ai-lbl{bottom:8px;font-size:10px;padding:2px 6px;border-radius:8px}
 @media (prefers-reduced-motion:reduce){.thumb-ov{transition:none}}
-.gauge .g-k{font-size:12px;font-weight:700;color:var(--m);white-space:nowrap}
-.gauge{margin-top:12px;padding:10px 12px 11px;border-radius:12px;background:var(--card2)}
-.gauge .g-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.gauge .g-k em{font-style:normal;font-size:11px;font-weight:700;margin-left:4px;padding:1px 6px;border-radius:6px;color:var(--m);box-shadow:inset 0 0 0 1px var(--line)}
-.gauge .g-p{font-size:15px;font-weight:800;color:var(--g-ink);letter-spacing:-.02em}
-.gbar{display:flex;height:12px;margin-top:7px;border-radius:99px;overflow:hidden;background:var(--line)}
-.gbar .pay{background:var(--pay)}
-.gbar .sv{background:repeating-linear-gradient(135deg,var(--g) 0 6px,color-mix(in srgb,var(--g) 82%,#fff) 6px 9px)}
-.gauge .g-t{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--t2)}
-.gauge .g-t s{color:var(--m)}
-.gauge .g-t b{color:var(--t)}
-.gauge .g-s{font-weight:800;color:var(--g-ink)}
+.sring{flex:0 0 52px;align-self:center;position:relative;width:52px;height:52px;min-height:0;padding:0;margin:0 -2px 0 0;border:0;border-radius:50%;background:transparent;color:var(--g-ink);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:none}
+.sring:hover{filter:none}
+.sring:active{transform:none}
+.sring svg{position:absolute;inset:0;width:52px;height:52px}
+.sring .sr-bg{fill:none;stroke:var(--line);stroke-width:5}
+.sring .sr-fg{fill:none;stroke:var(--g);stroke-width:5;stroke-linecap:round}
+.sring .sr-p{position:relative;font-size:14px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
+.sring .sr-p small{font-size:9.5px;font-weight:800;margin-left:.5px}
+.sring[aria-expanded=true],.sring:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+.tip-pop .tp-l{display:block;margin-top:2px;color:color-mix(in srgb,var(--a-on) 82%,transparent)}
+.tip-pop .tp-l s{opacity:.75}
 .ings{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .ing{display:inline-flex;align-items:center;gap:4px;font-size:13px;padding:5px 10px;border-radius:10px;font-weight:600}
 .ing.hit{background:var(--a2);color:var(--a-ink)}
@@ -3146,8 +3145,10 @@ function closeTip(focusBack){
 }
 function openTip(btn){
   closeTip();
-  var info = TIPS[btn.getAttribute('data-tip')] || ['', ''], t = tipEl();
-  t.innerHTML = '<b>'+esc(info[0])+'</b>'+esc(info[1]);
+  var t = tipEl();
+  if (btn.classList.contains('sring')){ var D = btn.dataset;
+    t.innerHTML = '<b>절약률 '+esc(D.pct)+'%</b>'+esc(D.basis)+'<span class="tp-l">원가 <s>'+esc(D.orig)+'</s> → '+esc(D.sale)+' · 약 '+esc(D.save)+' 절약</span>';
+  } else { var info = TIPS[btn.getAttribute('data-tip')] || ['', '']; t.innerHTML = '<b>'+esc(info[0])+'</b>'+esc(info[1]); }
   t.hidden = false; t.className = 'tip-pop';
   var r = btn.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight, m = 12;
   var w = t.offsetWidth, h = t.offsetHeight, cx = r.left + r.width/2;
@@ -3162,23 +3163,24 @@ function openTip(btn){
 }
 // 캡처 단계에서 먼저 받아서 부모(마트 줄 체크·카드 펼치기)로는 안 넘어가게
 document.addEventListener('click', function(e){
-  var b = e.target.closest && e.target.closest('button.tipb');
+  var b = e.target.closest && e.target.closest('button.tipb, button.sring');
   if (b){ e.preventDefault(); e.stopPropagation(); if (tipOpenBtn === b) closeTip(); else openTip(b); return; }
   if (tipOpenBtn && !(e.target.closest && e.target.closest('#tipPop'))) closeTip();
 }, true);
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && tipOpenBtn) { e.preventDefault(); closeTip(true); } });
 window.addEventListener('scroll', function(){ if (tipOpenBtn) closeTip(); }, {passive:true, capture:true});
 window.addEventListener('resize', function(){ if (tipOpenBtn) closeTip(); });
-// 절약률 게이지: 주재료의 한 끼(1인분) 분량 기준 (팩 크기를 모르는 재료는 1팩으로 넣고 「일부 1팩」 표시)
-function saveGauge(s){
+// 절약률 링: 카드 머리 오른쪽 작은 원형 그래프. 누르면 「한 끼 기준」 설명·원가→할인가 말풍선
+// (주재료의 한 끼(1인분) 분량 기준, 팩 크기를 모르는 재료는 1팩으로 넣고 「일부 1팩」)
+function saveRing(s){
   if (!(s.mealOrig > 0 && s.mealSave > 0)) return '';
-  var pct = s.mealPct, payW = Math.max(0, Math.min(100, s.mealSale / s.mealOrig * 100));
+  var pct = s.mealPct, C = 2 * Math.PI * 21, arc = Math.max(0, Math.min(100, pct)) / 100 * C;
   var basis = s.mealAll ? '한 끼 기준' : '한 끼 기준 · 일부 1팩';
   var txt = '원가 '+formatWon(s.mealOrig)+' → '+formatWon(s.mealSale)+' · '+pct+'% 절약 ('+basis+')';
-  return '<div class="gauge" role="img" aria-label="예상 절약률 '+pct+'%: '+esc(txt)+'">' +
-    '<div class="g-h" aria-hidden="true"><span class="g-k">절약률<em>'+basis+'</em></span><span class="g-p">'+pct+'%</span></div>' +
-    '<div class="gbar" aria-hidden="true"><i class="pay" style="width:'+payW.toFixed(1)+'%"></i><i class="sv" style="width:'+(100-payW).toFixed(1)+'%"></i></div>' +
-    '<div class="g-t" aria-hidden="true">원가 <s>'+formatWon(s.mealOrig)+'</s> → <b>'+formatWon(s.mealSale)+'</b> · <span class="g-s">'+pct+'% 절약</span> <span class="muted">(약 '+formatWon(s.mealSave)+')</span></div></div>';
+  return '<button type="button" class="sring" aria-expanded="false" aria-label="예상 절약률 '+pct+'%: '+esc(txt)+'" data-pct="'+pct+'" data-basis="'+esc(basis)+'"' +
+    ' data-orig="'+esc(formatWon(s.mealOrig))+'" data-sale="'+esc(formatWon(s.mealSale))+'" data-save="'+esc(formatWon(s.mealSave))+'">' +
+    '<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="sr-bg" cx="26" cy="26" r="21"/><circle class="sr-fg" cx="26" cy="26" r="21" stroke-dasharray="'+arc.toFixed(2)+' '+C.toFixed(2)+'" transform="rotate(-90 26 26)"/></svg>' +
+    '<span class="sr-p" aria-hidden="true">'+pct+'<small>%</small></span></button>';
 }
 function rankedCard(s, idx){
   var r = s.recipe;
@@ -3192,8 +3194,7 @@ function rankedCard(s, idx){
   }).join('');
   var miss = s.missing.map(function(x){ return '<span class="ing miss'+(x.ing.main?' main':'')+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+'</span>'; }).join('');
   var detail = s.matched.map(function(x){ return '<li>'+esc(x.ing.k)+': '+dealNameInline(x.deal.name)+' <span class="mn">— '+esc(x.deal.martName)+'</span> '+(x.deal.price!=null?(x.deal.orig?'<span class="orig">'+formatWon(x.deal.orig)+'</span> ':'')+'<b>'+formatWon(x.deal.price)+'</b>'+(x.meal && x.meal.f != null ? ' <span class="pm-d">· 한 끼 약 '+formatWon(x.meal.price)+'</span>' : ' <span class="pk">1팩 기준</span>'):'')+' <span class="muted small">'+esc(x.deal.cond||'')+(x.deal.start && x.deal.start>todayStr()?' · '+fmtMD(x.deal.start)+'부터':'')+(x.deal.end?' · ~'+fmtMD(x.deal.end):'')+'</span>'+(x.deal.check?' '+tipBtn('chk','가격확인','tag chk'):'')+'</li>'; }).join('');
-  return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0, s)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div></div>' +
-    saveGauge(s) +
+  return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0, s)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div>'+saveRing(s)+'</div>' +
     '<div class="ings">'+hits+miss+'</div>' +
     recipeBody(r, '<div class="small"><b>할인 상품</b><ul class="deal-ul">'+detail+'</ul></div>') +
     '<div class="mn-row"><button type="button" class="mn-toggle" aria-pressed="false" title="가격 옆에 어느 매장 가격인지 보여요">표시 가격 기준</button></div></div>';

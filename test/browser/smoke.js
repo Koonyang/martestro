@@ -223,9 +223,21 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   await p.screenshot({ path: '/tmp/martestro_deals.png' });
   await p.click('nav button[data-tab="tab-recipes"]');
   console.log('top5:', await p.$$eval('.recipe h3', els => els.slice(0, 5).map(e => e.innerText)));
-  const gauges = await p.$$eval('.recipe .gauge', gs => gs.slice(0, 3).map(g => g.getAttribute('aria-label')));
+  const gauges = await p.$$eval('.recipe .rc-top .sring', gs => gs.slice(0, 3).map(g => g.getAttribute('aria-label')));
   console.log('gauges:', gauges);
-  if (!gauges.length || !gauges.every(t => /^예상 절약률 \d+%: 원가 [\d,]+원 → [\d,]+원 · \d+% 절약 \(한 끼 기준( · 일부 1팩)?\)$/.test(t))) throw new Error('절약률 게이지 없음/형식 오류');
+  if (!gauges.length || !gauges.every(t => /^예상 절약률 \d+%: 원가 [\d,]+원 → [\d,]+원 · \d+% 절약 \(한 끼 기준( · 일부 1팩)?\)$/.test(t))) throw new Error('절약률 링 없음/형식 오류');
+  { const W = ms => new Promise(r => setTimeout(r, ms)); // 절약률: 막대 상자 대신 카드 머리 오른쪽 작은 링, 누르면 「한 끼 기준」 말풍선
+    const rg = await p.evaluate(() => { const b = document.querySelector('#recipeList .recipe .sring'), r = b.getBoundingClientRect(), top = b.closest('.rc-top').getBoundingClientRect(), card = b.closest('.recipe').getBoundingClientRect();
+      return { w: r.width, h: r.height, right: Math.abs(r.right - (card.right - 18)) < 4, inTop: r.top >= top.top - 1 && r.bottom <= top.bottom + 1, box: !!document.querySelector('.recipe .gauge, .recipe .gbar'), exp: b.getAttribute('aria-expanded'), pct: b.querySelector('.sr-p').textContent, tag: b.tagName, basisShown: /한 끼 기준/.test(b.closest('.recipe').innerText) }; });
+    console.log('save ring:', rg);
+    if (rg.box || rg.tag !== 'BUTTON' || rg.w < 44 || rg.w > 60 || rg.h !== rg.w || !rg.right || !rg.inTop || rg.exp !== 'false' || !/^\d+%$/.test(rg.pct) || rg.basisShown) throw new Error('절약률 링 배치 이상 ' + JSON.stringify(rg));
+    await p.$eval('#recipeList .recipe .sring', e => e.scrollIntoView({ block: 'center' })); await W(100); await p.click('#recipeList .recipe .sring'); await W(150);
+    const po = await p.evaluate(() => { const t = document.getElementById('tipPop'), b = document.querySelector('#recipeList .recipe .sring'); return { open: !!t && !t.hidden, txt: t ? t.innerText.replace(/\s+/g, ' ') : '', exp: b.getAttribute('aria-expanded') }; });
+    console.log('save ring pop:', po);
+    if (!po.open || po.exp !== 'true' || !/^절약률 \d+% ?한 끼 기준( · 일부 1팩)? ?원가 [\d,]+원 → [\d,]+원 · 약 [\d,]+원 절약$/.test(po.txt)) throw new Error('절약률 링 말풍선 이상 ' + JSON.stringify(po));
+    await p.click('#tab-recipes .page-h h1'); await W(150);
+    const pc = await p.evaluate(() => ({ hid: document.getElementById('tipPop').hidden, exp: document.querySelector('#recipeList .recipe .sring').getAttribute('aria-expanded') }));
+    if (!pc.hid || pc.exp !== 'false') throw new Error('바깥 누르면 링 말풍선이 닫혀야 함'); }
   if (await p.$('.recipe .save')) throw new Error('예전 절약 알약이 남아 있어요');
   // 범례 줄은 없어지고, 「가격확인」「주재료」 태그를 누르면 뜻이 말풍선으로 떠요 (하나만, 바깥/다시 누름/ESC/스크롤로 닫힘)
   if (await p.$('.legend')) throw new Error('레시피 카드 범례가 아직 있어요');
@@ -266,7 +278,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   {
     const pm = await p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe .ing.hit')].map(e => { const sm = e.querySelector('small'); const t = sm ? sm.innerText : ''; const m = (e.getAttribute('title') || '').match(/팩 가격 ([\d,]+)원/);
       return { meal: /한 끼 약/.test(t), pack1: !!e.querySelector('.pk'), v: +((t.match(/([\d,]+)원/) || [, '0'])[1].replace(/,/g, '')), pack: m ? +m[1].replace(/,/g, '') : null }; }));
-    const gk = await p.evaluate(() => [...document.querySelectorAll('#recipeList .gauge .g-k em')].map(e => e.textContent));
+    const gk = await p.evaluate(() => [...document.querySelectorAll('#recipeList .sring')].map(e => e.getAttribute('data-basis')));
     const priced = pm.filter(x => x.pack != null), meal = priced.filter(x => x.meal), bulk = meal.filter(x => x.pack >= 20000);
     console.log('per-meal chips:', priced.length, 'meal', meal.length, '1팩', priced.filter(x => x.pack1).length, 'bulk→meal', bulk.slice(0, 3).map(x => x.pack + '→' + x.v), 'gauge', [...new Set(gk)]);
     if (!meal.length || priced.some(x => !x.meal && !x.pack1) || meal.some(x => x.v % 10 || x.v > 20000) || !gk.length || gk.some(t => !/^한 끼 기준/.test(t))) throw new Error('한 끼 가격 표시 이상');
@@ -403,7 +415,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if (on(b) !== '추천순' || r.heads.join() !== r0.heads.join()) throw new Error('추천순(재료 묶음) 복귀 이상');
     // 레시피
     await p.click('nav button[data-tab="tab-recipes"]'); await W(400);
-    const rRows = () => p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe')].map(c => { const g = c.querySelector('.g-p'), m = [...c.querySelectorAll('.rmeta span')].map(e => e.textContent).find(t => /kcal$/.test(t)), mm = [...c.querySelectorAll('.rmeta span')].some(e => /\d+분$/.test(e.textContent)); return { save: g ? +g.textContent.replace(/[^\d]/g, '') : null, kcal: m ? +m.replace(/[^\d]/g, '') : null, mins: mm, rank: !!c.querySelector('.rank, .rk, .num') }; }));
+    const rRows = () => p.evaluate(() => [...document.querySelectorAll('#recipeList .recipe')].map(c => { const g = c.querySelector('.sring .sr-p'), m = [...c.querySelectorAll('.rmeta span')].map(e => e.textContent).find(t => /kcal$/.test(t)), mm = [...c.querySelectorAll('.rmeta span')].some(e => /\d+분$/.test(e.textContent)); return { save: g ? +g.textContent.replace(/[^\d]/g, '') : null, kcal: m ? +m.replace(/[^\d]/g, '') : null, mins: mm, rank: !!c.querySelector('.rank, .rk, .num') }; }));
     b = await sb('#rSortBar'); if (b.pills.map(x => x.k).join() !== 'rec,save,cost,kcal' || on(b) !== '추천순') throw new Error('레시피 정렬 기본 이상');
     await p.click('#rSortBar [data-sort="save"]'); await W(300); b = await sb('#rSortBar'); let rr = await rRows();
     if (on(b) !== '절약률 높은순↑' || !ordered(rr.map(x => x.save), true)) throw new Error('절약률 높은순 이상');
