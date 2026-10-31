@@ -409,11 +409,16 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
 }
 { // 레시피 탭 제목 아래 한 줄: 마트 이름 없이 공통 문구
   const st = o => L.recipeSubtitle(o).replace(/<[^>]+>/g, '');
-  assert.strictEqual(st({sel:true, mart:true, n:42, total:1078}), '선택한 재료로 만들 수 있는 레시피 42개 (전체 1,078개 중)');
-  assert.strictEqual(st({sel:false, mart:true, n:661, total:1078}), '선택한 마트의 할인 재료로 만들 수 있는 레시피 661개 (전체 1,078개 중)');
+  assert.strictEqual(st({sel:true, mart:true, n:42, total:1078}), '선택한 재료로 만들 수 있는 레시피 42개');
+  assert.strictEqual(st({sel:false, mart:true, n:661, total:1078}), '선택한 마트의 할인 재료로 만들 수 있는 레시피 661개');
   assert.strictEqual(st({sel:false, mart:false, n:1078, total:1078}), '레시피 1,078개');
-  assert.strictEqual(st({sel:false, mart:false, n:12, total:1078}), '레시피 12개 (전체 1,078개 중)');
-  assert(/<b>661개<\/b> <span class="muted small">\(전체 1,078개 중\)<\/span>$/.test(L.recipeSubtitle({mart:true, n:661, total:1078})));
+  assert.strictEqual(st({sel:false, mart:false, n:12, total:1078}), '레시피 12개');
+  assert(!/전체|중\)/.test(L.recipeSubtitle({mart:true, n:661, total:1078})) && /<b>661개<\/b>$/.test(L.recipeSubtitle({mart:true, n:661, total:1078})));
+  // 제목 옆 전체 개수: 아무것도 안 골라 전부 보일 땐 숨김
+  assert.strictEqual(L.recipeTotalLabel({sel:false, mart:true, n:661, total:1078}), '전체 1,078개');
+  assert.strictEqual(L.recipeTotalLabel({sel:true, mart:true, n:42, total:1078}), '전체 1,078개');
+  assert.strictEqual(L.recipeTotalLabel({sel:false, mart:false, n:12, total:1078}), '전체 1,078개');
+  assert.strictEqual(L.recipeTotalLabel({sel:false, mart:false, n:1078, total:1078}), '');
   console.log('recipeSubtitle ok');
 }
 console.log('ALL TESTS PASSED');

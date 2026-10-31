@@ -71,6 +71,8 @@ main{max-width:680px;margin:0 auto;padding:4px 16px 0}
 .page-h{padding:14px 4px 2px}
 .page-h h1{font-size:23px;letter-spacing:-.035em;margin:0;font-weight:800}
 .page-h p{margin:4px 0 0;color:var(--t2);font-size:14px}
+.page-h h1 .h-tot{margin-left:8px;font-size:13px;font-weight:600;letter-spacing:-.01em;color:var(--m)}
+#recipeSummary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* cards */
 .card{background:var(--card);border-radius:var(--r);padding:20px;margin:14px 0;box-shadow:var(--shadow)}
 .card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 4px}
@@ -600,7 +602,7 @@ body.has-fab{padding-bottom:calc(var(--nav-h) + 96px + env(safe-area-inset-botto
       <div id="rCatPop" class="catpop" role="menu" aria-label="레시피 분류 (하나만 고를 수 있어요)" hidden></div>
     </div>
   </div>
-  <div class="page-h"><h1>추천 레시피</h1><p id="recipeSummary"></p></div>
+  <div class="page-h"><h1>추천 레시피<small id="recipeTotal" class="h-tot"></small></h1><p id="recipeSummary"></p></div>
   <div class="kind-row" role="group" aria-label="레시피 종류 (여러 개 고를 수 있어요)">
     <button type="button" class="kchip" data-kind="" aria-pressed="true">전체 <small class="kc"></small></button>
     <button type="button" class="kchip" data-kind="jachi" aria-pressed="false" title="재료 적고 저렴한 한 끼">자취생 <small class="kc"></small></button>
@@ -1461,21 +1463,21 @@ function recipeItems(){
       .sort(function(a, b){ return (b.h - a.h) || (a.i - b.i); }).map(function(x){ return x.it; });
   }
   // 제목 아래 한 줄: 마트 이름 없이 공통 문구 (재료 선택 > 마트 선택 > 레시피)
-  summary = recipeSubtitle({sel: sel.length > 0, mart: marts.length > 0, n: sel.length ? items.length : marts.length ? nRanked : items.length, total: ALL_RECIPES.length});
-  if (!sel.length && nExtra > 0) summary += ' <span class="muted small">· 할인 재료 없이 검색된 레시피 '+nExtra.toLocaleString('ko-KR')+'개</span>';
+  var so = {sel: sel.length > 0, mart: marts.length > 0, n: sel.length ? items.length : marts.length ? nRanked : items.length, total: ALL_RECIPES.length};
+  summary = recipeSubtitle(so); var totalLbl = recipeTotalLabel(so);
   // 종류 칩 개수(지금 목록 기준) + 필터
   var cnt = {'': items.length}; RECIPE_KINDS.forEach(function(k){ cnt[k[0]] = items.filter(function(it){ return kr(it)[k[0]]; }).length; });
   if (rKinds.length){
     items = items.filter(function(it){ return kindMatch(kr(it), rKinds); });
     var kl = RECIPE_KINDS.filter(function(k){ return rKinds.indexOf(k[0]) >= 0; }).map(function(k){ return k[1]; }).join('·');
-    summary += ' <span class="muted small">· '+esc(kl)+' '+items.length.toLocaleString('ko-KR')+'개만 보는 중</span>';
+    var kindNote = kl + ' ' + items.length.toLocaleString('ko-KR') + '개만 보는 중'; // 한 줄 유지: 화면엔 안 쓰고 칩·aria로
   }
   // 정렬: 할인 재료로 순위 매긴 레시피끼리, 검색으로만 나온 레시피는 그 뒤에 (칼로리 순이면 그쪽도 정렬)
   if (rSort.k !== 'rec'){
     var rs = items.filter(function(it){ return it.s; }), rr = items.filter(function(it){ return !it.s; });
     items = sortRecipes(rs, rSort, function(it){ return it.s; }).concat(rSort.k === 'kcal' ? sortRecipes(rr, rSort, function(it){ return it.r; }) : rr);
   }
-  return {items:items, summary:summary, cnt:cnt, marts:marts, sel:sel};
+  return {items:items, summary:summary, totalLbl:totalLbl, kindNote:kindNote || '', cnt:cnt, marts:marts, sel:sel};
 }
 function renderSelInd(sel){
   var el = $('selInd');
@@ -1489,7 +1491,8 @@ function renderRecipes(append){
   document.querySelectorAll('.kchip').forEach(function(b){ var n = cnt[b.getAttribute('data-kind')]; b.querySelector('.kc').textContent = n != null ? n.toLocaleString('ko-KR') : ''; });
   renderSelInd(R.sel);
   renderSortBar($('rSortBar'), RECIPE_SORTS, rSort);
-  $('recipeSummary').innerHTML = summary;
+  $('recipeSummary').innerHTML = summary; $('recipeSummary').setAttribute('data-kind', R.kindNote); $('recipeSummary').setAttribute('data-shown', items.length);
+  $('recipeTotal').textContent = R.totalLbl; $('recipeTotal').hidden = !R.totalLbl;
   if (!items.length){
     $('recipeList').innerHTML = '<div class="card">'+(R.sel.length ? emptyBox('chef', '고른 재료가 들어간 레시피가 없어요', (rKinds.length || rQuery || rCat ? '종류·검색 조건을 풀거나 ' : '') + '할인 재료 탭에서 다른 재료를 골라 보세요.') + '<button class="sec block" id="selClear2">선택 재료 지우기</button>' : rKinds.length && !rQuery && !rCat ? emptyBox('chef', '이 종류에 맞는 레시피가 없어요', '「전체」를 눌러 다른 레시피도 보세요.') : rQuery||rCat ? emptyBox('search', '검색 결과가 없어요', '다른 이름이나 재료로 검색해 보세요.') : emptyBox('chef', '맞는 레시피가 없어요', '다른 마트를 추가하거나 할인 재료를 직접 입력해 보세요.'))+'</div>';
     $('btnMore').style.display = 'none'; return;
