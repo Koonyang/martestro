@@ -561,6 +561,35 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     if (await p.evaluate(() => getComputedStyle(document.documentElement).fontSize) !== '16px') throw new Error('글자 크기 보통 복귀 이상');
     const meta = await p.evaluate(() => ({ ts: (document.querySelector('meta[name=text-scale]') || {}).content, tsa: getComputedStyle(document.documentElement).webkitTextSizeAdjust || getComputedStyle(document.documentElement).textSizeAdjust }));
     console.log('system text scale:', JSON.stringify(meta)); if (meta.ts !== 'scale' || /none/.test(meta.tsa || '')) throw new Error('기기 글자 크기 설정 이상 ' + JSON.stringify(meta)); }
+  { // 큰 글자에서 플로팅 버튼: 한 줄(짧은 문구·점 없음), 배지 한 줄, 44px / 상품명·규격 마지막 줄에 한 글자만 남지 않기
+    const W = ms => new Promise(r => setTimeout(r, ms)); const vp0 = p.viewport();
+    const fabInfo = id => p.evaluate(id => { const e = document.getElementById(id); if (!e.classList.contains('show')) return null; const s = e.querySelector(':scope>span'), bd = e.querySelector('b');
+      const vis = [...s.querySelectorAll('.fl-long,.fl-short')].filter(c => getComputedStyle(c).display !== 'none'); const lh = parseFloat(getComputedStyle(s).lineHeight); const R = e.getBoundingClientRect();
+      return { fit: e.dataset.fit, label: vis.map(c => c.textContent.replace(/\u00a0/g, ' ')).join(''), dot: vis.some(c => c.querySelector('.sep')), lines: Math.round(s.getBoundingClientRect().height / lh), badgeLines: Math.round(bd.getBoundingClientRect().height / (parseFloat(getComputedStyle(bd).fontSize) * 1.705 + 6)) || 1, badgeOne: bd.getClientRects().length === 1 && bd.getBoundingClientRect().height < parseFloat(getComputedStyle(bd).fontSize) * 2.2, h: Math.round(R.height), over: e.scrollWidth > e.clientWidth + 1 }; }, id);
+    for (const [vw, ts] of [[390, 1], [390, 1.5], [390, 2], [320, 1], [320, 1.5], [320, 2]]) {
+      await p.setViewport({ width: vw, height: 844, deviceScaleFactor: 2 });
+      await p.evaluate(t => { if (t === 1) localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', String(t)); }, ts);
+      await p.reload({ waitUntil: 'networkidle0' }); await W(500); await openSetup(); await W(900);
+      const f = await fabInfo('fab');
+      const marts = await p.evaluate(() => [...document.querySelectorAll('#martList .mart')].slice(0, 6).map(m => { const nm = m.querySelector('.nm'), d = m.querySelector('.dist').getBoundingClientRect(), card = m.closest('.card').getBoundingClientRect();
+        const bad = [...m.querySelectorAll('.meta > *')].some(k => { const r = k.getBoundingClientRect(); return r.width && ((r.right > d.left + 1 && r.bottom > d.top + 1 && r.top < d.bottom - 1) || r.right > card.right + 1); });
+        return { name: nm.textContent, cut: nm.scrollWidth > nm.clientWidth + 1, bad }; }));
+      if (marts.some(m => m.bad) || (ts > 1 && marts.some(m => m.cut))) throw new Error(`마트 줄 꼬리표/이름 이상 ${vw}/${ts}x ` + JSON.stringify(marts));
+      await p.evaluate(() => document.querySelector('nav button[data-tab="tab-deals"]').click()); await W(900);
+      await p.evaluate(() => { const d = document.querySelector('#dealList .deal[data-sel]:not(.picked)'); d && d.click(); }); await W(700);
+      const fr = await fabInfo('fabR');
+      const orphans = await p.evaluate(() => [...document.querySelectorAll('#dealList .dn, #dealList .dspec')].filter(e => { const r = document.createRange(); r.selectNodeContents(e); const rs = [...r.getClientRects()].filter(x => x.width > 0); return rs.length > 1 && rs[rs.length - 1].width < parseFloat(getComputedStyle(e).fontSize) * 1.15; }).map(e => e.textContent));
+      await p.evaluate(() => { const d = document.querySelector('#dealList .deal.picked'); d && d.click(); });
+      console.log(`fab ${vw}/${ts}x:`, JSON.stringify({ fab: f, fabR: fr, orphans: orphans.length }));
+      for (const [nm, x] of [['할인 식재료 확인', f], ['레시피 추천', fr]]) {
+        if (!x) throw new Error(`플로팅 버튼(${nm}) 안 보임 ${vw}/${ts}x`);
+        if (x.lines !== 1 || !x.badgeOne || x.over || x.h < 44) throw new Error(`플로팅 버튼(${nm}) 줄바꿈/배지/크기 이상 ${vw}/${ts}x ` + JSON.stringify(x));
+        if (x.dot && x.fit !== '0') throw new Error('짧은 문구에 점이 남았어요 ' + JSON.stringify(x)); }
+      if (ts > 1 && (f.label !== (f.fit === '0' ? '할인 식재료 확인 ·' : '할인 재료'))) throw new Error('큰 글자 문구 이상 ' + JSON.stringify(f));
+      if (vw === 390 && ts === 1 && (f.fit !== '0' || f.label !== '할인 식재료 확인 ·' || fr.fit !== '0' || fr.label !== '해당 재료로 레시피 추천 ·')) throw new Error('1× 390 문구가 바뀌었어요 ' + JSON.stringify([f, fr]));
+      if (ts > 1 && orphans.length) throw new Error(`한 글자만 남은 줄 ${vw}/${ts}x: ` + orphans.join(', '));
+    }
+    await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.setViewport(vp0); await p.reload({ waitUntil: 'networkidle0' }); await W(500); }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
     const gap = await p.evaluate(() => { const t = (document.querySelector('#rSortBar .sp') || document.getElementById('rSortBar')).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });

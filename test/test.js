@@ -451,4 +451,14 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/\.opt-l>span\{white-space:nowrap\}/.test(T) && /\.seg button\{white-space:nowrap;/.test(T) && /\.fab b\{flex:none;white-space:nowrap\}/.test(T) && /확인&nbsp;<i class="sep">/.test(T), '큰 글자: 반경 라벨·km·N곳 배지 한 줄');
   assert(/\.ts-ctl button\{background:none;[^}]*min-height:44px;min-width:44px/.test(T), '상자 없음 + 44px');
 }
+// 큰 글자: 플로팅 버튼 짧은 문구(점 없음)로 한 줄, 상품명 한 글자 꼬리 없애기, 마트 줄 쌓기, 글자 크기 바꿀 때 @container 다시 계산
+{ const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
+  assert(/<span class="fl-long">할인 식재료 확인&nbsp;<i class="sep">·<\/i><\/span><span class="fl-short">할인 재료<\/span>/.test(T), '할인 버튼 짧은 문구');
+  assert(/<span class="fl-long">해당 재료로 레시피 추천&nbsp;<i class="sep">·<\/i><\/span><span class="fl-short">레시피 추천<\/span>/.test(T), '레시피 버튼 짧은 문구');
+  assert(/\.fab \.fl-short\{display:none\}/.test(T) && /\.fab\.short \.fl-long\{display:none\}/.test(T) && /function fitFab\(btn\)/.test(T) && /fitFabs\(\);\n\}/.test(T), 'fitFab');
+  assert(!/\.fab \.(lg|st)\b/.test(T), '.lg/.st 이름 충돌 금지');
+  assert(/function fixOrphans\(\)/.test(T) && /\.deal \.dn\.brk,\.deal \.dspec\.brk\{word-break:break-all;text-wrap:balance\}/.test(T), '한 글자 꼬리');
+  assert(/html\.ts-cq #tab-deals \.card,html\.ts-cq \.recipe,html\.ts-cq #tab-recipes \.page-h\{container-type:normal!important\}/.test(T) && /d\.classList\.add\('ts-cq'\)/.test(T), '@container 다시 계산');
+  assert(/html:is\(\[data-ts="1\.5"\],\[data-ts="2"\]\) \.mart \.dist\{flex:1 0 100%/.test(T), '마트 줄 쌓기');
+  console.log('큰 글자 플로팅 버튼·줄바꿈 ok'); }
 console.log('ALL TESTS PASSED');

@@ -24,6 +24,8 @@
     var k = iosScale() * userScale(), pct = Math.round(k * 10000) / 100;
     if (Math.abs(k - 1) < 0.001) d.style.removeProperty('font-size'); else d.style.fontSize = pct + '%';
     d.setAttribute('data-ts', String(userScale()));
+    // Chrome이 em 기준 @container 조건을 루트 글자 크기 변경 뒤 다시 안 따지는 경우가 있어서, 컨테이너를 한 번 풀었다 다시 걸어요
+    if (document.body){ d.classList.add('ts-cq'); void document.body.offsetHeight; d.classList.remove('ts-cq'); void document.body.offsetHeight; }
   };
   window.__applyTextSize();
   // iOS에서 설정을 바꾸고 돌아오면 다시 계산
@@ -522,6 +524,14 @@ nav button.on svg.i{--ff:color-mix(in srgb,var(--g) 35%,transparent)}
 /* 큰 글자: 문구는 줄바꿈해도 「N곳」 배지는 한 줄 */
 .fab>span{min-width:0;text-align:center}
 .fab b{flex:none;white-space:nowrap}
+/* 글자가 커서 한 줄에 안 들어가면 (fitFabs): 짧은 문구·점 없음 → 여백·간격 좁게 → 앞 아이콘 숨김. 그래도 안 되면 두 줄 */
+.fab .fl-short{display:none}
+.fab.short .fl-long{display:none}
+.fab.short .fl-short{display:inline}
+.fab.tight{padding:6px 12px;gap:6px}
+.fab.tight b{padding:3px 7px}
+.fab.noic svg.i:not(.arr){display:none}
+.fab.measure>span{white-space:nowrap}
 .fab b{background:var(--g);color:var(--g-on);font-size:.84375rem;font-weight:800;padding:3px 9px;border-radius:99px}
 .fab:hover{filter:brightness(1.08)}
 .fab:active{transform:translate(-50%,0) scale(.98)}
@@ -548,6 +558,17 @@ a.brand::after,button.sp::after,button.kchip::after,button.catchip::after,button
 @media (max-width:359px){.top-in{padding:6px 12px;padding-top:calc(6px + env(safe-area-inset-top));min-height:48px;gap:8px}.hdr-btn .hb-ic{width:32px;height:32px}}
 /* 할인 상품 줄: 좁거나 글씨가 크면 가격을 이름 아래로 */
 #tab-deals .card{container-type:inline-size}
+html.ts-cq #tab-deals .card,html.ts-cq .recipe,html.ts-cq #tab-recipes .page-h{container-type:normal!important}
+/* 크게·아주 크게: 상품명·규격·행사·재료 줄이 「…키/위」처럼 한 글자만 남기고 꺾이지 않게 (낱말 단위 + 마지막 줄 고르게) */
+/* 띄어쓰기 없는 긴 상품명이 마지막 한 글자만 남기고 꺾이면 (fixOrphans) 두 줄로 고르게 */
+.deal .dn.brk,.deal .dspec.brk{word-break:break-all;text-wrap:balance}
+/* 크게·아주 크게: 마트 이름은 「서원…」 대신 줄바꿈, 「전단 판독 · 가격확인」 꼬리표가 길찾기 위로 넘치지 않게 */
+html:is([data-ts="1.5"],[data-ts="2"]) .mart .nm{white-space:normal;overflow-wrap:anywhere}
+html:is([data-ts="1.5"],[data-ts="2"]) .mart .tag{white-space:normal;max-width:100%}
+html:is([data-ts="1.5"],[data-ts="2"]) .mart{flex-wrap:wrap;row-gap:2px}
+html:is([data-ts="1.5"],[data-ts="2"]) .mart .info{flex:1 1 0}
+html:is([data-ts="1.5"],[data-ts="2"]) .mart .dist{flex:1 0 100%;flex-direction:row;align-items:baseline;gap:14px;padding-left:92px;box-sizing:border-box}
+html:is([data-ts="1.5"],[data-ts="2"]) :is(.meta span,.ingtxt){word-break:keep-all;overflow-wrap:anywhere;text-wrap:pretty}
 @container (max-width:18em){
   .deal{flex-wrap:wrap;row-gap:4px}
   .deal .dinfo{flex:1 1 0}
@@ -725,8 +746,8 @@ a.brand::after,button.sp::after,button.kchip::after,button.catchip::after,button
  </div>
 </dialog>
 
-<button id="fabR" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-pot"/></svg><span>해당 재료로 레시피 추천 <i class="sep">·</i></span><b id="fabRN">0개</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-<button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인&nbsp;<i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+<button id="fabR" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-pot"/></svg><span><span class="fl-long">해당 재료로 레시피 추천&nbsp;<i class="sep">·</i></span><span class="fl-short">레시피 추천</span></span><b id="fabRN">0개</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+<button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span><span class="fl-long">할인 식재료 확인&nbsp;<i class="sep">·</i></span><span class="fl-short">할인 재료</span></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <nav aria-label="메뉴"><div class="nav-in">
   <button data-tab="tab-deals"><svg class="i"><use href="#i-tag"/></svg>할인 재료</button>
   <button data-tab="tab-recipes"><svg class="i"><use href="#i-pot"/></svg>레시피 추천</button>
@@ -2822,8 +2843,47 @@ function updateFab(){
   $('fab').classList.toggle('show', !!show); document.body.classList.toggle('has-fab', !!(show || showR));
   $('fab').setAttribute('aria-hidden', show ? 'false' : 'true'); $('fab').tabIndex = show ? 0 : -1;
   $('fab').setAttribute('aria-label', '할인 식재료 확인 · ' + n + '곳');
+  fitFabs();
 }
 $('fab').addEventListener('click', function(){ showTab('tab-deals'); });
+// 큰 글자에서 플로팅 버튼이 두 줄로 꺾이지 않게: 한 줄에 들어가는 가장 긴 모양을 골라요 (1×는 그대로)
+function fitFab(btn){
+  var FAB_LV = ['', 'short', 'short tight', 'short tight noic'];
+  var lab = btn.querySelector(':scope>span'); if (!lab) return;
+  btn.classList.remove('short', 'tight', 'noic'); btn.classList.add('measure');
+  var pick = null;
+  for (var i = 0; i < FAB_LV.length; i++){
+    btn.classList.remove('short', 'tight', 'noic');
+    if (FAB_LV[i]) FAB_LV[i].split(' ').forEach(function(c){ btn.classList.add(c); });
+    // 한 줄로 놓았을 때 필요한 폭 = 좌우 여백 + 보이는 것들 폭 + 간격
+    var cs = getComputedStyle(btn), kids = [].filter.call(btn.children, function(c){ return getComputedStyle(c).display !== 'none'; });
+    var inner = [].filter.call(lab.children, function(c){ return getComputedStyle(c).display !== 'none'; })[0];
+    var need = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.columnGap || 0) * (kids.length - 1);
+    kids.forEach(function(c){ need += c === lab ? (inner ? inner.getBoundingClientRect().width : lab.scrollWidth) : c.getBoundingClientRect().width; });
+    if (need <= btn.getBoundingClientRect().width - 0.5){ pick = i; break; }
+  }
+  btn.classList.remove('measure');
+  if (pick === null){ btn.classList.remove('noic'); }   // 정말 안 되면 짧은 문구로 깔끔하게 두 줄 (점 없음)
+  btn.setAttribute('data-fit', pick === null ? 'wrap' : String(pick));
+}
+// 크게·아주 크게에서 「…키/위」처럼 한 글자만 다음 줄로 넘어간 상품명·규격 고치기 (1×는 손대지 않아요)
+function fixOrphans(){
+  var big = (document.documentElement.getAttribute('data-ts') || '1') !== '1';
+  document.querySelectorAll('#dealList .dn, #dealList .dspec').forEach(function(e){
+    var had = e.classList.contains('brk'); if (had) e.classList.remove('brk');
+    if (!big) return;
+    var r = document.createRange(); r.selectNodeContents(e);
+    var rs = [].filter.call(r.getClientRects(), function(x){ return x.width > 0; });
+    if (rs.length > 1 && rs[rs.length - 1].width < parseFloat(getComputedStyle(e).fontSize) * 1.15) e.classList.add('brk');
+  });
+}
+function fixOrphansSoon(){ clearTimeout(window._orT); window._orT = setTimeout(fixOrphans, 80); }
+if (window.ResizeObserver){ new ResizeObserver(fixOrphansSoon).observe($('dealList')); }
+window.addEventListener('resize', fixOrphansSoon);
+new MutationObserver(fixOrphansSoon).observe($('dealList'), { childList: true });   // 목록을 다시 그리면 (높이가 같아도) 다시 확인
+function fitFabs(){ fitFab($('fab')); fitFab($('fabR')); }
+window.addEventListener('resize', function(){ clearTimeout(window._fabT); window._fabT = setTimeout(fitFabs, 60); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitFabs);
 $('fabR').addEventListener('click', function(){ rLimit = PAGE; showTab('tab-recipes'); });
 // 할인 품목 고르기: 줄을 누르거나(마우스·터치) 왼쪽 체크 버튼(키보드). 가격확인 말풍선 태그는 캡처 단계에서 먼저 막혀요.
 $('dealList').addEventListener('click', function(e){
