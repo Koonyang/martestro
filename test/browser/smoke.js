@@ -503,9 +503,45 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
     await p.click('nav button[data-tab="tab-deals"]'); await W(250);
     console.log('sort pills OK');
   }
+  { // 큰 글씨·확대: 가로 넘침 없음, 상품명·레시피 제목이 한 글자씩 세로로 서지 않음, 워드마크 한 줄, 누르는 곳 44px
+    const W = ms => new Promise(r => setTimeout(r, ms)); const vp0 = p.viewport();
+    const modes = [{ id: '390', vw: 390 }, { id: '390 root150%', vw: 390, root: '150%' }, { id: '390 root200%', vw: 390, root: '200%' }, { id: '260 (zoom150)', vw: 260 }, { id: '195 (zoom200)', vw: 195 }, { id: '320', vw: 320 }];
+    const check = (tab) => p.evaluate((tab) => {
+      const de = document.documentElement, vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+      const wm = document.querySelector('.brand .wm'), wcs = getComputedStyle(wm), wr = wm.getBoundingClientRect();
+      const out = { tab, docW: de.scrollWidth, cw: de.clientWidth, wm: { fs: parseFloat(wcs.fontSize), h: Math.round(wr.height), lines: wm.getClientRects().length, ws: wcs.whiteSpace }, thin: [], small: [] };
+      const sel = tab === 'deals' ? '#dealList .deal .dn' : '#recipeList .recipe h3';
+      [...document.querySelectorAll(sel)].filter(vis).slice(0, 8).forEach(e => { const fs = parseFloat(getComputedStyle(e).fontSize), w = e.getBoundingClientRect().width; if (w < fs * 3) out.thin.push(e.textContent.slice(0, 10) + ' ' + Math.round(w) + 'px'); });
+      out.nThin = document.querySelectorAll(sel).length;
+      const targets = tab === 'deals' ? ['a.brand', 'button.hdr-btn', '#dSortBar button.sp', '#dealList button.tipb'] : ['a.brand', '#rCatBtn', '.kind-row button.kchip', '#rSortBar button.sp', '#recipeList button.tipb', '#recipeList button.mn-toggle'];
+      targets.forEach(q => { const e = [...document.querySelectorAll(q)].find(vis); if (!e) { out.small.push(q + ' 없음'); return; }
+        if (!e.closest('#top')) e.scrollIntoView({ block: 'center', inline: 'nearest' });
+        const r = e.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, h = 21.5;
+        const pts = [[cx, cy - h], [cx, cy + h], [Math.max(1, cx - h), cy], [Math.min(de.clientWidth - 1, cx + h), cy]];
+        const miss = pts.filter(([x, y]) => { const t = document.elementFromPoint(x, y); if (!t) return true; if (e.contains(t)) return false; return !(q.includes('tipb') && t.closest('button.tipb')); });
+        if (miss.length) out.small.push(q + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' miss ' + miss.map(m => m.map(Math.round).join(',')).join(' ')); });
+      window.scrollTo(0, 0); return out; }, tab);
+    const problems = [];
+    for (const m of modes) {
+      await p.setViewport({ ...vp0, width: m.vw }); await p.evaluate(r => { document.documentElement.style.fontSize = r || ''; window.dispatchEvent(new Event('resize')); }, m.root || ''); await W(350);
+      for (const tab of ['deals', 'recipes']) {
+        await p.click('nav button[data-tab="tab-' + tab + '"]'); await W(350);
+        const r = await check(tab);
+        const bad = [];
+        if (r.docW > r.cw) bad.push('가로 넘침 ' + r.docW + '>' + r.cw);
+        if (r.thin.length) bad.push('세로로 선 글자 ' + r.thin.join(', '));
+        if (r.wm.lines !== 1 || r.wm.h > r.wm.fs * 1.6 || r.wm.ws !== 'nowrap') bad.push('워드마크 줄바꿈 ' + JSON.stringify(r.wm));
+        if (r.small.length) bad.push('누르는 곳 44px 미만 ' + r.small.join(' / '));
+        console.log('large-text ' + m.id + ' ' + tab + ':', bad.length ? 'FAIL ' + bad.join(' | ') : 'OK (docW ' + r.docW + ', wordmark ' + r.wm.fs.toFixed(1) + 'px)');
+        if (bad.length) problems.push(m.id + ' ' + tab + ': ' + bad.join(' | '));
+      }
+    }
+    await p.evaluate(() => { document.documentElement.style.fontSize = ''; }); await p.setViewport(vp0); await W(300);
+    await p.click('nav button[data-tab="tab-deals"]'); await W(250);
+    if (problems.length) throw new Error('큰 글씨·확대 점검 실패\n' + problems.join('\n')); }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
-    const gap = await p.evaluate(() => { const t = document.getElementById('rSortBar').getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
+    const gap = await p.evaluate(() => { const t = (document.querySelector('#rSortBar .sp') || document.getElementById('rSortBar')).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });
     console.log('recipes tools gap:', gap); if (gap.sw || gap.gap < 10 || gap.gap > 32) throw new Error('레시피 탭 스위치/간격 이상 ' + JSON.stringify(gap));
     await p.click('nav button[data-tab="tab-deals"]'); }
   if (await p.$('nav button[data-tab="tab-info"]')) throw new Error('출처 탭이 아직 메뉴에 있어요');

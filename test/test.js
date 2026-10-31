@@ -312,6 +312,9 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   const OK = new Set([1.705, 1.43, 1.76, 1.485, 1.1, 1.32, 17.6, 1.65, 1.815]);
   lhs.forEach(x => { if (/\.brand \.wm/.test(x.sel)) assert.equal(x.v, 1); else if (/^\.dhead \.page-h (h1|p)$/.test(x.sel)) assert([1.2, 1.35].includes(x.v), x.sel); /* 할인 재료 머리말만 일부러 촘촘히 */ else assert(OK.has(x.v), x.sel + ' line-height ' + x.v); });
   inl.forEach(v => assert(OK.has(v), 'inline line-height ' + v));
+  // 글씨 크기를 따라가는 em 행간은 예전 px 값 그대로 (17.6px @ 10.5px 글씨)
+  const lhCalc = [...T.matchAll(/line-height:calc\(([^)]*)\)/g)].map(m => m[1]);
+  assert.deepEqual(lhCalc, ['17.6em / 10.5'], 'calc line-height ' + lhCalc);
   assert(/body\{[^}]*line-height:1\.705/.test(T));
   console.log('line-height ×1.1 OK (' + lhs.length + '+' + inl.length + ')');
 }
@@ -347,7 +350,7 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(real >= 15 && ai >= 1);
   // 화면: AI 사진에만 작은 「AI 생성 이미지」 표시, 출처 화면에 사진 출처
   const html = fs.readFileSync(__dirname + '/../index.html', 'utf8');
-  assert(/\.ai-lbl\{[^}]*bottom:4px[^}]*z-index:2[^}]*font-size:8px/.test(html), 'AI 표시 스타일');
+  assert(/\.ai-lbl\{[^}]*bottom:4px[^}]*z-index:2[^}]*font-size:calc\(100cqw \* 8 \/ 76\)/.test(html), 'AI 표시 스타일 (사진 76px일 때 8px)');
   assert(html.includes("r.img && r.imgAi ? '<span class=\"ai-lbl\">AI 생성 이미지</span>'"), '썸네일 AI 표시');
   assert(html.includes('function photoCredits()') && html.includes('photoCredits() +'), '사진 출처');
 }
