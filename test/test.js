@@ -448,6 +448,7 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/v === 1\.5 \|\| v === 2 \? v : 1/.test(head), '배율 1·1.5·2');
   assert(/<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기<\/span><button type="button" data-ts="1" aria-pressed="true">보통<\/button><button type="button" data-ts="1.5" aria-pressed="false">크게<\/button><button type="button" data-ts="2" aria-pressed="false">아주 크게<\/button><\/div>/.test(T), '글자 크기 버튼 마크업');
   assert(/<\/footer>\n<div class="ts-ctl"/.test(T), '푸터 바로 아래');
+  assert(/\.opt-l>span\{white-space:nowrap\}/.test(T) && /\.seg button\{white-space:nowrap;/.test(T) && /\.fab b\{flex:none;white-space:nowrap\}/.test(T) && /확인&nbsp;<i class="sep">/.test(T), '큰 글자: 반경 라벨·km·N곳 배지 한 줄');
   assert(/\.ts-ctl button\{background:none;[^}]*min-height:44px;min-width:44px/.test(T), '상자 없음 + 44px');
 }
 console.log('ALL TESTS PASSED');

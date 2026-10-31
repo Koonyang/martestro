@@ -147,10 +147,11 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .chip.on{background:var(--a);color:var(--a-on);border-color:var(--a)}
 .chip.on::before{content:"";width:14px;height:14px;margin-right:-2px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/contain no-repeat}
 .opts{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
-.seg{display:inline-flex;background:var(--card2);border-radius:12px;padding:3px;gap:2px}
-.seg button{min-height:38px;padding:6px 13px;border-radius:10px;background:transparent;color:var(--m);font-size:.875rem;font-weight:600}
+.seg{display:inline-flex;flex-wrap:wrap;max-width:100%;background:var(--card2);border-radius:12px;padding:3px;gap:2px}
+.seg button{white-space:nowrap;min-height:38px;padding:6px 13px;border-radius:10px;background:transparent;color:var(--m);font-size:.875rem;font-weight:600}
 .seg button.on{background:var(--card);color:var(--t);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-.opt-l{display:flex;align-items:center;gap:10px;font-size:.84375rem;font-weight:600;color:var(--t2)}
+.opt-l{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:.84375rem;font-weight:600;color:var(--t2)}
+.opt-l>span{white-space:nowrap}
 .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:.875rem;font-weight:600;color:var(--t2);min-height:44px;user-select:none}
 .switch input{width:46px;height:28px;min-height:0;padding:0;border:0;border-radius:999px;background:var(--line);position:relative;cursor:pointer;flex:0 0 auto;transition:background .2s}
@@ -513,11 +514,14 @@ nav button.on{color:var(--t)}
 nav button.on svg.i{color:var(--a);transform:translateY(-1px)}
 nav button.on svg.i{--ff:color-mix(in srgb,var(--g) 35%,transparent)}
 /* 선택한 마트가 있을 때 아래에서 올라오는 「할인 식재료 확인」 버튼 */
-.fab{position:fixed;z-index:29;left:50%;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));width:calc(100% - 32px);max-width:488px;min-height:54px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 18px;border-radius:16px;background:var(--a);color:var(--a-on);font-size:1rem;font-weight:750;letter-spacing:-.02em;box-shadow:0 10px 28px rgba(15,22,38,.28),0 0 0 1px rgba(201,162,39,.35) inset;transform:translate(-50%,calc(100% + 120px));opacity:0;visibility:hidden;transition:transform .38s var(--ease),opacity .25s var(--ease),visibility 0s linear .38s}
+.fab{position:fixed;z-index:29;left:50%;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));width:calc(100% - 32px);max-width:488px;min-height:54px;display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 18px;border-radius:16px;background:var(--a);color:var(--a-on);font-size:1rem;font-weight:750;letter-spacing:-.02em;box-shadow:0 10px 28px rgba(15,22,38,.28),0 0 0 1px rgba(201,162,39,.35) inset;transform:translate(-50%,calc(100% + 120px));opacity:0;visibility:hidden;transition:transform .38s var(--ease),opacity .25s var(--ease),visibility 0s linear .38s}
 .fab.show{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .38s var(--ease),opacity .25s var(--ease),visibility 0s}
 .fab svg.i{width:20px;height:20px;color:var(--g)}
 .fab svg.arr{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
 .fab .sep{font-style:normal;opacity:.6;margin-left:2px}
+/* 큰 글자: 문구는 줄바꿈해도 「N곳」 배지는 한 줄 */
+.fab>span{min-width:0;text-align:center}
+.fab b{flex:none;white-space:nowrap}
 .fab b{background:var(--g);color:var(--g-on);font-size:.84375rem;font-weight:800;padding:3px 9px;border-radius:99px}
 .fab:hover{filter:brightness(1.08)}
 .fab:active{transform:translate(-50%,0) scale(.98)}
@@ -722,7 +726,7 @@ a.brand::after,button.sp::after,button.kchip::after,button.catchip::after,button
 </dialog>
 
 <button id="fabR" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-pot"/></svg><span>해당 재료로 레시피 추천 <i class="sep">·</i></span><b id="fabRN">0개</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-<button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인 <i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+<button id="fab" class="fab" type="button" aria-hidden="true" tabindex="-1"><svg class="i"><use href="#i-tag"/></svg><span>할인 식재료 확인&nbsp;<i class="sep">·</i></span><b id="fabN">0곳</b><svg class="i arr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
 <nav aria-label="메뉴"><div class="nav-in">
   <button data-tab="tab-deals"><svg class="i"><use href="#i-tag"/></svg>할인 재료</button>
   <button data-tab="tab-recipes"><svg class="i"><use href="#i-pot"/></svg>레시피 추천</button>
