@@ -3,6 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 기기 글자 크기 따르기: Chrome·Edge 146+ (Android OS 글자 크기 → 기본 글자 크기). 글자 크기는 모두 rem/em -->
+<meta name="text-scale" content="scale">
+<script>
+/* 글자 크기: (iOS Dynamic Type 비율) × (아래 「글자 크기」 선택 1·1.5·2). 루트 글자는 %로만, 기본이면 아예 안 건드려요.
+   그리기 전에 실행해서 깜빡임 없음. iOS는 -apple-system-body 기본값 17px을 1로 맞춰요 (기본 설정이면 지금과 똑같음) */
+(function(){
+  var d = document.documentElement;
+  function iosScale(){
+    try {
+      var ios = /iP(hone|od|ad)/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+      if (!ios || !(window.CSS && CSS.supports && CSS.supports('font', '-apple-system-body'))) return 1;
+      var e = document.createElement('span'); e.style.font = '-apple-system-body'; e.style.position = 'absolute'; e.style.visibility = 'hidden';
+      d.appendChild(e); var px = parseFloat(getComputedStyle(e).fontSize); d.removeChild(e);
+      return px > 0 ? Math.min(3.5, Math.max(0.75, px / 17)) : 1;
+    } catch (_) { return 1; }
+  }
+  function userScale(){ try { var v = parseFloat(localStorage.getItem('mr_ts')); return v === 1.5 || v === 2 ? v : 1; } catch (_) { return 1; } }
+  window.__applyTextSize = function(){
+    var k = iosScale() * userScale(), pct = Math.round(k * 10000) / 100;
+    if (Math.abs(k - 1) < 0.001) d.style.removeProperty('font-size'); else d.style.fontSize = pct + '%';
+    d.setAttribute('data-ts', String(userScale()));
+  };
+  window.__applyTextSize();
+  // iOS에서 설정을 바꾸고 돌아오면 다시 계산
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) window.__applyTextSize(); });
+})();
+</script>
 <meta name="theme-color" content="#F7F6F2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1626" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -35,7 +62,9 @@
 }}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-body{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--t);font-size:.9375rem;line-height:1.705;letter-spacing:-.01em;padding-bottom:calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+/* 가로 모드 자동 확대만 막아요 (none이 아니라 100%: 사용자 글자 크기·확대는 그대로) */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;background:var(--bg);color:var(--t);font-size:.9375rem;line-height:1.705;letter-spacing:-.01em;padding-bottom:calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
 a{color:var(--a-ink);text-decoration:none}
 a:hover{text-decoration:underline}
 svg.i{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
@@ -402,6 +431,14 @@ details ol li::before{content:counter(s);position:absolute;left:0;top:.4375rem;w
 .foot-link{display:inline-flex;align-items:center;gap:5px;background:none;min-height:36px;padding:6px 10px;font-size:.78125rem;font-weight:600;color:var(--m);border-radius:10px;text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--m) 40%,transparent);text-underline-offset:3px}
 .foot-link:hover{color:var(--a-ink);filter:none;text-decoration-color:var(--g)}
 .foot-link svg.i{width:15px;height:15px}
+/* 맨 아래 「글자 크기」: 작은 글씨, 상자 없이. 고른 것만 진하게+밑줄. 누르는 곳 44px */
+.ts-ctl{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0 2px;margin:-6px 0 4px;font-size:.75rem;color:var(--m)}
+.ts-ctl .ts-k{margin-right:4px;font-weight:600}
+.ts-ctl button{background:none;box-shadow:none;border:0;min-height:44px;min-width:44px;padding:0 8px;border-radius:8px;font-size:.75rem;font-weight:500;color:var(--m);letter-spacing:-.01em}
+.ts-ctl button:hover{filter:none;color:var(--a-ink)}
+.ts-ctl button:active{transform:none}
+.ts-ctl button[aria-pressed=true]{color:var(--t);font-weight:700;text-decoration:underline;text-decoration-color:var(--g);text-decoration-thickness:2px;text-underline-offset:4px}
+.ts-ctl button:focus-visible{outline:2px solid var(--g);outline-offset:-6px}
 .sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:680px;max-height:88vh;max-height:88dvh;border-radius:24px 24px 0 0;background:var(--bg);color:var(--t);box-shadow:0 -10px 40px rgba(15,22,38,.25);overflow:hidden}
 .sheet[open]{display:flex;animation:sheetUp .34s var(--ease)}
 .sheet::backdrop{background:rgba(15,22,38,.45);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
@@ -654,6 +691,7 @@ a.brand::after,button.sp::after,button.kchip::after,button.catchip::after,button
 </section>
 
 <footer class="site-foot"><span id="dataStamp" class="stamp"></span><span class="dot" aria-hidden="true">·</span><button type="button" id="btnSrc" class="foot-link" aria-haspopup="dialog"><svg class="i"><use href="#i-info"/></svg>출처·데이터 정보</button></footer>
+<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기</span><button type="button" data-ts="1" aria-pressed="true">보통</button><button type="button" data-ts="1.5" aria-pressed="false">크게</button><button type="button" data-ts="2" aria-pressed="false">아주 크게</button></div>
 </main>
 
 <!-- 출처·데이터 정보: 메뉴 탭 대신 페이지 맨 아래 작은 링크로 여는 시트 -->
@@ -1013,6 +1051,21 @@ document.addEventListener('click', function(e){ if (e.target.closest && e.target
 function openSources(){ var d = $('srcSheet'); if (d.showModal) { if (!d.open) d.showModal(); } else d.setAttribute('open',''); $('srcSheet').querySelector('.sheet-in').scrollTop = 0; }
 function closeSources(){ var d = $('srcSheet'); if (d.close) d.close(); else d.removeAttribute('open'); }
 $('btnSrc').addEventListener('click', openSources);
+// 글자 크기 (보통·크게·아주 크게 = 기기 설정 × 1·1.5·2). 저장해 두고 다음에도 그리기 전에 적용
+(function(){
+  var box = document.querySelector('.ts-ctl'); if (!box) return;
+  function sync(){ var cur = document.documentElement.getAttribute('data-ts') || '1'; box.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-ts') === cur ? 'true' : 'false'); }); }
+  box.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-ts]'); if (!b) return;
+    try { if (b.getAttribute('data-ts') === '1') localStorage.removeItem('mr_ts'); else localStorage.setItem('mr_ts', b.getAttribute('data-ts')); } catch (_) {}
+    var y = b.getBoundingClientRect().top;
+    if (window.__applyTextSize) window.__applyTextSize();
+    sync(); window.dispatchEvent(new Event('resize'));
+    // 누른 버튼이 화면에서 도망가지 않게
+    window.scrollBy(0, b.getBoundingClientRect().top - y);
+  });
+  sync();
+})();
 $('srcClose').addEventListener('click', closeSources);
 $('srcSheet').addEventListener('click', function(e){ if (e.target === $('srcSheet')) closeSources(); });
 function toggleSel(id, on){

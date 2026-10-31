@@ -505,7 +505,8 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
   }
   { // 큰 글씨·확대: 가로 넘침 없음, 상품명·레시피 제목이 한 글자씩 세로로 서지 않음, 워드마크 한 줄, 누르는 곳 44px
     const W = ms => new Promise(r => setTimeout(r, ms)); const vp0 = p.viewport();
-    const modes = [{ id: '390', vw: 390 }, { id: '390 root150%', vw: 390, root: '150%' }, { id: '390 root200%', vw: 390, root: '200%' }, { id: '260 (zoom150)', vw: 260 }, { id: '195 (zoom200)', vw: 195 }, { id: '320', vw: 320 }];
+    const modes = [{ id: '390', vw: 390 }, { id: '390 root150%', vw: 390, root: '150%' }, { id: '390 root200%', vw: 390, root: '200%' }, { id: '260 (zoom150)', vw: 260 }, { id: '195 (zoom200)', vw: 195 }, { id: '320', vw: 320 },
+      { id: '390 글자 크게', vw: 390, ts: 1.5 }, { id: '390 글자 아주 크게', vw: 390, ts: 2 }, { id: '320 글자 크게', vw: 320, ts: 1.5 }, { id: '320 글자 아주 크게', vw: 320, ts: 2 }];
     const check = (tab) => p.evaluate((tab) => {
       const de = document.documentElement, vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
       const wm = document.querySelector('.brand .wm'), wcs = getComputedStyle(wm), wr = wm.getBoundingClientRect();
@@ -523,7 +524,7 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
       window.scrollTo(0, 0); return out; }, tab);
     const problems = [];
     for (const m of modes) {
-      await p.setViewport({ ...vp0, width: m.vw }); await p.evaluate(r => { document.documentElement.style.fontSize = r || ''; window.dispatchEvent(new Event('resize')); }, m.root || ''); await W(350);
+      await p.setViewport({ ...vp0, width: m.vw }); await p.evaluate((r, ts) => { if (ts) { localStorage.setItem('mr_ts', String(ts)); window.__applyTextSize(); } else { localStorage.removeItem('mr_ts'); document.documentElement.style.fontSize = r || ''; } window.dispatchEvent(new Event('resize')); }, m.root || '', m.ts || 0); await W(350);
       for (const tab of ['deals', 'recipes']) {
         await p.click('nav button[data-tab="tab-' + tab + '"]'); await W(350);
         const r = await check(tab);
@@ -536,9 +537,30 @@ const ROOT = process.env.SITE || path.join(__dirname, '..', '..');
         if (bad.length) problems.push(m.id + ' ' + tab + ': ' + bad.join(' | '));
       }
     }
-    await p.evaluate(() => { document.documentElement.style.fontSize = ''; }); await p.setViewport(vp0); await W(300);
+    await p.evaluate(() => { localStorage.removeItem('mr_ts'); window.__applyTextSize(); document.documentElement.style.fontSize = ''; }); await p.setViewport(vp0); await W(300);
     await p.click('nav button[data-tab="tab-deals"]'); await W(250);
     if (problems.length) throw new Error('큰 글씨·확대 점검 실패\n' + problems.join('\n')); }
+  { // 맨 아래 「글자 크기」: 보통·크게·아주 크게 (기기 설정 × 1·1.5·2), aria-pressed, 44px, 저장 → 다시 열면 그리기 전에 적용
+    const W = ms => new Promise(r => setTimeout(r, ms));
+    const st = () => p.evaluate(() => { const c = document.querySelector('.ts-ctl'); const bs = [...c.querySelectorAll('button')];
+      return { label: c.querySelector('#tsLbl').textContent, names: bs.map(b => b.textContent), pressed: bs.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent), sizes: bs.map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }),
+        rootFs: parseFloat(getComputedStyle(document.documentElement).fontSize), inline: document.documentElement.style.fontSize, ls: localStorage.getItem('mr_ts'), afterFoot: !!document.querySelector('.site-foot + .ts-ctl'), fs: parseFloat(getComputedStyle(c).fontSize), boxed: getComputedStyle(bs[0]).backgroundColor }; });
+    let t = await st(); console.log('text-size control:', JSON.stringify(t));
+    if (t.label !== '글자 크기' || t.names.join() !== '보통,크게,아주 크게' || t.pressed.join() !== '보통' || t.sizes.some(([w, h]) => w < 44 || h < 44) || t.rootFs !== 16 || t.inline || !t.afterFoot || t.fs > 12.5 || !/rgba\(0, 0, 0, 0\)|transparent/.test(t.boxed)) throw new Error('글자 크기 조절 기본 상태 이상 ' + JSON.stringify(t));
+    for (const [name, fs, ls] of [['크게', 24, '1.5'], ['아주 크게', 32, '2'], ['보통', 16, null]]) {
+      await p.evaluate(n => [...document.querySelectorAll('.ts-ctl button')].find(b => b.textContent === n).click(), name); await W(250); t = await st();
+      if (t.rootFs !== fs || t.ls !== ls || t.pressed.join() !== name) throw new Error('글자 크기 ' + name + ' 이상 ' + JSON.stringify(t)); }
+    // 저장 → 새로 열 때 body가 생기기 전에 이미 커져 있어야 (깜빡임 없음)
+    await p.evaluate(() => localStorage.setItem('mr_ts', '2'));
+    await p.evaluateOnNewDocument(() => { new MutationObserver((ms, o) => { if (document.body) { window.__fsAtBody = getComputedStyle(document.documentElement).fontSize; o.disconnect(); } }).observe(document, { childList: true, subtree: true }); });
+    await p.reload({ waitUntil: 'networkidle0' }); await W(400);
+    const early = await p.evaluate(() => ({ atBody: window.__fsAtBody, now: getComputedStyle(document.documentElement).fontSize, pressed: document.querySelector('.ts-ctl button[aria-pressed=true]').textContent, wmLines: document.querySelector('.brand .wm').getClientRects().length }));
+    console.log('text-size saved/early:', JSON.stringify(early));
+    if (early.atBody !== '32px' || early.now !== '32px' || early.pressed !== '아주 크게' || early.wmLines !== 1) throw new Error('저장된 글자 크기 미리 적용 이상 ' + JSON.stringify(early));
+    await p.evaluate(() => localStorage.removeItem('mr_ts')); await p.reload({ waitUntil: 'networkidle0' }); await W(400);
+    if (await p.evaluate(() => getComputedStyle(document.documentElement).fontSize) !== '16px') throw new Error('글자 크기 보통 복귀 이상');
+    const meta = await p.evaluate(() => ({ ts: (document.querySelector('meta[name=text-scale]') || {}).content, tsa: getComputedStyle(document.documentElement).webkitTextSizeAdjust || getComputedStyle(document.documentElement).textSizeAdjust }));
+    console.log('system text scale:', JSON.stringify(meta)); if (meta.ts !== 'scale' || /none/.test(meta.tsa || '')) throw new Error('기기 글자 크기 설정 이상 ' + JSON.stringify(meta)); }
   // 「주재료가 모두 할인 중인 것만」 스위치는 없어졌어요 (검색 줄과 첫 카드 사이는 넉넉하게)
   { await p.click('nav button[data-tab="tab-recipes"]'); await new Promise(r => setTimeout(r, 300));
     const gap = await p.evaluate(() => { const t = (document.querySelector('#rSortBar .sp') || document.getElementById('rSortBar')).getBoundingClientRect(), c = document.querySelector('#recipeList > *'); return { sw: !!document.getElementById('onlyFull') || /주재료가 모두 할인 중인 것만/.test(document.getElementById('tab-recipes').innerText), gap: c ? Math.round(c.getBoundingClientRect().top - t.bottom) : -1 }; });

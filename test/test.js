@@ -436,4 +436,18 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert.strictEqual(new Set(ids.map(sym)).size, 6, '분류 아이콘 6개 모두 달라요');
   console.log('반찬 아이콘 ok');
 }
+// 글자 크기: 기기 설정 따르기 + 맨 아래 「글자 크기」 (보통·크게·아주 크게)
+{ const T = require('fs').readFileSync(require('path').join(__dirname, '..', 'src/template.html'), 'utf8');
+  const head = T.slice(0, T.indexOf('</head>'));
+  assert(/<meta name="text-scale" content="scale">/.test(head), 'text-scale meta');
+  assert(!/(^|[}\s,])(html|:root)\s*\{[^}]*font-size\s*:\s*[\d.]+px/.test(T), '루트 글자 크기를 px로 고정하면 안 돼요');
+  assert(!/text-size-adjust\s*:\s*none/.test(T), 'text-size-adjust:none 금지');
+  assert(/html\{-webkit-text-size-adjust:100%;text-size-adjust:100%\}/.test(T), 'text-size-adjust 100% on html');
+  assert(head.indexOf('__applyTextSize') > 0 && head.indexOf('__applyTextSize') < head.indexOf('<style'), '글자 크기는 스타일보다 먼저(그리기 전) 적용');
+  assert(/localStorage\.getItem\('mr_ts'\)/.test(head) && /d\.style\.fontSize = pct \+ '%'/.test(head) && /removeProperty\('font-size'\)/.test(head), '루트는 %로만, 보통이면 그대로');
+  assert(/v === 1\.5 \|\| v === 2 \? v : 1/.test(head), '배율 1·1.5·2');
+  assert(/<div class="ts-ctl" role="group" aria-labelledby="tsLbl"><span class="ts-k" id="tsLbl">글자 크기<\/span><button type="button" data-ts="1" aria-pressed="true">보통<\/button><button type="button" data-ts="1.5" aria-pressed="false">크게<\/button><button type="button" data-ts="2" aria-pressed="false">아주 크게<\/button><\/div>/.test(T), '글자 크기 버튼 마크업');
+  assert(/<\/footer>\n<div class="ts-ctl"/.test(T), '푸터 바로 아래');
+  assert(/\.ts-ctl button\{background:none;[^}]*min-height:44px;min-width:44px/.test(T), '상자 없음 + 44px');
+}
 console.log('ALL TESTS PASSED');
