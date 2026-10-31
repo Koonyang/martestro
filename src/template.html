@@ -105,6 +105,9 @@ main{max-width:680px;margin:0 auto;padding:4px 16px 0}
 .page-h h1 .h-tot{margin-left:8px;white-space:nowrap;font-size:.8125rem;font-weight:600;letter-spacing:-.01em;color:var(--m)}
 #recipeSummary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tab-recipes .page-h{container:rhead/inline-size}
+/* 레시피 머리말(제목·부제·종류 칩): 할인 재료 머리말처럼 위아래 37.5px — 검색창 아래 ↔ 제목, 칩(또는 고른 재료 줄) ↔ 첫 카드. 할인 탭처럼 px라 글자 크기와 상관없이 같음 */
+#tab-recipes .page-h{padding-top:37.5px}
+#tab-recipes .page-h h1{line-height:1.2}
 @container rhead (max-width:20em){#recipeSummary{white-space:normal;overflow:visible}}
 /* cards */
 .card{background:var(--card);border-radius:var(--r);padding:20px;margin:14px 0;box-shadow:var(--shadow)}
@@ -330,7 +333,7 @@ button.sortdd svg{width:.9em;height:.9em;fill:none;stroke:currentColor;stroke-wi
 .rsort .catpop button .sd-dir{margin-left:auto;padding-left:14px;font-size:.75rem;font-weight:600;color:var(--m)}
 .rsort .catpop button[aria-checked=false] .sd-dir{visibility:hidden}
 .catpop button .sd-ar{display:inline-block;color:var(--g);font-weight:800;margin-right:1px}
-#tab-recipes #recipeList{margin-top:16px}
+#tab-recipes #recipeList{margin-top:37.5px}
 /* 정렬 줄은 위아래 여백 8px(누르는 영역 44px)만큼 margin을 줄여 위치는 그대로 */
 .sb-k{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;font-size:.75rem;font-weight:700;color:var(--m);margin-right:1px}
 .sb-k svg{width:14px;height:14px;fill:none;stroke:var(--g);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
