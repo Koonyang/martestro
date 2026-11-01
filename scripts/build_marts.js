@@ -62,8 +62,8 @@ function toRows(elements) {
     let name = (/^[\x00-\x7f]+$/.test(t.name || '') && t['name:ko']) || t.name || t['name:ko'] || t.brand; // 영문 이름이면 한국어 이름 우선
     const isBig = L.BRANDS[brand] && L.BRANDS[brand].big;
     if (isBig && /^[\x00-\x7f]+$/.test(name)) name = L.BRANDS[brand].label + (t.branch ? ' ' + t.branch : ''); // 'Emart' → '이마트'
-    if (BIG_SHOPS.test(t.shop) && !isBig) continue;            // 도매·백화점은 대형마트 브랜드만
-    if (brand === 'local' && L.NON_FOOD_RE.test(name)) continue; // 식료품점이 아닌 잘못 태깅된 곳
+    if (BIG_SHOPS.test(t.shop) && !isBig && !(t.shop === 'wholesale' && brand === 'local' && L.isFoodWholesale(t, name))) continue; // 도매·백화점은 대형마트 브랜드만 (+ 식자재마트 같은 식품 도매)
+    if (brand === 'local' && L.isNonFoodName(name)) continue; // 식료품점이 아닌 잘못 태깅된 곳 (식자재마트는 통과)
     const key = name + '|' + la.toFixed(3) + lo.toFixed(3); if (seen[key]) continue; seen[key] = 1;
     const row = [e.type[0] + e.id, +la.toFixed(5), +lo.toFixed(5), name];
     if (brand !== 'local') row.push(brand);

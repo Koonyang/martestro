@@ -1051,6 +1051,7 @@ function findMartsLive(){
   var shops = $('incConv').checked ? 'supermarket|convenience' : 'supermarket';
   var q = '[out:json][timeout:25];(' +
     'nwr["shop"~"^(' + shops + ')$"](around:' + rm + ',' + L0.lat + ',' + L0.lon + ');' +
+    'nwr["shop"="wholesale"](around:' + rm + ',' + L0.lat + ',' + L0.lon + ');' + // 식자재마트(식품 도매) — 식품 아닌 도매는 parseMarts가 걸러요
     'nwr["shop"~"^(supermarket|wholesale|department_store)$"]["name"~"이마트|홈플러스|롯데마트|코스트코|트레이더스|Costco|탑마트"](around:' + big + ',' + L0.lat + ',' + L0.lon + ');' +
     ');out center tags;';
   clearTimeout(skTimer);

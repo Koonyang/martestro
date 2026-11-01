@@ -32,6 +32,28 @@ const fx = {elements:[
 const m = L.parseMarts(fx,37.5663,126.9779,2);
 console.log(m.map(x=>x.name+'('+x.brand+','+x.distKm.toFixed(2)+'km)').join(', '));
 assert.deepEqual(m.map(x=>x.name), ['싱싱마트','롯데마트','이마트 미아점']);
+// 5b. 식자재마트는 마트예요 ('자재'·'도매' 거르기에 걸리지 않게), 건축자재·철물도매·의류도매는 계속 빼요
+{ const keep = ['세계로식자재마트', '장보고식자재마트', '식자재왕', '도매식자재마트', '식자재왕도매마트 진접점', '대구식자재마트', '식재료할인마트', '삼성식품', '한국푸드마트', '도매마트', '싱싱청과도매'];
+  const drop = ['건축자재', '대성건축자재', '인테리어자재마트', '철물도매', '의류도매', '동대문의류도매상가', '꽃도매', '문구도매', '화장품할인점', '써브웨이', '중앙상가', '24시코인세탁', '에덴도매건재판넬마트', '프리지아속옷도매마트', '용산컴퓨터도매마트'];
+  keep.forEach(n => assert(!L.isNonFoodName(n), '식료품점인데 빠짐: ' + n));
+  drop.forEach(n => assert(L.isNonFoodName(n), '식료품점이 아닌데 남음: ' + n));
+  assert(L.isFoodWholesale({ shop: 'wholesale' }, '세계로식자재마트') && !L.isFoodWholesale({ shop: 'wholesale', wholesale: 'food' }, '양산농산물도매시장') && !L.isFoodWholesale({ shop: 'wholesale', wholesale: 'clothes' }, '대한마트') && !L.isFoodWholesale({ shop: 'wholesale' }, '의류도매') && !L.isFoodWholesale({ shop: 'wholesale' }, '청자수입상가') && !L.isFoodWholesale({ shop: 'wholesale' }, '한빛상사'), '식품 도매 판별');
+  const fx2 = { elements: [
+    { type: 'node', id: 11, lat: 37.567, lon: 126.978, tags: { shop: 'supermarket', name: '장보고식자재마트' } },
+    { type: 'node', id: 12, lat: 37.5671, lon: 126.978, tags: { shop: 'wholesale', name: '세계로식자재마트' } },
+    { type: 'node', id: 13, lat: 37.5672, lon: 126.978, tags: { shop: 'wholesale', name: '식자재왕' } },
+    { type: 'node', id: 14, lat: 37.5673, lon: 126.978, tags: { shop: 'supermarket', name: '도매식자재마트' } },
+    { type: 'node', id: 15, lat: 37.5674, lon: 126.978, tags: { shop: 'wholesale', name: '의류도매' } },
+    { type: 'node', id: 16, lat: 37.5675, lon: 126.978, tags: { shop: 'supermarket', name: '대성건축자재' } },
+    { type: 'node', id: 17, lat: 37.5676, lon: 126.978, tags: { shop: 'wholesale', name: '한빛상사' } },
+    { type: 'node', id: 18, lat: 37.5677, lon: 126.978, tags: { shop: 'supermarket', name: '철물도매' } }] };
+  const m2 = L.parseMarts(fx2, 37.5663, 126.9779, 2).map(x => x.name + '/' + x.brand).sort();
+  assert.deepEqual(m2, ['도매식자재마트/local', '세계로식자재마트/local', '식자재왕/local', '장보고식자재마트/local'], 'parseMarts 식자재마트 ' + m2);
+  const B = require('../scripts/build_marts.js'), rows = B.toRows(fx2.elements.concat([{ type: 'node', id: 19, lat: 37.5, lon: 127, tags: { shop: 'wholesale', name: 'Costco', brand: 'Costco' } }, { type: 'node', id: 20, lat: 37.5, lon: 127.01, tags: { shop: 'department_store', name: '동네백화점' } }]));
+  const rn = rows.local.map(r => r[3]).sort();
+  assert.deepEqual(rn, ['도매식자재마트', '세계로식자재마트', '식자재왕', '장보고식자재마트'], 'build_marts 식자재마트 ' + rn);
+  assert(rows.big.length === 1 && rows.big[0][4] === 'costco', 'build_marts 코스트코만 대형');
+  console.log('식자재마트 인식 ok'); }
 // 6. real overpass result if present
 try { const op = require('./fixtures/op.json'); const mm = L.parseMarts(op,37.5663,126.9779,2); console.log('실제 Overpass 결과(서울시청 2km):', mm.length,'곳; 상위:', mm.slice(0,8).map(x=>x.name+'/'+x.brand+'/'+x.distKm.toFixed(2)).join(', ')); assert(mm.length>10); } catch(e){ console.log('op.json 없음', e.message); }
 // 7. 추천

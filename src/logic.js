@@ -75,7 +75,26 @@ function haversineKm(lat1, lon1, lat2, lon2){
   return 2*R*Math.asin(Math.sqrt(a));
 }
 
-var NON_FOOD_RE = /써브웨이|세탁|상가|도매|타운|프라자|플라자|핸드백|네일|샘물|이유식|문구|화장품|약국|의류|가구|전자|철물|공구|꽃|낚시|이불|보일러|건설|자재|plaza|mall/i;
+// 식료품점이 아닌데 supermarket 등으로 잘못 태깅된 곳 (동네마트만 적용). '자재'(건축자재)·'도매'(의류도매 등)는 따로:
+// 이름에 식자재·식재료·식품·푸드가 있으면 언제나 식료품점(세계로식자재마트, 장보고식자재마트, 식자재왕, 도매식자재마트…)
+var NON_FOOD_RE = /써브웨이|세탁|상가|타운|프라자|플라자|핸드백|네일|샘물|이유식|문구|화장품|약국|의류|가구|전자|철물|공구|꽃|낚시|이불|보일러|건설|건재|판넬|속옷|컴퓨터|plaza|mall/i;
+var FOOD_NAME_RE = /식자재|식재료|식품|푸드|food/i;
+function isNonFoodName(name){
+  var n = String(name || '');
+  if (FOOD_NAME_RE.test(n)) return false;
+  if (NON_FOOD_RE.test(n)) return true;
+  if (/자재/.test(n)) return true;                        // 건축자재, 인테리어자재 ('식자재'는 위에서 통과)
+  if (/도매/.test(n) && !/마트|mart|슈퍼|청과|농산|수산|축산|정육/i.test(n)) return true; // 철물도매·의류도매 ✗, 도매마트 ✓
+  return false;
+}
+// shop=wholesale: 코스트코·트레이더스 말고도 식자재마트(식자재 도매)는 넣어요. 이름이 마트·식자재·식품 같은 곳만, 식품이 아닌 도매(문구·의류·꽃 등)는 빼요
+var FOOD_WHOLESALE_NAME_RE = /식자재|식재료|식품|푸드|food|마트|mart|슈퍼/i; // 마트처럼 장 보는 곳만 (청과·수산 직판장, 도매시장 경매장 등은 빼요)
+function isFoodWholesale(tags, name){
+  tags = tags || {};
+  if (isNonFoodName(name)) return false;
+  if (/^(clothes|clothing|textiles|fabric|stationery|electronics|hardware|furniture|cosmetics|flowers|car|cars)/i.test(tags.wholesale || '')) return false;
+  return FOOD_WHOLESALE_NAME_RE.test(String(name || ''));
+}
 // Overpass 결과 → 마트 목록 (반경 안 전체 + 반경 밖은 대형마트만)
 function parseMarts(json, lat, lon, radiusKm){
   var out = [], seen = {};
@@ -87,8 +106,8 @@ function parseMarts(json, lat, lon, radiusKm){
     var brand = detectBrand(tags);
     var name = tags.name || tags['name:ko'] || tags.brand || (BRANDS[brand] ? BRANDS[brand].label : '이름 없는 마트');
     if (!tags.name && !tags.brand) return; // 이름 없는 점은 제외
-    if (brand === 'local' && NON_FOOD_RE.test(name)) return; // 식료품점이 아닌 잘못 태깅된 곳 제외
-    if (tags.shop === 'wholesale' && brand !== 'costco' && brand !== 'traders') return;
+    if (brand === 'local' && isNonFoodName(name)) return; // 식료품점이 아닌 잘못 태깅된 곳 제외
+    if (tags.shop === 'wholesale' && brand !== 'costco' && brand !== 'traders' && !(brand === 'local' && isFoodWholesale(tags, name))) return;
     var d = haversineKm(lat, lon, la, lo);
     if (d > radiusKm && !(BRANDS[brand] && BRANDS[brand].big)) return;
     var id = e.type + '/' + e.id;
@@ -759,4 +778,4 @@ function dealMatchesKw(d, kws){
   var hay = dealKwHay(d);
   return kws.some(function(k){ k = normKw(k); return !!k && hay.indexOf(k) >= 0; });
 }
-if (typeof module !== 'undefined') module.exports = {estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, arrowOfLabel:arrowOfLabel, recipeSubtitle:recipeSubtitle, recipeTotalLabel:recipeTotalLabel, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, cvsBrandOf:cvsBrandOf, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, APPLIANCES:APPLIANCES, APPLIANCE_ALT:APPLIANCE_ALT, recipeAppliances:recipeAppliances, normAp:normAp, applianceHidden:applianceHidden, applianceCounts:applianceCounts, apActiveCount:apActiveCount, apFryerHint:apFryerHint, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
+if (typeof module !== 'undefined') module.exports = {isNonFoodName:isNonFoodName, isFoodWholesale:isFoodWholesale, FOOD_NAME_RE:FOOD_NAME_RE, estKcal:estKcal, KCAL_100G:KCAL_100G, packGrams:packGrams, amtGrams:amtGrams, mealGrams:mealGrams, mealFrac:mealFrac, round10:round10, recipeServ:recipeServ, MEAL_DEFAULT_G:MEAL_DEFAULT_G, DEAL_SORTS:DEAL_SORTS, arrowOfLabel:arrowOfLabel, recipeSubtitle:recipeSubtitle, recipeTotalLabel:recipeTotalLabel, RECIPE_SORTS:RECIPE_SORTS, normSort:normSort, nextSort:nextSort, sortLabel:sortLabel, sortArrow:sortArrow, sortDeals:sortDeals, sortRecipes:sortRecipes, dealOffPct:dealOffPct, recipeSortVal:recipeSortVal, normKw:normKw, addKw:addKw, dealMatchesKw:dealMatchesKw, splitDealName:splitDealName, isUpcoming:isUpcoming, NON_FOOD_RE:NON_FOOD_RE, detectBrand:detectBrand, haversineKm:haversineKm, parseMarts:parseMarts, MART_TILE:MART_TILE, martTileKeys:martTileKeys, martsFromRows:martsFromRows, guessIng:guessIng, dealIng:dealIng, cvsBrandOf:cvsBrandOf, get DEALS(){ return DEALS; }, get RAW_DEALS(){ return RAW_DEALS; }, setDealsData:setDealsData, get DEALS_META(){ return DEALS_META; }, RECIPES:RECIPES, ALL_RECIPES:ALL_RECIPES, HAND_IMG_CREDITS:HAND_IMG_CREDITS, PUB_RECIPES:PUB_RECIPES, PUB_INFO:PUB_INFO, filterRecipes:filterRecipes, APPLIANCES:APPLIANCES, APPLIANCE_ALT:APPLIANCE_ALT, recipeAppliances:recipeAppliances, normAp:normAp, applianceHidden:applianceHidden, applianceCounts:applianceCounts, apActiveCount:apActiveCount, apFryerHint:apFryerHint, convOf:convOf, CONV_CAT:CONV_CAT, recipeTags:recipeTags, kindMatch:kindMatch, RECIPE_KINDS:RECIPE_KINDS, get DEALS_BUILT(){ return DEALS; }, RECIPE_CATS:RECIPE_CATS, buildDealIndex:buildDealIndex, scoreRecipe:scoreRecipe, rankRecipes:rankRecipes, isActive:isActive, setToday:function(t){TODAY_FIXED=t;}, ING_LIST:ING_LIST, BRANDS:BRANDS, get SOURCES(){ return SOURCES; }};
