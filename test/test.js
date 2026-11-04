@@ -544,7 +544,7 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   const A = [bx('흙당근(국산·봉)', 100, 100, 200, 30), bx('2,985원', 100, 135, 160, 50), bx('수·목 행사가', 400, 100, 120, 20), bx('3,980원', 525, 100, 90, 20), bx('양파(국산·3kg)', 400, 125, 200, 30), bx('5,980원', 400, 160, 160, 50),
     bx('우리쌀(국산·20kg)', 100, 400, 200, 30), bx('257,855원', 100, 435, 200, 50)];
   const B = A.map(b => b[0] === '5,980원' ? bx('8,980원', 400, 160, 160, 50) : b);
-  const got = Object.fromEntries(RP.combine([A, B]).map(x => [RP.KEY(x.name), x.price]));
+  const got = Object.fromEntries(RP.combine([A, B], { conf: false }).map(x => [RP.KEY(x.name), x.price]));
   assert.equal(got['흙당근'], 2985); assert.equal(got['양파'], null, '두 판독이 다르면 비움'); assert.equal(got['우리쌀'], null, '20만원 넘으면 버림');
   assert(!Object.values(got).includes(3980), '수·목 행사가(작은 가격) 제외');
   assert.equal(RP.parsePrice('29608'), null); assert.equal(RP.parsePrice('1,984원'), 1984); assert.equal(RP.parsePrice('정상가 5,000원'), null);

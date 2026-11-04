@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # 탑마트 전단 OCR (무료 · RapidOCR = PaddleOCR PP-OCRv5 한국어 모델을 onnxruntime 으로 실행)
-# 사용: python3 scripts/ocr_rapid.py 전단1.webp 전단2.webp ...  → 표준출력 JSON {파일: [보통 해상도 결과, 원본 해상도 결과]}
+# 사용: python3 scripts/ocr_rapid.py 전단1.webp 전단2.webp ...  → 표준출력 JSON {파일: [판독 4가지]}
 #   결과 = [[글자, [[x,y]×4], 확신도], ...]. 두 해상도로 읽어 서로 맞춰 보면(topmart.js) 잘못 읽은 가격을 많이 걸러요.
 # 모델 파일(약 15MB)은 OCR_MODEL_DIR(기본 ~/.cache/martestro-ocr)에 두고 다시 써요(GitHub Actions 캐시).
 import sys, os, json, shutil
@@ -11,8 +11,8 @@ MD = os.environ.get('OCR_MODEL_DIR') or os.path.expanduser('~/.cache/martestro-o
 os.makedirs(MD, exist_ok=True)
 DET, REC, CLS = "ch_PP-OCRv5_det_mobile.onnx", "korean_PP-OCRv5_rec_mobile.onnx", "ch_ppocr_mobile_v2.0_cls_mobile.onnx"
 
-def engine(max_side):
-    p = {"Global.max_side_len": max_side, "Global.use_cls": True, "Global.log_level": "error",
+def engine(max_side, cls=True):
+    p = {"Global.max_side_len": max_side, "Global.use_cls": cls, "Global.log_level": "error",
          "Det.ocr_version": OCRVersion.PPOCRV5, "Det.model_type": ModelType.MOBILE,
          "Rec.lang_type": LangRec.KOREAN, "Rec.ocr_version": OCRVersion.PPOCRV5, "Rec.model_type": ModelType.MOBILE}
     if os.path.exists(os.path.join(MD, DET)) and os.path.exists(os.path.join(MD, REC)) and os.path.exists(os.path.join(MD, CLS)):
@@ -30,7 +30,8 @@ def run(eng, f):
     if r.boxes is None: return []
     return [[t, [[float(x), float(y)] for x, y in b], float(s)] for b, t, s in zip(r.boxes, r.txts, r.scores)]
 
-engs = [engine(2000), engine(4000)]
+# 네 가지로 읽어(보통·원본 해상도 × 글자 방향 보정 켬·끔) 여러 판독이 같은 값을 낸 가격을 믿어요
+engs = [engine(2000), engine(4000), engine(2000, False), engine(4000, False)]
 keep_models()
 out = {f: [run(e, f) for e in engs] for f in sys.argv[1:]}
 json.dump(out, sys.stdout, ensure_ascii=False)

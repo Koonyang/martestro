@@ -51,19 +51,34 @@ const lev = (a, b) => { const d = Array.from({ length: a.length + 1 }, (_, i) =>
 const sim = (a, b) => 1 - lev(a, b) / Math.max(a.length, b.length, 1);
 const MAXP = 200000, STRONG = 1, SOLO = 0.3;
 // runs: 같은 전단 한 장을 여러 설정으로 읽은 상자 목록들 → [{name, price|null}] (name = OCR 원문)
-function combine(runs) {
+// 지난주 손 가격(88품목)으로 고른 기준(정확도 약 93%): 판독 둘 이상이 같은 값 + 이름과 가격 글자 1배 거리 안,
+// 판독 하나뿐이면 아주 가까울 때(0.3배)만, 판독끼리 다르면 더 많이 나온 값, 앞에 숫자 하나 더 붙은 판독은 합치기
+const DEF = { solo: 0.3, conf: 0.3, repair: true, both: 1 };
+function combine(runs, o = {}) {
+  o = { ...DEF, ...o };
   const groups = [];
   runs.forEach((r, i) => pair(r, { k: 3 }).forEach(x => {
     const k = KEY(x.name); if (k.length < 2) return;
     let g = groups.find(g => sim(g.k, k) >= 0.75); if (!g) groups.push(g = { k, name: x.name, c: [] });
-    g.c.push({ i, p: x.price, d: x.d });
+    g.c.push({ i, p: x.price, d: x.d, ph: x.ph });
   }));
   return groups.map(g => {
-    const vals = new Set(g.c.map(c => c.p)), p = g.c[0].p;
-    const runsN = new Set(g.c.map(c => c.i)).size;
-    // 두 해상도가 같은 값을 읽었으면 믿고, 한쪽만 읽었으면 이름과 아주 가까울 때만(SOLO)
-    const okP = vals.size === 1 && p >= 100 && p <= MAXP && (runsN >= 2 || g.c[0].d < SOLO);
-    return { name: g.name, price: okP ? p : null };
+    let c = g.c.filter(c => c.p >= 100 && c.p <= MAXP);
+    // 앞에 숫자가 하나 더 붙은 판독(24956 ↔ 4956)은 짧은 쪽으로 합쳐요
+    if (o.repair) { const ps = c.map(x => x.p); c = c.map(x => { const q = ps.find(q => q !== x.p && String(x.p).length === String(q).length + 1 && String(x.p).endsWith(String(q))); return q ? { ...x, p: q } : x; }); }
+    if (!c.length) return { name: g.name, price: null };
+    const by = {}; for (const x of c) (by[x.p] = by[x.p] || []).push(x);
+    const vals = Object.keys(by).map(Number);
+    const score = v => [new Set(by[v].map(x => x.i)).size, -Math.min(...by[v].map(x => x.d))];
+    vals.sort((a, b) => { const A = score(a), B = score(b); return B[0] - A[0] || B[1] - A[1]; });
+    const v = vals[0], sup = new Set(by[v].map(x => x.i)).size, dmin = Math.min(...by[v].map(x => x.d));
+    if (vals.length > 1) { // 판독끼리 다를 때: conf 가 켜져 있고, 이긴 값이 더 많은 판독의 지지를 받거나 이름에 훨씬 가까울 때만
+      if (!o.conf) return { name: g.name, price: null };
+      const v2 = vals[1], sup2 = new Set(by[v2].map(x => x.i)).size, d2 = Math.min(...by[v2].map(x => x.d));
+      if (!(sup > sup2 || dmin + o.conf < d2)) return { name: g.name, price: null };
+    }
+    const ok = sup >= 2 ? dmin < o.both : dmin < o.solo;
+    return { name: g.name, price: ok ? v : null };
   });
 }
 // 가격 짝이 없는 이름 줄도 품목 후보로(이름만)

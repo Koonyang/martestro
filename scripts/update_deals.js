@@ -58,6 +58,15 @@ function tagConv(r) {
   }
   // 3) 가격 기록 쌓기(진짜로 읽은 가격만) → 가격 못 읽은 품목에 추정 가격(지난 전단 → 다른 마트) 채우기
   const hist = PH.load();
+  // OCR로 읽은 탑마트 가격이 지난 전단의 같은 품목보다 3배 넘게 비싸거나 1/3보다 싸면 잘못 읽은 걸로 보고 비워요
+  let odd = 0;
+  next.deals.topmart = (next.deals.topmart || []).map(r => {
+    if (r[1] == null || (r[11] && r[11].est)) return r;
+    const e = PH.estimate(hist, next.deals, 'topmart', r[0], r[4] || today);
+    if (e && e.src === 'past' && (r[1] > e.p * 3 || r[1] * 3 < e.p)) { odd++; r = r.slice(); r[1] = null; }
+    return r;
+  });
+  if (odd) console.log('탑마트: 지난 가격과 너무 달라 비운 가격 ' + odd + '개');
   PH.record(hist, next.deals, today);
   const est = PH.fill(hist, next.deals, today);
   PH.save(hist);
