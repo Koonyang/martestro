@@ -86,7 +86,12 @@ function fill(h, deals, today, marts = EST_MARTS) {
     const s = stat[m] = { read: 0, est: 0, none: 0 };
     deals[m] = (deals[m] || []).map(r => {
       if (r[11] && r[11].est) { r = r.slice(0, 11); r[1] = null; }
-      if (r[1] != null) { s.read++; return trim(r); }
+      if (r[1] != null) {
+        s.read++;
+        // 전단에 정상가가 없으면(탑마트) 지난 전단에 적힌 같은 품목 정상가를 빌려 써요 — 읽은 가격보다 비쌀 때만
+        if (r[2] == null) { const e = estimate(h, deals, m, r[0], r[4] || today); if (e && e.src === 'past' && e.o && e.o > r[1] && e.o <= r[1] * 3) { r = r.slice(); r[2] = e.o; s.orig = (s.orig || 0) + 1; } }
+        return trim(r);
+      }
       const e = estimate(h, deals, m, r[0], r[4] || today);
       if (!e) { s.none++; return trim(r); }
       s.est++;

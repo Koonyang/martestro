@@ -41,6 +41,20 @@ jobs:
       - name: OCR 엔진(tesseract.js) 설치 (가격 판독용 · 실패하면 tesseract 명령어로)
         continue-on-error: true
         run: npm install --no-save --no-package-lock --no-audit --no-fund tesseract.js@5
+      - name: OCR 모델 캐시 (RapidOCR 한국어 모델 ~15MB)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/martestro-ocr
+            ~/.cache/pip
+          key: rapidocr-3.10-ppocrv5-kor-v1
+      - name: 무료 OCR RapidOCR 설치 (탑마트 가격 판독 1순위 · 실패하면 tesseract.js 로)
+        continue-on-error: true
+        run: |
+          python3 -m venv /tmp/ocrenv
+          /tmp/ocrenv/bin/pip install -q rapidocr==3.10.0 onnxruntime opencv-python-headless
+          /tmp/ocrenv/bin/python -c "import rapidocr, onnxruntime; print('rapidocr ok')"
+          echo "OCR_PYTHON=/tmp/ocrenv/bin/python" >> "$GITHUB_ENV"
       - name: 전국 마트 위치 갱신 (주 1회 · 실패하면 기존 유지)
         if: github.event.schedule == '30 18 * * 0' || inputs.marts
         continue-on-error: true

@@ -1,22 +1,36 @@
 // 탑마트(서원유통) — 전단이 이미지뿐이라 martmap.co.kr 이 모아 둔 전단 이미지를 받아 무료 OCR(tesseract)로 읽어요.
 // 1) 전단 한 장 전체에서 품목 이름 줄(위치 포함)을 찾고, 2) 이름 바로 아래(가격이 적히는 자리)를 잘라 숫자만 다시 읽어요.
 // 가격은 「1,984원」처럼 모양이 확실할 때만 넣어요(애매하면 비워 두고, update_deals 가 지난 전단·다른 마트 가격으로 어림해요).
-// OCR 엔진: npm 패키지 tesseract.js 가 있으면 그걸(로컬·CI 결과가 같음), 없으면 tesseract 명령어를 써요.
+// OCR 엔진: 1순위 RapidOCR(PaddleOCR 한국어 모델, 무료·pip) — 이름·가격 상자를 한 번에 읽어 topmart_rapid.js 가 짝지어요.
+//   없으면(설치 실패) 예전 방식: npm 패키지 tesseract.js 가 있으면 그걸(로컬·CI 결과가 같음), 없으면 tesseract 명령어를 써요.
 const fs = require('fs'), os = require('os'), path = require('path');
 const { execFileSync } = require('child_process');
 const { getJson, http, isoToKST, isFood, clean } = require('../lib');
 const L = require('../../src/logic.js');
+const RP = require('./topmart_rapid');
 const STORE = 'topmart-21840'; // 탑마트 진주호탄점 (전단은 전 점포 공통)
 const API = 'https://martmap.co.kr/api/stores/' + STORE;
 const PAGE = 'https://martmap.co.kr/stores/' + STORE;
 
-const FIX = [[/칼치/g, '갈치'], [/토미토/g, '토마토'], [/매스켓|머스켓/g, '머스캣'], [/브로컬리/g, '브로콜리'], [/삼겸/g, '삼겹']];
+const FIX = [[/칼치/g, '갈치'], [/토미토/g, '토마토'], [/매스켓|머스켓/g, '머스캣'], [/브로컬리/g, '브로콜리'], [/삼겸/g, '삼겹'], [/삼검/g, '삼겹'], [/감글/g, '감귤'], [/고츠가루/g, '고춧가루'], [/밀치/g, '멸치'], [/필리판/g, '필리핀'], [/콰리고추/g, '꽈리고추'], [/파리고추/g, '꽈리고추']];
 
 function tessJs() { try { return require('tesseract.js'); } catch (e) { return null; } }
 function hasCli() {
   try { execFileSync(process.env.TESSERACT_BIN || 'tesseract', ['--version'], { stdio: 'ignore' }); return true; } catch (e) { return false; }
 }
 function hasTesseract() { return !!tessJs() || hasCli(); }
+const PY = process.env.OCR_PYTHON || 'python3';
+function hasRapid() { if (process.env.NO_RAPID) return false; try { execFileSync(PY, ['-c', 'import rapidocr, onnxruntime'], { stdio: 'ignore' }); return true; } catch (e) { return false; } }
+// RapidOCR 로 전단 여러 장 → 장마다 [{name, price}] (이름은 cleanName 으로 다듬기 전 원문)
+function readRapid(files) {
+  const out = execFileSync(PY, [path.join(__dirname, '..', 'ocr_rapid.py'), ...files], { encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'inherit'], timeout: 15 * 60000 });
+  const j = JSON.parse(out);
+  return files.map(f => {
+    const runs = j[f] || [], got = RP.combine(runs), seen = new Set(got.map(g => RP.KEY(g.name)));
+    for (const n of RP.names(runs)) if (![...seen].some(k => RP.sim(k, RP.KEY(n)) >= 0.75)) { seen.add(RP.KEY(n)); got.push({ name: n, price: null }); }
+    return got;
+  });
+}
 
 // OCR 엔진 하나로 통일: recognize(file, psm) → {text, lines:[[글자, x0, y0, x1, y1]]}
 async function makeEngine() {
@@ -63,6 +77,8 @@ function cleanName(line, dealIng) {
   if (!dealIng(name) && !L.convOf(name)) return null; // 레시피 재료나 간편식품으로 확인되는 이름만 (OCR 잡음 제거)
   return name;
 }
+// 가격까지 짝지어진 이름은 재료 사전에 없어도(isFood 만 통과하면) 받아요
+function cleanLoose(line) { return cleanName(line, () => true); }
 function extractNames(text, dealIng) {
   return text.split('\n').map(l => cleanName(l, dealIng)).filter(Boolean);
 }
@@ -132,27 +148,52 @@ async function run(ctx) {
   const f = flyers[0];
   const prev = ctx.prevStatus || {};
   if (prev.flyerId === f.id && !process.env.FORCE_OCR) return { keep: true, msg: '같은 전단(' + f.title + ') — 기존 정리 데이터 유지' };
-  if (!hasTesseract()) throw new Error('탑마트: 새 전단 발견(' + f.title + ')했지만 tesseract(OCR)가 없어 기존 데이터 유지');
+  const rapid = hasRapid();
+  if (!rapid && !hasTesseract()) throw new Error('탑마트: 새 전단 발견(' + f.title + ')했지만 tesseract(OCR)가 없어 기존 데이터 유지');
   const start = isoToKST(f.startDate), end = isoToKST(f.endDate);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'topmart-'));
   const byName = new Map(), items = [];
   const pages = (f.pages || []).sort((a, b) => a.pageOrder - b.pageOrder);
-  const eng = await makeEngine();
+  const files = [];
+  for (const p of pages) {
+    const buf = Buffer.from(await (await http(p.imageUrl, { timeout: 60000 })).arrayBuffer());
+    const file = path.join(dir, 'p' + p.pageOrder + '.webp'); fs.writeFileSync(file, buf); files.push(file);
+  }
+  let eng = null, results = null, t0 = Date.now();
+  if (rapid) {
+    try {
+      results = readRapid(files).map(list => list.map(({ name, price }) => {
+        const n = cleanName(name, ctx.dealIng); if (!n) return null;
+        // 규격(500g·1kg·10입…)은 한 끼 가격 계산에 쓰여서 「이름(500g)」으로 남겨요
+        const sz = (String(name).split('(').slice(1).join('(').match(/([1-9]\d*(?:\.\d+)?)\s?(kg|g|ml|L|입|개|마리|봉)(?![a-z])/i) || [])[0];
+        return { name: sz ? n + '(' + sz.replace(/\s/g, '') + ')' : n, price };
+      }).filter(Boolean));
+      eng = { name: 'RapidOCR', close: async () => {} };
+    } catch (e) { console.error('[topmart] RapidOCR 실패 → tesseract 로 대신:', e.message); results = null; }
+  }
+  if (!results) {
+    if (!hasTesseract()) throw new Error('탑마트: RapidOCR 실패, tesseract 도 없어 기존 데이터 유지');
+    eng = await makeEngine(); results = [];
+    for (const file of files) { try { results.push(await readPage(eng, file, ctx.dealIng, dir)); } catch (e) { results.push([]); } }
+  }
+  console.error('[topmart] OCR ' + eng.name + ' ' + files.length + '장 ' + Math.round((Date.now() - t0) / 1000) + '초');
   try {
-    for (const p of pages) {
-      const buf = Buffer.from(await (await http(p.imageUrl, { timeout: 60000 })).arrayBuffer());
-      const file = path.join(dir, 'p' + p.pageOrder + '.webp'); fs.writeFileSync(file, buf);
-      let found = [];
-      try { found = await readPage(eng, file, ctx.dealIng, dir); } catch (e) { continue; }
+    for (let pi = 0; pi < pages.length; pi++) {
+      const p = pages[pi], found = results[pi] || [];
       for (const { name, price } of found) {
         if (!(isFood(name, ctx.dealIng) || L.convOf(name))) continue;
-        const had = byName.get(name);
+        const had = byName.get(name) || (price == null && items.find(r => RP.sim(RP.KEY(r[0]), RP.KEY(name)) >= 0.7));
         if (had) { if (had[1] == null && price != null) { had[1] = price; had[3] = NOTE_P; } continue; }
         const row = [name, price, null, price != null ? NOTE_P : NOTE_N, start, end, null, 'topmart', p.pageOrder];
         byName.set(name, row); items.push(row);
       }
     }
   } finally { await eng.close(); }
+  // 가격 없는 이름 조각(「돼지냉장」⊂「돼지냉장갈비」)은 빼요 — 엉뚱한 어림값이 붙지 않게
+  for (let i = items.length - 1; i >= 0; i--) {
+    const k = RP.KEY(items[i][0]);
+    if (items[i][1] == null && items.some(r => r !== items[i] && RP.KEY(r[0]) !== k && RP.KEY(r[0]).includes(k))) items.splice(i, 1);
+  }
   const priced = items.filter(r => r[1] != null).length;
   return {
     items, flyerId: f.id, flyerTitle: f.title, priced, engine: eng.name,
@@ -167,4 +208,4 @@ async function run(ctx) {
 }
 const NOTE_P = ''; // 가격을 읽은 품목은 따로 문구 없이(「가격확인」 꼬리표로 충분)
 const NOTE_N = '전단 이미지 자동 판독(OCR) · 가격은 전단 원본에서 확인';
-module.exports = { run, extractNames, hasTesseract, priceFromTexts };
+module.exports = { run, extractNames, hasTesseract, hasRapid, priceFromTexts, cleanName };
