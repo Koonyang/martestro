@@ -287,7 +287,9 @@ function buildDeals(){
       // r[10] = 상품 사진 주소 (선택 칸, 공식 상품 이미지가 있는 마트만 — 지금은 홈플러스)
       // r[9] 이 종류 이름(예: '즉석식')이면 그 이름을, '간편식품'이면 묶음 이름을 표시
       var cv = convOf(r[0]); if (!cv && typeof r[9] === 'string' && r[9]) cv = {kind:r[9], ing:r[6] && r[6] !== '-' ? r[6] : null};
-      return {id: brand+'-'+i, brand: brand, name:r[0], price:r[1], orig:r[2], cond:r[3], start:r[4], end:r[5],
+      // r[11] = 추정 가격 {est:1, p, src:'past'|'other', m, d, n} — 전단에서 가격을 못 읽어 지난 전단·다른 마트 가격으로 어림한 값(가격 칸은 null 그대로)
+      var est = (r[1] == null && r[11] && r[11].est && r[11].p > 0) ? {src:r[11].src, mart:r[11].m || null, date:r[11].d || null, from:r[11].n || null} : null;
+      return {id: brand+'-'+i, brand: brand, name:r[0], price: est ? r[11].p : r[1], est: est, orig: est && r[11].o > r[11].p ? r[11].o : r[2], cond:r[3], start:r[4], end:r[5],
         ing: cv ? cv.ing : (r[6] === '-' ? null : (r[6] || dealIng(r[0]))), cat: cv ? CONV_CAT : null, kind: cv ? cv.kind : null, src: r[7] || brand, page: r[8] || null, img: safeImg(r[10]), real:true,
         check: !!(SOURCES[r[7] || brand] && SOURCES[r[7] || brand].needsCheck)};
     });
@@ -485,11 +487,11 @@ function buildDealIndex(deals, today){
       var ua = isUpcoming(a, today) ? 1 : 0, ub = isUpcoming(b, today) ? 1 : 0;
       if (ua !== ub) return ua - ub; // 오늘 적용되는 할인 우선
       // 할인율 우선(대용량 묶음이 '절약액'만 커서 1등 되는 것 방지), 같으면 절약액
-      var ra = (a.price!=null && a.orig) ? Math.round((a.orig-a.price)/a.orig*100) : -1;
-      var rb = (b.price!=null && b.orig) ? Math.round((b.orig-b.price)/b.orig*100) : -1;
+      var ra = (!a.est && a.price!=null && a.orig) ? Math.round((a.orig-a.price)/a.orig*100) : -1;
+      var rb = (!b.est && b.price!=null && b.orig) ? Math.round((b.orig-b.price)/b.orig*100) : -1;
       if (rb !== ra) return rb - ra;
-      var sa = (a.price!=null && a.orig!=null) ? a.orig-a.price : -1;
-      var sb = (b.price!=null && b.orig!=null) ? b.orig-b.price : -1;
+      var sa = (!a.est && a.price!=null && a.orig!=null) ? a.orig-a.price : -1;
+      var sb = (!b.est && b.price!=null && b.orig!=null) ? b.orig-b.price : -1;
       if (sb !== sa) return sb - sa;
       var pa = a.price==null ? 1e12 : a.price, pb = b.price==null ? 1e12 : b.price;
       return pa - pb;
@@ -613,7 +615,9 @@ function estKcal(r){
 RECIPES.forEach(function(r){ r.kcal = estKcal(r); r.kcalEst = true; });
 // 한 끼 비율(0~1). 팩 크기를 모르면 null
 function mealFrac(r, ing, d){
-  var pg = packGrams(d.name, d.ing || ing.k); if (!pg) return null;
+  var pg = packGrams(d.name, d.ing || ing.k);
+  if (!pg && d.est && d.est.from) pg = packGrams(d.est.from, d.ing || ing.k); // 추정 가격은 어림에 쓴 지난 전단 상품(용량 있음) 기준
+  if (!pg) return null;
   var use = mealGrams(r, ing);
   if (ing.k === '쌀' && /밥/.test(d.name)) use = use * 210 / 90; // 쌀(생쌀 90g) ↔ 지은 밥 상품(1공기 210g)
   return use / pg; // 100g당 가격이면 1보다 클 수 있어요 (150g = 100g 가격 × 1.5)
@@ -690,7 +694,7 @@ function sortBy(list, val, dir){
     return (a.v < b.v ? -1 : a.v > b.v ? 1 : 0) * dir || (a.i - b.i);
   }).map(function(o){ return o.x; });
 }
-function dealOffPct(d){ return d.price != null && d.orig != null && d.orig > d.price ? (1 - d.price / d.orig) * 100 : null; }
+function dealOffPct(d){ return !d.est && d.price != null && d.orig != null && d.orig > d.price ? (1 - d.price / d.orig) * 100 : null; }
 var DEAL_SORT_VAL = {off:dealOffPct, price:function(d){ return d.price != null ? +d.price : null; }, end:function(d){ return d.end || null; }};
 function sortDeals(deals, cur){
   var d = sortDef(DEAL_SORTS, cur && cur.k);

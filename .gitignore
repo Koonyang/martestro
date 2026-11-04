@@ -6,3 +6,4 @@ node_modules/
 tmp/
 _site/
 .DS_Store
+*.traineddata

@@ -537,4 +537,43 @@ console.log('탑마트 10/30: 표시', tmAct.length, '(오늘 할인', tmNow.len
   assert(/aria-pressed="false"/.test(T) && /load\('mr_ap', null\)/.test(T) && /save\('mr_ap', rAp\)/.test(T), '토글 aria-pressed + 저장');
   assert(/transition:grid-template-rows \.2s cubic-bezier\(\.16,1,\.3,1\)/.test(T), '200ms ease-out');
   console.log('없는 가전제품 필터 ok', all3.length); }
+
+// 탑마트 OCR 가격 판독 + 추정 가격(지난 전단 → 다른 마트)
+{ const { priceFromTexts } = require('../scripts/scrapers/topmart');
+  assert.equal(priceFromTexts(['5.984왼 양파(국산6-8임왕)', '5.984원']), 5984);
+  assert.equal(priceFromTexts(['4,784원 _、 흙대파(908/8)']), 4784);
+  assert.equal(priceFromTexts(['. 29608', '29600']), null, '원이 숫자로 읽힌 건 버림');
+  assert.equal(priceFromTexts(['19848', '|  1.0040']), null);
+  assert.equal(priceFromTexts(['2,784', 'x 2,784 y']), 2784, '쉼표 세 자리가 두 번 같으면 OK');
+  assert.equal(priceFromTexts(['2,784', '2,780']), null);
+  assert.equal(priceFromTexts(['65536099980']), null);
+  const H = require('../scripts/price_history');
+  assert.equal(H.key('남양)찰기장쌀'), H.key('남양 찰기장쌀(1kg)'));
+  assert.equal(H.key('해남절임배추(국산·20kg) 사전예약'), '해남절임배추');
+  assert.equal(H.size('사과(국산·2.5kg·BOX)'), 2500); assert.equal(H.size('참치(135g×4입)'), 540); assert.equal(H.size('양파'), null);
+  const h = { version: 1, marts: {} };
+  const old = { topmart: [['양파(국산·1.5kg·망)', 2990, null, '', '2026-10-21', '2026-10-27', null, 'topmart', 1], ['깐마늘(국산·500g)', 4500, null, '', '2026-10-21', '2026-10-27', null, 'topmart', 1]] };
+  H.record(h, old, '2026-10-21');
+  const now = { topmart: [['양파', null, null, 'x', '2026-11-04', '2026-11-07', null, 'topmart', 1], ['깐마늘', 4784, null, '', '2026-11-04', '2026-11-07', null, 'topmart', 1], ['우유', null, null, 'x', '2026-11-04', '2026-11-07', null, 'topmart', 2], ['외계과일', null, null, 'x', '2026-11-04', '2026-11-07', null, 'topmart', 2]],
+    lottemart: [['한우 전품목 (1등급)', null, null, '50%', '2026-11-04', '2026-11-10', null, 'lottemart', 1], ['우유 (900ml)', null, null, '', '2026-11-04', '2026-11-10', null, 'lottemart', 1]],
+    emart: [['우유', 2500, 3000, '', '2026-11-04', '2026-11-10', null, 'emart', 1], ['우유 (1.8L)', 4800, null, '', '2026-11-04', '2026-11-10', null, 'emart', 1]] };
+  H.record(h, now, '2026-11-04');
+  const st = H.fill(h, now, '2026-11-04');
+  assert.deepEqual(st.topmart, { read: 1, est: 2, none: 1 });
+  const on = now.topmart[0][11]; assert(on && on.est === 1 && on.p === 2990 && on.src === 'past' && on.d === '2026-10-21', JSON.stringify(on));
+  assert.equal(now.topmart[0][1], null, '가격 칸은 null 그대로');
+  const mu = now.topmart[2][11]; assert(mu && mu.src === 'other' && mu.m === 'emart' && mu.p === 2500, '다른 마트: 용량 모르는 쪽끼리만 ' + JSON.stringify(mu));
+  assert.equal(now.lottemart[0][11], undefined, '전품목은 추정 안 함');
+  assert(now.lottemart[1][11] && now.lottemart[1][11].p === 2400, '용량 비례(1.8L 4800 → 900ml 2400) ' + JSON.stringify(now.lottemart[1][11]));
+  assert(!h.marts.topmart[H.key('양파')].some(e => e[0] === '2026-11-04'), '추정 가격은 기록에 안 쌓임');
+  H.fill(h, now, '2026-11-04'); assert.equal(now.topmart[0][11].p, 2990, '다시 돌려도 같음');
+  // 앱: 추정 가격은 price 로 계산에 쓰이고 est 표시
+  const D2 = JSON.parse(require('fs').readFileSync(__dirname+'/fixtures/deals_2026-10-30.json'));
+  const D3 = JSON.parse(JSON.stringify(D2)); D3.deals.topmart = now.topmart;
+  L.setDealsData(D3); const td = L.DEALS.topmart;
+  assert.equal(td[0].price, 2990); assert(td[0].est && td[0].est.src === 'past'); assert.equal(td[1].est, null); assert.equal(td[3].price, null);
+  L.setDealsData(D2);
+  const T = require('fs').readFileSync(__dirname+'/../src/template.html','utf8');
+  assert(/tipBtn\('est','추정','est'\)/.test(T) && /EST_TIP = '이번 전단에서 가격을 읽지 못해/.test(T), '추정 태그 + 말풍선');
+  console.log('탑마트 가격 판독·추정 가격 ok'); }
 console.log('ALL TESTS PASSED');

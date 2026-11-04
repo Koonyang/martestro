@@ -6,6 +6,7 @@
 const fs = require('fs'), path = require('path');
 const L = require('../src/logic.js');
 const { todayKST } = require('./lib');
+const PH = require('./price_history');
 
 const FILE = process.env.DEALS_FILE || path.join(__dirname, '..', 'data', 'deals.json');
 const SCRAPERS = { emart: require('./scrapers/emart'), homeplus: require('./scrapers/homeplus'), lottemart: require('./scrapers/lottemart'), topmart: require('./scrapers/topmart'),
@@ -47,14 +48,22 @@ function tagConv(r) {
       next.deals[mart] = items;
       if (!same) next.sources[mart] = r.source;
       next.status[mart] = { mode: 'auto', ok: true, fetched: same ? (st.fetched || today) : today, lastTry: today, count: items.length, ...(r.total ? { total: r.total, dropped: r.dropped } : {}),
-        ...(r.flyerId ? { flyerId: r.flyerId } : {}), ...(r.flyerTitle ? { flyerTitle: r.flyerTitle } : {}), msg: same ? '변화 없음' : '갱신됨' };
-      log.push(`${mart}: ${same ? '변화 없음' : '갱신'} ${items.length}개`);
+        ...(r.flyerId ? { flyerId: r.flyerId } : {}), ...(r.flyerTitle ? { flyerTitle: r.flyerTitle } : {}), ...(r.priced != null ? { priced: r.priced } : {}),
+        msg: (same ? '변화 없음' : '갱신됨') + (r.msg ? ' · ' + r.msg : '') };
+      log.push(`${mart}: ${same ? '변화 없음' : '갱신'} ${items.length}개${r.msg ? ' — ' + r.msg : ''}`);
     } catch (e) {
       next.status[mart] = { ...st, ok: false, lastTry: today, lastError: String(e.message || e).slice(0, 300) };
       log.push(`${mart}: 실패 → 이전 데이터 유지 (${next.deals[mart] ? next.deals[mart].length : 0}개) — ${e.message}`);
     }
   }
-  // 3) 바뀐 게 있을 때만 저장 (lastTry 같은 시도 기록만 바뀐 건 무시)
+  // 3) 가격 기록 쌓기(진짜로 읽은 가격만) → 가격 못 읽은 품목에 추정 가격(지난 전단 → 다른 마트) 채우기
+  const hist = PH.load();
+  PH.record(hist, next.deals, today);
+  const est = PH.fill(hist, next.deals, today);
+  PH.save(hist);
+  console.log('가격:', Object.entries(est).map(([m, s]) => `${m} 읽음 ${s.read} · 추정 ${s.est} · 없음 ${s.none}`).join(' / '));
+  for (const [m, s] of Object.entries(est)) if (next.status[m]) next.status[m].prices = s;
+  // 4) 바뀐 게 있을 때만 저장 (lastTry 같은 시도 기록만 바뀐 건 무시)
   const strip = o => JSON.stringify({ s: o.sources, d: o.deals, st: Object.fromEntries(Object.entries(o.status).map(([k, v]) => [k, { ...v, lastTry: undefined, msg: undefined }])) });
   console.log(log.join('\n'));
   console.log('사진:', Object.entries(next.deals).map(([k, v]) => k + ' ' + v.filter(r => r[10]).length + '/' + v.length).join(', '));

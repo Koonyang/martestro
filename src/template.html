@@ -242,6 +242,8 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .tag{display:inline-flex;align-items:center;font-size:.71875rem;font-weight:650;padding:calc(2em / 11.5) calc(8em / 11.5);border-radius:6px;background:var(--card2);color:var(--m);white-space:nowrap}
 .tag.real{background:var(--info2);color:var(--info)}
 .tag.me{background:var(--me2);color:var(--me)}
+.price .ap{font-weight:600;font-size:.8125rem;color:var(--m)}
+button.tipb.est{background:transparent;border:0;padding:0;font-size:.6875rem;font-weight:600;color:var(--m);line-height:1.65}
 .tag.chk{background:transparent;color:var(--warn);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--warn) 55%,transparent)}
 .tag.soon{background:var(--a2);color:var(--a-ink)}
 .tag.today{background:var(--sale2);color:var(--sale)}
@@ -536,6 +538,7 @@ button.tipb{font:inherit;min-height:0;margin:0;cursor:help;-webkit-tap-highlight
 button.tipb.mk{padding:calc(1em / 10.5) calc(5em / 10.5);white-space:nowrap;font-size:.65625rem;font-weight:700;line-height:1.65;color:inherit}
 button.tipb.tag{padding:calc(2em / 11.5) calc(8em / 11.5);white-space:nowrap;font-size:.71875rem;font-weight:650;line-height:inherit}
 button.tipb.tag.chk,button.tipb.mk.chk{color:var(--warn);background:transparent}
+button.tipb.mk.est{color:var(--m);background:transparent;font-weight:600}
 button.tipb:hover{filter:none}
 button.tipb[aria-expanded=true]{outline:2px solid var(--g);outline-offset:1px}
 button.tipb:focus-visible{outline:2px solid var(--g);outline-offset:2px}
@@ -1468,15 +1471,17 @@ function dealRow(d){
   var when = d.end ? (up ? '<span class="tag soon">'+fmtMD(d.start)+' 시작</span>' : '') + (d.end===today ? '<span class="tag today">오늘까지</span>' : '<span>'+(d.start && d.start === d.end ? fmtMD(d.end)+' 단 하루' : '~' + fmtMD(d.end))+'</span>') : '';
   var off = (d.price != null && d.orig > d.price) ? Math.round((1 - d.price / d.orig) * 100) : 0;
   var np = nPlusOne(d.cond); // 편의점 1+1·2+1: 배지는 「1+1」, 가격은 개당
-  var priceHtml = d.price != null
+  var priceHtml = d.est
+    ? '<span class="now"><span class="ap">약 </span>'+formatWon(d.price)+'</span>'+tipBtn('est','추정','est')
+    : d.price != null
     ? (d.orig ? '<span class="was">'+(np ? '<span class="off np">'+np+'</span>' : off ? '<span class="off">−'+off+'%</span>' : '')+(S.origLabel ? '<span>'+esc(S.origLabel)+'</span>' : '')+'<span class="orig">'+formatWon(d.orig)+'</span></span>' : '') + '<span class="now">'+formatWon(d.price)+'</span>'
     : '<span class="cond">'+esc(d.cond)+'</span>';
   if (d.kind) tag = '<span class="tag conv">'+esc(d.kind)+'</span>' + tag;
   if (d.ing){ // 레시피 재료로 쓰이는 품목만 고를 수 있어요
     var sk = selKey(d), on = !!selDeals[sk];
-    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기">'+dealThumb(d)+'<span class="pk-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span></button><div class="dinfo" style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(np ? nPlusOneNote(d.cond) : d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+    return '<div class="deal pickable'+(on?' picked':'')+'" data-sel="'+esc(sk)+'" data-ing="'+esc(d.ing)+'"><button type="button" class="pick" aria-pressed="'+on+'" aria-label="'+esc(d.name)+' — '+esc(d.ing)+' 재료로 고르기">'+dealThumb(d)+'<span class="pk-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span></button><div class="dinfo" style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && !d.est && d.cond ? '<span>'+esc(np ? nPlusOneNote(d.cond) : d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
   }
-  return '<div class="deal">'+dealThumb(d)+'<div class="dinfo" style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && d.cond ? '<span>'+esc(np ? nPlusOneNote(d.cond) : d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
+  return '<div class="deal">'+dealThumb(d)+'<div class="dinfo" style="min-width:0;flex:1">'+dealNameHtml(d.name)+'<div class="meta">'+tag+'<span>'+esc(d.martName||'')+'</span>'+(d.price!=null && !d.est && d.cond ? '<span>'+esc(np ? nPlusOneNote(d.cond) : d.cond)+'</span>' : '')+when+'</div></div><div class="price">'+priceHtml+'</div></div>';
 }
 function nPlusOne(c){ var m = /^(\d)\+(\d)$/.exec(c || ''); return m ? m[1]+'+'+m[2] : ''; }
 function nPlusOneNote(c){ var m = /^(\d)\+(\d)$/.exec(c); return (+m[1] + +m[2]) + '개 사면 개당'; }
@@ -1691,9 +1696,11 @@ function thumb(r, rank, s){
 // ---------- 탭하면 뜻이 뜨는 태그 (가격확인·주재료) ----------
 // 가격확인 태그(레시피 칩·자세히·할인 품목·마트 목록) 말풍선 문구는 모두 같아요
 var CHK_TIP = '가게 전단 이미지를 AI 인식 기능으로 읽어들인 정보에요. 정확하지 않을 수 있으니 가게에서 직접 확인이 필요해요.';
+var EST_TIP = '이번 전단에서 가격을 읽지 못해, 같은 마트 지난 전단이나 다른 마트의 같은 상품 가격으로 어림한 값이에요. 용량·가격이 다를 수 있으니 매장에서 확인하세요.';
 var TIPS = {
   chk: ['가격확인', CHK_TIP],
   chk2: ['가격확인', CHK_TIP],
+  est: ['추정 가격', EST_TIP],
   main: ['주재료', '이 요리의 핵심 재료예요.']
 };
 function tipBtn(kind, label, cls){ return '<button type="button" class="tipb '+cls+'" data-tip="'+kind+'" aria-expanded="false" aria-label="'+esc(label)+' — 뜻 보기">'+esc(label)+'</button>'; }
@@ -1748,10 +1755,10 @@ function rankedCard(s, idx){
   var hits = s.matched.map(function(x){
     var d = x.deal;
     // 레시피 카드는 한 끼(1인분) 가격 — 팩 크기를 모르면 팩 가격 + 「1팩 기준」
-    var p = d.price == null ? esc(d.cond) : x.meal && x.meal.f != null ? '<span class="pm">한 끼 약 </span>'+formatWon(x.meal.price) : formatWon(d.price)+'<span class="pk">1팩 기준</span>';
+    var p = d.price == null ? esc(d.cond) : x.meal && x.meal.f != null ? '<span class="pm">한 끼 약 </span>'+formatWon(x.meal.price) : (d.est ? '<span class="pm">약 </span>' : '')+formatWon(d.price)+'<span class="pk">1팩 기준</span>';
     var up = isUpcoming(d, todayStr()) ? ' · '+fmtMD(d.start)+'부터' : '';
-    var ttl = d.name + (d.price != null ? ' — 팩 가격 '+formatWon(d.price) : '');
-    return '<span class="ing hit'+(x.ing.main?' main':' sub')+'" title="'+esc(ttl)+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+' <small><span class="mn">'+esc(d.martName)+' </span>'+p+up+'</small>'+(d.check?tipBtn('chk','가격확인','mk chk'):'')+'</span>';
+    var ttl = d.name + (d.price != null ? ' — 팩 가격 '+formatWon(d.price)+(d.est ? ' (추정)' : '') : '');
+    return '<span class="ing hit'+(x.ing.main?' main':' sub')+'" title="'+esc(ttl)+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+' <small><span class="mn">'+esc(d.martName)+' </span>'+p+up+'</small>'+(d.est?tipBtn('est','추정','mk est'):d.check?tipBtn('chk','가격확인','mk chk'):'')+'</span>';
   }).join('');
   var miss = s.missing.map(function(x){ return '<span class="ing miss'+(x.ing.main?' main':'')+'">'+esc(x.ing.k)+(x.ing.main?tipBtn('main','주재료','mk'):'')+'</span>'; }).join('');
   return '<div class="recipe"><div class="rc-top">'+thumb(r, idx<99 ? idx+1 : 0, s)+'<div class="rc-main"><h3>'+esc(r.name)+'</h3>'+recipeMeta(r)+'</div>'+saveRing(s)+'</div>' +
